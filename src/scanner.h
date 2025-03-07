@@ -20,7 +20,7 @@ struct Scanner {
     const char *current;
 };
 
-void init_scanner(const char* src);
+void init_scanner(const char *src);
 
 bool is_at_end();
 

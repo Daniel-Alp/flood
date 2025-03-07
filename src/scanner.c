@@ -3,7 +3,7 @@
 
 struct Scanner scanner;
 
-void init_scanner(const char* src) {
+void init_scanner(const char *src) {
     scanner.start = src;
     scanner.current = src;
 }
