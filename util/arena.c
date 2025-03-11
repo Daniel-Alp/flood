@@ -14,8 +14,8 @@ void arena_free(struct Arena *arena) {
 }
 
 void *arena_push(struct Arena *arena, u64 size) {
-    arena->stack_pos += size;
     void *ptr = arena->stack_memory + arena->stack_pos;
+    arena->stack_pos += size;
     return ptr;
 }
 
