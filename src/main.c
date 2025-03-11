@@ -18,10 +18,11 @@ int main () {
     length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     source = allocate(length);
+    if (!source) {
+        exit(1);
+    }    
     fread(source, 1, length, fp);
 
-    struct Scanner scanner;
-    init_scanner(&scanner, source);
     struct Arena arena;
     arena_init(&arena);
     struct Expr *expr = parse(&arena, source);
