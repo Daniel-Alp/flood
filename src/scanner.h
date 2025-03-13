@@ -12,12 +12,16 @@ enum TokenType {
 struct Token {
     enum TokenType type;
     const char *start;
-    i32 length;
+    i32 length;    
+    i32 line;
+    i32 offset;
 };
 
 struct Scanner {
     const char *start;
     const char *current;  
+    i32 line;
+    i32 offset;
 };
 
 void init_scanner(struct Scanner *scanner, const char *source);

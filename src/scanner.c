@@ -3,6 +3,8 @@
 void init_scanner(struct Scanner *scanner, const char *source) {
     scanner->current = source;
     scanner->start = source;
+    scanner->line = 1;
+    scanner->offset = 0;
 }
 
 static char peek(struct Scanner *scanner) {
@@ -22,6 +24,7 @@ static char peek_next(struct Scanner *scanner) {
 
 static char advance(struct Scanner *scanner) {
     scanner->current++;
+    scanner->offset++;
     return scanner->current[-1];
 }
 
@@ -31,8 +34,13 @@ static void skip_whitespace(struct Scanner *scanner) {
         switch (c) {
             case ' ':
             case '\t':
+                scanner->current++;
+                scanner->offset++;
+                break;
             case '\n':
                 scanner->current++;
+                scanner->offset = 0;
+                scanner->line++;
                 break;
             default:
                 return;
@@ -41,10 +49,13 @@ static void skip_whitespace(struct Scanner *scanner) {
 }
 
 struct Token make_token(struct Scanner *scanner, enum TokenType type) {
-    struct Token token;
-    token.type = type;
-    token.start = scanner->start;
-    token.length = (scanner->current - scanner->start);
+    struct Token token = {
+        .type = type,
+        .start = scanner->start,
+        .length = (scanner->current - scanner->start),
+        .line = scanner->line,
+        .offset = scanner->offset
+    };
     return token;
 }
 

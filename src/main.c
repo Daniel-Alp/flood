@@ -26,9 +26,10 @@ int main () {
     struct Arena arena;
     arena_init(&arena);
     struct Expr *expr = parse(&arena, source);
-    print_expr(expr, 0);
-    printf("\n");
-    
+    if (expr) {
+        print_expr(expr, 0);
+        printf("\n");    
+    }
     free(arena.stack_memory);
     fclose(fp);
 }

@@ -12,7 +12,7 @@ struct Expr {
 
 struct UnaryExpr {
     struct Expr base;
-    struct Expr *expr;
+    struct Expr *rhs;
     struct Token op;
 };
 
