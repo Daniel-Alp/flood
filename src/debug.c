@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "debug.h"
 
-void print_expr(struct Expr *expr, u32 offset);
-
 static void print_unary_epxr(struct UnaryExpr *expr, u32 offset) {
     printf("%*s", offset, "");
     printf("(UnaryExpr\n");
@@ -42,5 +40,34 @@ void print_expr(struct Expr *expr, u32 offset) {
         case EXPR_BINARY:
             print_binary_expr((struct BinaryExpr*) expr, offset);
             break;
+    }
+}
+
+void disassemble_chunk(struct Chunk *chunk) {
+    for (i32 i = 0; i < chunk->count; i++) {
+        switch (chunk->code[i]) {
+            case OP_ADD:
+                printf("OP_ADD\n");
+                break;
+            case OP_SUB:
+                printf("OP_SUB\n");
+                break;
+            case OP_MUL:
+                printf("OP_MUL\n");
+                break;
+            case OP_DIV:
+                printf("OP_DIV\n");
+                break;
+            case OP_NEGATE:
+                printf("OP_NEGATE\n");
+                break;
+            case OP_CONST:
+                printf("OP_CONST\n");
+                i++;
+                printf("%.4f\n", chunk->constants.vals[chunk->code[i]]);
+                break;
+            case OP_RETURN:
+                printf("OP_RETURN\n");
+        }
     }
 }

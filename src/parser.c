@@ -102,10 +102,6 @@ static struct Expr *expression(struct Arena *arena, struct Parser *parser, u32 l
         token = peek_next(parser);
         u32 old_level = infix_precedence[token.type].old;
         u32 new_level = infix_precedence[token.type].new;
-        if (!token.type == TOKEN_EOF && old_level == 0) {
-            error(parser, "UNEXPECTED TOKEN");
-            return NULL;
-        }
         if (old_level <= level) {
             break;
         }
@@ -127,8 +123,8 @@ struct Expr *parse(struct Arena *arena, const char *source) {
     parser.panic = false;
 
     struct Expr *expr = expression(arena, &parser, 0);
-    if (parser.had_error) {
-        return NULL;
+    if (parser.next.type != TOKEN_EOF) {
+        error(&parser, "UNEXPECTED TOKEN");
     }
-    return expr;
+    return parser.had_error ? NULL : expr;
 }

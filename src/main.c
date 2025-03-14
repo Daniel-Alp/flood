@@ -4,6 +4,7 @@
 #include "../util/arena.h"
 #include "scanner.h"
 #include "parser.h"
+#include "compiler.h"
 #include "debug.h"
 
 int main () {
@@ -26,10 +27,16 @@ int main () {
     struct Arena arena;
     arena_init(&arena);
     struct Expr *expr = parse(&arena, source);
-    if (expr) {
-        print_expr(expr, 0);
-        printf("\n");    
+    if (!expr) {
+        exit(1);    
     }
-    free(arena.stack_memory);
+    print_expr(expr, 0);
+    printf("\n\n");
+    
+    struct Chunk chunk;
+    init_chunk(&chunk);
+    compile(&chunk, expr);
+    disassemble_chunk(&chunk);
+
     fclose(fp);
 }
