@@ -31,14 +31,14 @@ int main () {
     if (!expr) {
         exit(1);    
     }
-    // print_expr(expr, 0);
-    // printf("\n\n");
+    print_expr(expr, 0);
+    printf("\n\n");
     
     struct Chunk chunk;
     init_chunk(&chunk);
     compile(&chunk, expr);
-    // disassemble_chunk(&chunk);
-    // printf("\n");
+    disassemble_chunk(&chunk);
+    printf("\n");
 
     struct VM vm;
     init_vm(&vm, chunk);

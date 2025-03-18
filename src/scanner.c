@@ -1,10 +1,10 @@
 #include "scanner.h"
 
 void init_scanner(struct Scanner *scanner, const char *source) {
+    scanner->source = source;
     scanner->current = source;
     scanner->start = source;
     scanner->line = 1;
-    scanner->offset = 0;
 }
 
 static char peek(struct Scanner *scanner) {
@@ -24,7 +24,6 @@ static char peek_next(struct Scanner *scanner) {
 
 static char advance(struct Scanner *scanner) {
     scanner->current++;
-    scanner->offset++;
     return scanner->current[-1];
 }
 
@@ -35,11 +34,9 @@ static void skip_whitespace(struct Scanner *scanner) {
             case ' ':
             case '\t':
                 scanner->current++;
-                scanner->offset++;
                 break;
             case '\n':
                 scanner->current++;
-                scanner->offset = 0;
                 scanner->line++;
                 break;
             default:
@@ -54,7 +51,6 @@ struct Token make_token(struct Scanner *scanner, enum TokenType type) {
         .start = scanner->start,
         .length = (scanner->current - scanner->start),
         .line = scanner->line,
-        .offset = scanner->offset
     };
     return token;
 }
@@ -67,7 +63,7 @@ struct Token make_number(struct Scanner *scanner) {
     while(is_digit(peek(scanner))) {
         advance(scanner);
     }
-    if (peek(scanner) == '.') {
+    if (peek(scanner) == '.' && is_digit(peek_next(scanner))) {
         advance(scanner);
         while (is_digit(peek(scanner))) {
             advance(scanner);

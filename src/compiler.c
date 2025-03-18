@@ -59,5 +59,4 @@ void compile_expr(struct Expr *expr, struct Chunk *chunk) {
 void compile(struct Chunk *chunk, struct Expr *expr){
     compile_expr(expr, chunk);
     write_chunk(chunk, OP_RETURN);
-    // reallocate happens here and oopsy!
 }

@@ -28,4 +28,12 @@ struct LiteralExpr {
     struct Token value;
 };
 
+struct Parser {
+    struct Scanner scanner;
+    struct Token current;
+    struct Token next;
+    bool had_error;
+    bool panic;
+};
+
 struct Expr *parse(struct Arena *arena, const char *source);
