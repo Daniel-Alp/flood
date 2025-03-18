@@ -5,6 +5,7 @@
 #include "scanner.h"
 #include "parser.h"
 #include "compiler.h"
+#include "vm.h"
 #include "debug.h"
 
 int main () {
@@ -30,13 +31,18 @@ int main () {
     if (!expr) {
         exit(1);    
     }
-    print_expr(expr, 0);
-    printf("\n\n");
+    // print_expr(expr, 0);
+    // printf("\n\n");
     
     struct Chunk chunk;
     init_chunk(&chunk);
     compile(&chunk, expr);
-    disassemble_chunk(&chunk);
+    // disassemble_chunk(&chunk);
+    // printf("\n");
+
+    struct VM vm;
+    init_vm(&vm, chunk);
+    run(&vm);
 
     fclose(fp);
 }

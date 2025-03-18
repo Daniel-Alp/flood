@@ -4,7 +4,7 @@
 typedef double Value;
 
 struct ValueArray {
-    Value *vals;
+    Value *arr;
     u32 count;
     u32 cap;
 };

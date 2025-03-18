@@ -5,21 +5,21 @@
 void init_value_array(struct ValueArray *array) {
     array->cap = 8;
     array->count = 0;
-    array->vals = allocate(8 * sizeof(Value));
+    array->arr = allocate(8 * sizeof(Value));
 }
 
 void write_value_array(struct ValueArray *array, Value val) {
     if (array->count == array->cap) {
-        array->vals = reallocate(array->vals, 2 * array->cap * sizeof(Value));
+        array->arr = reallocate(array->arr, 2 * array->cap * sizeof(Value));
         array->cap *= 2;
     }
-    array->vals[array->count] = val;
+    array->arr[array->count] = val;
     array->count++;
 }
 
 void free_value_array(struct ValueArray *array) {
-    free(array->vals);
-    array->vals = NULL;
+    free(array->arr);
+    array->arr = NULL;
     array->count = 0;
     array->cap = 0;
 }

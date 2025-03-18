@@ -64,7 +64,7 @@ void disassemble_chunk(struct Chunk *chunk) {
             case OP_CONST:
                 printf("OP_CONST\n");
                 i++;
-                printf("%.4f\n", chunk->constants.vals[chunk->code[i]]);
+                printf("%.4f\n", chunk->constants.arr[chunk->code[i]]);
                 break;
             case OP_RETURN:
                 printf("OP_RETURN\n");
