@@ -29,9 +29,6 @@ void init_chunk(struct Chunk *chunk) {
     chunk->count = 0;
     chunk->code = allocate(8 * sizeof(u8));
 
-    chunk->line_rle_cap = 8;
-    chunk->line_rle_count = 0;
-    chunk->line_rle = allocate(8 * sizeof(u32));
     init_value_array(&chunk->constants);
 }
 
@@ -49,11 +46,6 @@ void free_chunk(struct Chunk *chunk) {
     chunk->code = NULL;
     chunk->count = 0;
     chunk->cap = 0;
-
-    free(chunk->line_rle);
-    chunk->line_rle = NULL;
-    chunk->line_rle_count = 0;
-    chunk->line_rle_cap = 0;
 
     free_value_array(&chunk->constants);
 }

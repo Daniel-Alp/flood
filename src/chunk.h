@@ -14,10 +14,6 @@ struct Chunk {
     u32 count;
     u32 cap;
 
-    u32 *line_rle;
-    u32 line_rle_count;
-    u32 line_rle_cap;
-
     struct ValueArray constants;
 };
 

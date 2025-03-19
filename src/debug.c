@@ -44,7 +44,7 @@ void print_expr(struct Expr *expr, u32 offset) {
 }
 
 void disassemble_chunk(struct Chunk *chunk) {
-    for (i32 i = 0; i < chunk->count; i++) {
+    for (u32 i = 0; i < chunk->count; i++) {
         switch (chunk->code[i]) {
             case OP_ADD:
                 printf("OP_ADD\n");
@@ -62,9 +62,9 @@ void disassemble_chunk(struct Chunk *chunk) {
                 printf("OP_NEGATE\n");
                 break;
             case OP_CONST:
-                printf("OP_CONST\n");
+                printf("OP_CONST");
                 i++;
-                printf("%.4f\n", chunk->constants.arr[chunk->code[i]]);
+                printf("%16.4f\n", chunk->constants.arr[chunk->code[i]]);
                 break;
             case OP_RETURN:
                 printf("OP_RETURN\n");
