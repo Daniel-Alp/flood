@@ -25,26 +25,32 @@ int main () {
     }    
     fread(source, 1, length, fp);
 
-    struct Arena arena;
-    init_arena(&arena);
-    struct Expr *expr = parse(&arena, source);
-    if (!expr) {
-        exit(1);    
+    struct Scanner scanner;
+    init_scanner(&scanner, source);
+
+    struct Token tk;
+    while ((tk = next_token(&scanner)).type != TOKEN_EOF) {
+        printf("%.*s\n", tk.length, tk.start);
     }
-    print_expr(expr, 0);
-    printf("\n\n");
+
+    // struct Arena arena;
+    // init_arena(&arena);
+    // struct Expr *expr = parse(&arena, source);
+    // if (!expr) {
+    //     exit(1);    
+    // }
     
-    struct Chunk chunk;
-    init_chunk(&chunk);
-    compile(&chunk, expr);
-    disassemble_chunk(&chunk);
-    printf("\n");
+    // struct Chunk chunk;
+    // init_chunk(&chunk);
+    // compile(&chunk, expr);
+    // disassemble_chunk(&chunk);
+    // printf("\n");
 
-    struct VM vm;
-    init_vm(&vm, chunk);
-    run(&vm);
+    // struct VM vm;
+    // init_vm(&vm, chunk);
+    // run(&vm);
 
-    fclose(fp);
-    free_chunk(&chunk);
-    free_arena(&arena);
+    // fclose(fp);
+    // free_chunk(&chunk);
+    // free_arena(&arena);
 }

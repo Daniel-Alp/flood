@@ -1,3 +1,4 @@
+#include <string.h>
 #include "scanner.h"
 
 void init_scanner(struct Scanner *scanner, const char *source) {
@@ -55,11 +56,19 @@ struct Token make_token(struct Scanner *scanner, enum TokenType type) {
     return token;
 }
 
-bool is_digit(char c) {
+static bool is_digit(char c) {
     return '0' <= c && c <= '9';
 }
 
-struct Token make_number(struct Scanner *scanner) {
+static bool is_alpha(char c) {
+    return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_';
+}
+
+static bool is_alpha_digit(char c) {
+    return is_digit(c) || is_alpha(c);
+}
+
+static void number(struct Scanner *scanner) {
     while(is_digit(peek(scanner))) {
         advance(scanner);
     }
@@ -69,7 +78,20 @@ struct Token make_number(struct Scanner *scanner) {
             advance(scanner);
         }
     }
-    return make_token(scanner, TOKEN_NUMBER);
+}
+
+static void identifier(struct Scanner *scanner) {
+    while(is_alpha_digit(peek(scanner))) {
+        advance(scanner);
+    }
+}
+
+static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenType type) {
+    u32 token_length = scanner->current - scanner->start;
+    if (token_length != length || memcmp(scanner->start+1, rest, length-1)) {
+        return make_token(scanner, TOKEN_IDENTIFIER);
+    }
+    return make_token(scanner, type);
 }
 
 struct Token next_token(struct Scanner *scanner) {
@@ -86,9 +108,21 @@ struct Token next_token(struct Scanner *scanner) {
         case '/': return make_token(scanner, TOKEN_SLASH);
         case '(': return make_token(scanner, TOKEN_LEFT_PAREN);
         case ')': return make_token(scanner, TOKEN_RIGHT_PAREN);
+        case '{': return make_token(scanner, TOKEN_LEFT_BRACE);
+        case '}': return make_token(scanner, TOKEN_RIGHT_BRACE);
+        case ';': return make_token(scanner, TOKEN_SEMICOLON);
+        case '=': return make_token(scanner, TOKEN_EQUAL); // Change to check for ==
         default:
             if (is_digit(c)) {
-                return make_number(scanner);
+                number(scanner);
+                return make_token(scanner, TOKEN_NUMBER);
+            } else if (is_alpha(c)) {
+                identifier(scanner);
+                switch (c) {
+                    case 'l': return check_keyword(scanner, "et", 3, TOKEN_LET);
+                    case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
+                    default:  return make_token(scanner, TOKEN_IDENTIFIER);
+                }
             } else {
                 return make_token(scanner, TOKEN_ERROR);
             }
