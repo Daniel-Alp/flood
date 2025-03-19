@@ -6,9 +6,9 @@ struct Arena {
     u64 stack_pos;
 };
 
-void arena_init(struct Arena *arena);
+void init_arena(struct Arena *arena);
 
-void arena_free(struct Arena *arena);
+void free_arena(struct Arena *arena);
 
 void *arena_push(struct Arena *arena, u64 size);
 

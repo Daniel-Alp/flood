@@ -2,12 +2,12 @@
 #include "arena.h"
 #include "memory.h"
 
-void arena_init(struct Arena *arena) {
+void init_arena(struct Arena *arena) {
     arena->stack_memory = allocate(4294967296);
-    arena->stack_pos;
+    arena->stack_pos = 0;
 }
 
-void arena_free(struct Arena *arena) {
+void free_arena(struct Arena *arena) {
     free(arena->stack_memory);
     arena->stack_memory = NULL;
     arena->stack_pos = 0;

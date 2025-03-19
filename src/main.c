@@ -26,7 +26,7 @@ int main () {
     fread(source, 1, length, fp);
 
     struct Arena arena;
-    arena_init(&arena);
+    init_arena(&arena);
     struct Expr *expr = parse(&arena, source);
     if (!expr) {
         exit(1);    
@@ -45,4 +45,6 @@ int main () {
     run(&vm);
 
     fclose(fp);
+    free_chunk(&chunk);
+    free_arena(&arena);
 }
