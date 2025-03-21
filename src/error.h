@@ -1,4 +1,4 @@
 #pragma once
-#include "parser.h"
+#include "scanner.h"
 
-void error(struct Parser *parser, const char *message);
+void error(struct Token token, const char *message, const char *source);

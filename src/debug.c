@@ -4,20 +4,20 @@
 static void print_unary_epxr(struct UnaryExpr *expr, u32 offset) {
     printf("%*s", offset, "");
     printf("(UnaryExpr\n");
-    printf("%*s", offset + 4, "");
+    printf("%*s", offset + 2, "");
     printf("%.*s\n", expr->op.length, expr->op.start);
-    print_expr(expr->rhs, offset + 4);
+    print_expr(expr->rhs, offset + 2);
     printf(")");
 }
 
 static void print_binary_expr(struct BinaryExpr *expr, u32 offset) {
     printf("%*s", offset, "");
     printf("(BinaryExpr\n");
-    printf("%*s", offset + 4, "");
+    printf("%*s", offset + 2, "");
     printf("%.*s\n", expr->op.length, expr->op.start);
-    print_expr(expr->lhs, offset + 4);
+    print_expr(expr->lhs, offset + 2);
     printf("\n");
-    print_expr(expr->rhs, offset + 4);
+    print_expr(expr->rhs, offset + 2);
     printf(")");
 }
 

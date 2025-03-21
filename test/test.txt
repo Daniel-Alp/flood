@@ -1,9 +1,9 @@
- if true && ! !false {
-    var __x__123 = 5;
-    VAR = z;
-    TRUE = z + 4;
-} else {
-    if 5 <= 4 || 3.321 >= 2 && z == 4  && !(true || 3 != 4){
-        FALSE = (2.321+3) * (4+5);
+{
+    let x = 4;
+    if true {
+
+    } else {
+    {
     }
 }
+}}
