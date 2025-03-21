@@ -1,4 +1,0 @@
-let letters = 4;
-{
-    var variables = 5;
-}

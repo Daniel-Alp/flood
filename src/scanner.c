@@ -57,7 +57,7 @@ struct Token make_token(struct Scanner *scanner, enum TokenType type) {
 }
 
 static bool is_digit(char c) {
-    return '0' <= c && c <= '9';
+    return '0' <= c && c <= '9'; 
 }
 
 static bool is_alpha(char c) {
@@ -94,6 +94,14 @@ static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32
     return make_token(scanner, type);
 }
 
+static struct Token check_next(struct Scanner *scanner, char next, enum TokenType type1, enum TokenType type2) {
+    if (peek(scanner) == next) {
+        advance(scanner);
+        return make_token(scanner, type1);
+    }
+    return make_token(scanner, type2);
+}
+
 struct Token next_token(struct Scanner *scanner) {
     skip_whitespace(scanner);
     scanner->start = scanner->current;
@@ -111,7 +119,12 @@ struct Token next_token(struct Scanner *scanner) {
         case '{': return make_token(scanner, TOKEN_LEFT_BRACE);
         case '}': return make_token(scanner, TOKEN_RIGHT_BRACE);
         case ';': return make_token(scanner, TOKEN_SEMICOLON);
-        case '=': return make_token(scanner, TOKEN_EQUAL); // Change to check for ==
+        case '=': return check_next(scanner, '=', TOKEN_EQUAL_EQUAL, TOKEN_EQUAL);
+        case '<': return check_next(scanner, '=', TOKEN_LESS_EQUAL, TOKEN_LESS);
+        case '>': return check_next(scanner, '=', TOKEN_GREATER, TOKEN_LESS);
+        case '&': return check_next(scanner, '&', TOKEN_AND, TOKEN_ERROR);
+        case '|': return check_next(scanner, '|', TOKEN_OR, TOKEN_ERROR);
+        case '!': return check_next(scanner, '=', TOKEN_NOT_EQUAL, TOKEN_NOT);
         default:
             if (is_digit(c)) {
                 number(scanner);
@@ -119,8 +132,11 @@ struct Token next_token(struct Scanner *scanner) {
             } else if (is_alpha(c)) {
                 identifier(scanner);
                 switch (c) {
-                    case 'l': return check_keyword(scanner, "et", 3, TOKEN_LET);
                     case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
+                    case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+                    case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+                    case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
+                    case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
                     default:  return make_token(scanner, TOKEN_IDENTIFIER);
                 }
             } else {

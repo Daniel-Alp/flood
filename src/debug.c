@@ -26,7 +26,7 @@ static void print_literal_expr(struct LiteralExpr *expr, u32 offset) {
     printf("(LiteralExpr %.*s)", expr->value.length, expr->value.start);
 }
 
-void print_expr(struct Expr *expr, u32 offset) {
+void print_expr(struct Node *expr, u32 offset) {
     if (!expr) {
         return;
     }

@@ -4,7 +4,7 @@
 
 #include "debug.h"
 
-void compile_expr(struct Expr *expr, struct Chunk *chunk);
+void compile_expr(struct Node *expr, struct Chunk *chunk);
 
 void compile_unary(struct UnaryExpr *expr, struct Chunk *chunk) {
     compile_expr(expr->rhs, chunk);
@@ -42,7 +42,7 @@ void compile_literal(struct LiteralExpr *expr, struct Chunk *chunk) {
     write_chunk(chunk, (&chunk->constants)->count-1);
 }
 
-void compile_expr(struct Expr *expr, struct Chunk *chunk) {
+void compile_expr(struct Node *expr, struct Chunk *chunk) {
     switch (expr->type) {
         case EXPR_UNARY:
             compile_unary((struct UnaryExpr*) expr, chunk);
@@ -56,7 +56,7 @@ void compile_expr(struct Expr *expr, struct Chunk *chunk) {
     }
 }
 
-void compile(struct Chunk *chunk, struct Expr *expr){
+void compile(struct Chunk *chunk, struct Node *expr){
     compile_expr(expr, chunk);
     write_chunk(chunk, OP_RETURN); // PLACEHOLDER
 }

@@ -38,7 +38,7 @@ static struct LiteralExpr *make_literal_expr(struct Arena *arena, struct Token v
     return expr;
 }
 
-static struct UnaryExpr *make_unary_expr(struct Arena *arena, struct Expr *rhs, struct Token op) {
+static struct UnaryExpr *make_unary_expr(struct Arena *arena, struct Node *rhs, struct Token op) {
     struct UnaryExpr *expr = arena_push(arena, sizeof(struct UnaryExpr));
     expr->base.type = EXPR_UNARY;
     expr->rhs = rhs;
@@ -46,7 +46,7 @@ static struct UnaryExpr *make_unary_expr(struct Arena *arena, struct Expr *rhs, 
     return expr;
 }
  
-static struct BinaryExpr *make_binary_expr(struct Arena *arena, struct Expr *lhs, struct Expr *rhs, struct Token op) {
+static struct BinaryExpr *make_binary_expr(struct Arena *arena, struct Node *lhs, struct Node *rhs, struct Token op) {
     struct BinaryExpr *expr = arena_push(arena, sizeof(struct BinaryExpr));
     expr->base.type = EXPR_BINARY;
     expr->lhs = lhs;
@@ -55,12 +55,13 @@ static struct BinaryExpr *make_binary_expr(struct Arena *arena, struct Expr *lhs
     return expr;
 }
 
-static struct Expr *expression(struct Arena *arena, struct Parser *parser, u32 level) {
-    struct Expr *lhs = NULL;
+static struct Node *expression(struct Arena *arena, struct Parser *parser, u32 level) {
+    struct Node *lhs = NULL;
     struct Token token = advance(parser);
     switch (token.type) {
         case TOKEN_NUMBER:
-            lhs = (struct Expr*) make_literal_expr(arena, token);
+        case TOKEN_IDENTIFIER:
+            lhs = (struct Node*) make_literal_expr(arena, token);
             break;
         case TOKEN_LEFT_PAREN:
             lhs = expression(arena, parser, 0);
@@ -69,7 +70,7 @@ static struct Expr *expression(struct Arena *arena, struct Parser *parser, u32 l
             }
             break;
         case TOKEN_MINUS:
-            lhs = (struct Expr*) make_unary_expr(arena, expression(arena, parser, 5), token);
+            lhs = (struct Node*) make_unary_expr(arena, expression(arena, parser, 5), token);
             break;
         default:
             error(parser, "invalid syntax");
@@ -84,13 +85,13 @@ static struct Expr *expression(struct Arena *arena, struct Parser *parser, u32 l
             break;
         }
         advance(parser);
-        struct Expr *rhs = expression(arena, parser, new_level);
-        lhs = (struct Expr*) make_binary_expr(arena, lhs, rhs, token);
+        struct Node *rhs = expression(arena, parser, new_level);
+        lhs = (struct Node*) make_binary_expr(arena, lhs, rhs, token);
     }
     return lhs;
 }
 
-struct Expr *parse(struct Arena *arena, const char *source) {
+struct Node *parse(struct Arena *arena, const char *source) {
     struct Scanner scanner;
     init_scanner(&scanner, source);
 
@@ -100,7 +101,7 @@ struct Expr *parse(struct Arena *arena, const char *source) {
     parser.had_error = false;
     parser.panic = false;
 
-    struct Expr *expr = expression(arena, &parser, 0);
+    struct Node *expr = expression(arena, &parser, 0);
     if (advance(&parser).type != TOKEN_EOF) {
         error(&parser, "invalid syntax");
     }

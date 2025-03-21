@@ -12,4 +12,4 @@ enum OpCode {
 
 void init_chunk(struct Chunk *chunk);
 
-void compile(struct Chunk *chunk, struct Expr *expr);
+void compile(struct Chunk *chunk, struct Node *expr);

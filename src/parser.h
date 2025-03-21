@@ -2,29 +2,29 @@
 #include "../util/arena.h"
 #include "scanner.h"
 
-enum ExprType {
+enum NodeType {
     EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL
 };
 
-struct Expr {
-    enum ExprType type;
+struct Node {
+    enum NodeType type;
 };
 
 struct UnaryExpr {
-    struct Expr base;
-    struct Expr *rhs;
+    struct Node base;
+    struct Node *rhs;
     struct Token op;
 };
 
 struct BinaryExpr {
-    struct Expr base;
-    struct Expr *lhs;
-    struct Expr *rhs;
+    struct Node base;
+    struct Node *lhs;
+    struct Node *rhs;
     struct Token op;
 };
 
 struct LiteralExpr {
-    struct Expr base;
+    struct Node base;
     struct Token value;
 };
 
@@ -36,4 +36,4 @@ struct Parser {
     bool panic;
 };
 
-struct Expr *parse(struct Arena *arena, const char *source);
+struct Node *parse(struct Arena *arena, const char *source);
