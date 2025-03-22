@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "error.h"
-#include "scanner.h"
+#include "parser.h"
 
 void error(struct Token token, const char *message, const char *source) {
     const char *line_start = token.start;
@@ -18,4 +18,9 @@ void error(struct Token token, const char *message, const char *source) {
     u32 offset = token.start - line_start;
     printf("    %*s^\n", offset, "");
     printf("Error: %s\n", message);
+}
+
+void parse_error(struct Parser *parser, const char *message) {
+    parser->had_error = true;
+    error(parser->current, message, parser->scanner.source);
 }

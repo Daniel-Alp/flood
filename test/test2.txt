@@ -1,15 +1,7 @@
-if true && ! !false {
-    var __x__123 = 5;
-    VAR = z;
-    TRUE = z + 4;
-} else {
-    if true {
-        {
-            x = x + 4;
-            var _hello_world = 124 + 5;
-        }
-    }
-    if 5 <= 4 || 3.321 >= 2 && z == 4  && !(true || 3 != 4){
-        FALSE = (2.321+3) * ((((4+5))));
+{
+    if / {
+        true
+    } else {
+        x = 
     }
 }

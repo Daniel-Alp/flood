@@ -1,9 +1,7 @@
 {
-    let x = 4;
-    if true {
-
+    if / {
+        true
     } else {
-    {
+        x = 
     }
 }
-}}

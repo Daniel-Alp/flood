@@ -25,17 +25,14 @@ int main () {
     }    
     fread(source, 1, length, fp);
 
-    struct Scanner scanner;
-    init_scanner(&scanner, source);
-
-    matching_braces(&scanner);
-
-    // struct Arena arena;
-    // init_arena(&arena);
-    // struct Expr *expr = parse(&arena, source);
-    // if (!expr) {
-    //     exit(1);    
-    // }
+    struct Arena arena;
+    init_arena(&arena);
+    struct BlockExpr *expr = parse(&arena, source);
+    if (!expr) {
+        exit(1);    
+    }
+    print_node((struct Node*)expr, 0);
+    printf("\n");
     
     // struct Chunk chunk;
     // init_chunk(&chunk);

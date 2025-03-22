@@ -3,7 +3,7 @@
 #include "scanner.h"
 
 enum NodeType {
-    EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL
+    EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL, EXPR_IF, EXPR_BLOCK, STMT_EXPR
 };
 
 struct Node {
@@ -35,23 +35,18 @@ struct NodeList {
 
 struct BlockExpr {
     struct Node base;
-    struct NodeList node_list;
+    struct NodeList *node_list;
 };
 
 struct IfExpr {
     struct Node base;
-    struct BlockExpr* if_block;
-    struct BlockExpr* else_block;
+    struct Node* test;
+    struct BlockExpr *true_block;
+    struct BlockExpr *else_block;
 };
 
 struct ExprStmt {
     struct Node base;
-    struct Node *expr;
-};
-
-struct VarDeclStmt {
-    struct Node base;
-    struct Token name;
     struct Node *expr;
 };
 
@@ -62,4 +57,6 @@ struct Parser {
     bool had_error;
 };
 
-bool matching_braces(struct Scanner *scanner);
+bool matching_brackets(struct Scanner *scanner);
+
+struct BlockExpr *parse(struct Arena *arena, const char *source);
