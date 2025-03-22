@@ -1,0 +1,14 @@
+{
+    if true {
+        x = 3
+    } else {
+        if true {
+            y = 4
+        }
+    }
+
+    if false {
+        y = z + 4;
+        y = 6 + 8
+    }
+}

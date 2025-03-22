@@ -82,7 +82,7 @@ static struct Token advance(struct Parser *parser) {
 static void exit_scope(struct Parser *parser) {
     i32 depth = 0;
     struct Token token = parser->current;
-    while (depth != -1) {
+    while (depth != -1 && token.type != TOKEN_EOF) {
         if (token.type == TOKEN_LEFT_BRACE || token.type == TOKEN_LEFT_PAREN) {
             depth++;
         } else if (token.type == TOKEN_RIGHT_BRACE || token.type == TOKEN_RIGHT_PAREN) {
@@ -157,12 +157,13 @@ static struct Node *expr(struct Arena *arena, struct Parser *parser, u32 lvl) {
         case TOKEN_LEFT_PAREN:
             lhs = (struct Node*) expr(arena, parser, 0);
             if (!lhs) {
-                exit_scope(parser);
+                return NULL;
             }
+            advance(parser);
             break;
         case TOKEN_MINUS:
         case TOKEN_NOT:
-            struct Node *rhs = expr(arena, parser, 15); // This should be a hardcoded value
+            struct Node *rhs = expr(arena, parser, 15); // This should not be a hardcoded value
             if (!rhs) {
                 return NULL;
             }
@@ -187,13 +188,28 @@ static struct Node *expr(struct Arena *arena, struct Parser *parser, u32 lvl) {
         u32 old_lvl = infix_precedence[token.type].old;
         u32 new_lvl = infix_precedence[token.type].new;
         if (old_lvl <= lvl) {
+            // TEMPORARY SOLUTION
             switch(token.type) {
+                case TOKEN_PLUS:
+                case TOKEN_MINUS:
+                case TOKEN_STAR:
+                case TOKEN_SLASH:
+                case TOKEN_AND:
+                case TOKEN_OR:
+                case TOKEN_EQUAL:
+                case TOKEN_LESS_EQUAL:
+                case TOKEN_LESS:
+                case TOKEN_EQUAL_EQUAL:
+                case TOKEN_GREATER:
+                case TOKEN_GREATER_EQUAL:
+                case TOKEN_LEFT_BRACE:
                 case TOKEN_RIGHT_BRACE:
+                case TOKEN_RIGHT_PAREN:
                 case TOKEN_SEMICOLON:
                     break;
                 default:
-                    advance(parser);
-                    parse_error(parser, "expected one of ';' '}' or operator");
+                    parse_error(parser, "expected one of ';' '{' '}' ')' or operator");
+                    return NULL;
             }
             break;
         }
