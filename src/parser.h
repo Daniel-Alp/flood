@@ -10,6 +10,11 @@ struct Node {
     enum NodeType type;
 };
 
+struct LiteralExpr {
+    struct Node base;
+    struct Token val;
+};
+
 struct UnaryExpr {
     struct Node base;
     struct Node *rhs;
@@ -21,11 +26,6 @@ struct BinaryExpr {
     struct Node *lhs;
     struct Node *rhs;
     struct Token op;
-};
-
-struct LiteralExpr {
-    struct Node base;
-    struct Token value;
 };
 
 struct NodeList {
@@ -57,6 +57,6 @@ struct Parser {
     bool had_error;
 };
 
-bool matching_brackets(struct Scanner *scanner);
+bool matching_braces(struct Scanner *scanner);
 
 struct BlockExpr *parse(struct Arena *arena, const char *source);

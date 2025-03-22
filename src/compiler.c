@@ -35,7 +35,7 @@ void compile_binary(struct BinaryExpr *expr, struct Chunk *chunk) {
 }
 
 void compile_literal(struct LiteralExpr *expr, struct Chunk *chunk) {
-    struct Token token = expr->value;
+    struct Token token = expr->val;
     double val = strtod(token.start, NULL);
     write_chunk(chunk, OP_CONST);
     write_value_array(&chunk->constants, val);

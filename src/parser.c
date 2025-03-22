@@ -38,28 +38,36 @@ struct PrecedenceLevel infix_precedence[] = {
     [TOKEN_ERROR]           = {0, 0}
 };
 
-bool matching_brackets(struct Scanner *scanner) {
+static struct Token current(struct Parser *parser) {
+    return parser->current;
+}
+
+static struct Token peek(struct Parser *parser) {
+    return parser->next;
+}
+
+static struct Token advance(struct Parser *parser) {
+    parser->current = parser->next;
+    parser->next = next_token(&parser->scanner);
+    return parser->current;
+}
+
+bool matching_braces(struct Scanner *scanner) {
     struct Token stack[256];
-    i32 depth = 0;
     struct Token token;
+    i32 depth = 0;
     while ((token = next_token(scanner)).type != TOKEN_EOF) {
-        if (token.type == TOKEN_LEFT_BRACE || token.type == TOKEN_LEFT_PAREN) {
+        if (token.type == TOKEN_LEFT_BRACE) {
             stack[depth] = token;
             depth++;
             if (depth == 256) {
                 error(token, "exceeded max depth", scanner->source);
                 return false;
             }
-        } else if (token.type == TOKEN_RIGHT_BRACE 
-                || token.type == TOKEN_RIGHT_PAREN) {
+        } else if (token.type == TOKEN_RIGHT_BRACE ) {
             depth--;
             if (depth < 0) {
                 error(token, "unmatched bracket", scanner->source);
-                return false;
-            }
-            if (stack[depth].type == TOKEN_LEFT_BRACE && token.type != TOKEN_RIGHT_BRACE
-            ||  stack[depth].type == TOKEN_LEFT_PAREN && token.type != TOKEN_RIGHT_PAREN) {
-                error(token, "mismatched bracket", scanner->source);
                 return false;
             }
         }
@@ -71,32 +79,24 @@ bool matching_brackets(struct Scanner *scanner) {
     return true;
 }
 
-static struct Token advance(struct Parser *parser) {
-    parser->current = parser->next;
-    parser->next = next_token(&parser->scanner);
-    return parser->current;
-};
-
-// discard tokens until exit scope (assumes source has matching brackets)
-// callee indicates caller has to exit scope by returning NULL
 static void exit_scope(struct Parser *parser) {
     i32 depth = 0;
-    struct Token token = parser->current;
-    while (depth != -1 && token.type != TOKEN_EOF) {
-        if (token.type == TOKEN_LEFT_BRACE || token.type == TOKEN_LEFT_PAREN) {
+    enum TokenType type = current(parser).type;
+    while (true) {
+        if (type == TOKEN_LEFT_BRACE || type == TOKEN_LEFT_PAREN)
             depth++;
-        } else if (token.type == TOKEN_RIGHT_BRACE || token.type == TOKEN_RIGHT_PAREN) {
+        if (type == TOKEN_RIGHT_BRACE || type == TOKEN_RIGHT_PAREN)
             depth--;
-        }
-        token = advance(parser);
+        if (depth == -1)
+            break;
+        type = advance(parser).type;
     }
-    parser->had_error = true;
 }
 
-static struct LiteralExpr *make_literal_expr(struct Arena *arena, struct Token value) {
+static struct LiteralExpr *make_literal_expr(struct Arena *arena, struct Token val) {
     struct LiteralExpr *expr = arena_push(arena, sizeof(struct LiteralExpr));
     expr->base.type = EXPR_LITERAL;
-    expr->value = value;
+    expr->val = val;
     return expr;
 }
 
@@ -147,6 +147,7 @@ static struct IfExpr *if_expr(struct Arena *arena, struct Parser *parser);
 static struct Node *expr(struct Arena *arena, struct Parser *parser, u32 lvl) {
     struct Node *lhs = NULL;
     struct Token token = advance(parser);
+
     switch (token.type) {
         case TOKEN_NUMBER:
         case TOKEN_IDENTIFIER:
@@ -156,61 +157,35 @@ static struct Node *expr(struct Arena *arena, struct Parser *parser, u32 lvl) {
             break;
         case TOKEN_LEFT_PAREN:
             lhs = (struct Node*) expr(arena, parser, 0);
-            if (!lhs) {
+            if (!lhs)
                 return NULL;
-            }
             advance(parser);
             break;
         case TOKEN_MINUS:
         case TOKEN_NOT:
             struct Node *rhs = expr(arena, parser, 15); // This should not be a hardcoded value
-            if (!rhs) {
+            if (!rhs)
                 return NULL;
-            }
             lhs = (struct Node*) make_unary_expr(arena, rhs, token);
             break;
         case TOKEN_IF:
             lhs = (struct Node*) if_expr(arena, parser);
-            if (!lhs) {
+            if (!lhs)
                 return NULL;
-            }
             break;
         case TOKEN_LEFT_BRACE:
             lhs = (struct Node*) block_expr(arena, parser);
             break;
         default:
-            parse_error(parser, "expected expression");
+            parse_error(parser, token, "expected expression");
             return NULL;
     }
     
     while(true) {
-        token = parser->next;
+        token = peek(parser);
         u32 old_lvl = infix_precedence[token.type].old;
         u32 new_lvl = infix_precedence[token.type].new;
         if (old_lvl <= lvl) {
-            // TEMPORARY SOLUTION
-            switch(token.type) {
-                case TOKEN_PLUS:
-                case TOKEN_MINUS:
-                case TOKEN_STAR:
-                case TOKEN_SLASH:
-                case TOKEN_AND:
-                case TOKEN_OR:
-                case TOKEN_EQUAL:
-                case TOKEN_LESS_EQUAL:
-                case TOKEN_LESS:
-                case TOKEN_EQUAL_EQUAL:
-                case TOKEN_GREATER:
-                case TOKEN_GREATER_EQUAL:
-                case TOKEN_LEFT_BRACE:
-                case TOKEN_RIGHT_BRACE:
-                case TOKEN_RIGHT_PAREN:
-                case TOKEN_SEMICOLON:
-                    break;
-                default:
-                    parse_error(parser, "expected one of ';' '{' '}' ')' or operator");
-                    return NULL;
-            }
             break;
         }
         advance(parser);
@@ -224,23 +199,25 @@ static struct Node *expr(struct Arena *arena, struct Parser *parser, u32 lvl) {
 }
 
 static struct IfExpr *if_expr(struct Arena *arena, struct Parser *parser) {
-    struct Node* test = expr(arena, parser, 0);
-    if (!test) {
+    struct Node *test = expr(arena, parser, 0);
+    if (!test)
         return NULL;
-    }
+    
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, "expected '{'");
+        parse_error(parser, parser->current, "expected '{'");
         return NULL;
     }
+
     struct BlockExpr *true_block = block_expr(arena, parser);
-    if (parser->next.type != TOKEN_ELSE) {
+    if (peek(parser).type != TOKEN_ELSE)
         return make_if_expr(arena, test, true_block, NULL);
-    }
+
     advance(parser);
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, "expected '{'");
+        parse_error(parser, parser->current, "expected '{'");
         return NULL;
     }
+
     struct BlockExpr *else_block = block_expr(arena, parser);
     return make_if_expr(arena, test, true_block, else_block);
 }
@@ -248,29 +225,33 @@ static struct IfExpr *if_expr(struct Arena *arena, struct Parser *parser) {
 static struct BlockExpr *block_expr(struct Arena *arena, struct Parser *parser) {
     struct NodeList *head = arena_push(arena, sizeof(struct NodeList));
     struct NodeList *tail = head;
-    struct Node *node = NULL;
-    while (parser->next.type != TOKEN_RIGHT_BRACE && parser->next.type != TOKEN_EOF) { 
-        switch (parser->next.type) {
-            case TOKEN_SEMICOLON:
-                advance(parser);
-                continue;
-            case TOKEN_IF:
-                advance(parser);
-                node = (struct Node*) if_expr(arena, parser);
-                break;
-            case TOKEN_LEFT_BRACE:
-                advance(parser);
-                node = (struct Node*) block_expr(arena, parser);
-                break;
-            default:
-                node = (struct Node*) expr(arena, parser, 0);
-                break;
+    struct Node *node;
+    enum TokenType type;
+    while (true) {
+        type = peek(parser).type;
+        if (type == TOKEN_RIGHT_BRACE) {
+            advance(parser);
+            break;
+        } else if (type == TOKEN_SEMICOLON) {
+            advance(parser);
+            continue;
+        } else if (type == TOKEN_IF) {
+            advance(parser);
+            node = (struct Node*) if_expr(arena, parser);
+        } else if (type == TOKEN_LEFT_BRACE) {
+            advance(parser);
+            node = (struct Node*) block_expr(arena, parser);
+        } else {
+            node = (struct Node*) expr(arena, parser, 0);
+            struct Token next = peek(parser);
+            if (node && next.type != TOKEN_SEMICOLON && next.type != TOKEN_RIGHT_BRACE)
+                parse_error(parser, next, "unexpected token");
         }
         if (!node) {
             exit_scope(parser);
             break;
         }
-        if (parser->next.type == TOKEN_SEMICOLON) {
+        if (peek(parser).type == TOKEN_SEMICOLON) {
             advance(parser);
             node = (struct Node*) make_expr_stmt(arena, node);
         }
@@ -278,23 +259,21 @@ static struct BlockExpr *block_expr(struct Arena *arena, struct Parser *parser) 
         tail->next = arena_push(arena, sizeof(struct NodeList));
         tail = tail->next;
     }
-    advance(parser);
     return make_block_expr(arena, head);
 }
 
-// everything at the top level has to be wrapped in a block for now
 struct BlockExpr *parse(struct Arena *arena, const char *source) {
     struct Scanner scanner;
     init_scanner(&scanner, source);
-    // error recovery assumes matching brackets
-    if (!matching_brackets(&scanner)) {
+    if (!matching_braces(&scanner)) {
         return NULL;
     }
     init_scanner(&scanner, source);
-    struct Parser parser;
-    parser.scanner = scanner;
-    parser.next = next_token(&parser.scanner);
-    parser.had_error = false;
+    struct Parser parser = {
+        .scanner = scanner,
+        .next = next_token(&parser.scanner),
+        .had_error = false
+    };
     advance(&parser);
     struct BlockExpr *block = block_expr(arena, &parser);
     return parser.had_error ? NULL : block;

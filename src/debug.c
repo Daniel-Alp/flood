@@ -23,7 +23,7 @@ static void print_binary_expr(struct BinaryExpr *expr, u32 offset) {
 
 static void print_literal_expr(struct LiteralExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(LiteralExpr %.*s)", expr->value.length, expr->value.start);
+    printf("(LiteralExpr %.*s)", expr->val.length, expr->val.start);
 }
 
 static void print_block_expr(struct BlockExpr *expr, u32 offset) {

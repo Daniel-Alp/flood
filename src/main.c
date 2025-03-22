@@ -9,7 +9,7 @@
 #include "debug.h"
 
 int main () {
-    for (int i = 0; i <= 15; i++) {
+    for (int i = 0; i < 20; i++) {
         char buffer[1024];
         snprintf(buffer, sizeof(buffer), "/home/alp/Projects/rhubarb/test/parsing/test%d.txt", i);
         
