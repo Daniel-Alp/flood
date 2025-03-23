@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "ast.h"
 #include "debug.h"
 
 static void print_unary_epxr(struct UnaryExpr *expr, u32 offset) {

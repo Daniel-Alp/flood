@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 #include "chunk.h"
-#include "parser.h"
+#include "ast.h"
 
 enum OpCode {
     OP_ADD, OP_SUB, OP_MUL, OP_DIV, 

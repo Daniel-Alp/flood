@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "error.h"
+#include "ast.h"
 #include "parser.h"
 
 struct PrecedenceLevel {
@@ -93,61 +94,6 @@ static void exit_scope(struct Parser *parser) {
     }
 }
 
-static struct LiteralExpr *make_literal_expr(struct Arena *arena, struct Token val) {
-    struct LiteralExpr *expr = arena_push(arena, sizeof(struct LiteralExpr));
-    expr->base.type = EXPR_LITERAL;
-    expr->val = val;
-    return expr;
-}
-
-static struct UnaryExpr *make_unary_expr(struct Arena *arena, struct Node *rhs, struct Token op) {
-    struct UnaryExpr *expr = arena_push(arena, sizeof(struct UnaryExpr));
-    expr->base.type = EXPR_UNARY;
-    expr->rhs = rhs;
-    expr->op = op;
-    return expr;
-}
-
-static struct BinaryExpr *make_binary_expr(struct Arena *arena, struct Node *lhs, struct Node *rhs, struct Token op) {
-    struct BinaryExpr *expr = arena_push(arena, sizeof(struct BinaryExpr));
-    expr->base.type = EXPR_BINARY;
-    expr->lhs = lhs;
-    expr->rhs = rhs;
-    expr->op = op;
-    return expr;
-}
-
-static struct IfExpr *make_if_expr(struct Arena *arena, struct Node *test, struct BlockExpr *if_block, struct BlockExpr *else_block) {
-    struct IfExpr *expr = arena_push(arena, sizeof(struct IfExpr));
-    expr->base.type = EXPR_IF;
-    expr->test = test;
-    expr->true_block = if_block;
-    expr->else_block = else_block;
-    return expr;
-}
-
-static struct BlockExpr *make_block_expr(struct Arena *arena, struct NodeList *node_list) {
-    struct BlockExpr *expr = arena_push(arena, sizeof(struct BlockExpr));
-    expr->base.type = EXPR_BLOCK;
-    expr->node_list = node_list;
-    return expr;
-}
-
-static struct ExprStmt *make_expr_stmt(struct Arena *arena, struct Node *expr) {
-    struct ExprStmt *stmt = arena_push(arena, sizeof(struct ExprStmt));
-    stmt->base.type = STMT_EXPR;
-    stmt->expr = expr;
-    return stmt;
-}
-
-static struct VarStmt *make_var_stmt(struct Arena *arena, struct Token id, struct Node *expr) {
-    struct VarStmt *stmt = arena_push(arena, sizeof(struct VarStmt));
-    stmt->base.type = STMT_VAR;
-    stmt->id = id;
-    stmt->expr = expr;
-    return stmt;
-}
-
 static struct BlockExpr *parse_block_expr(struct Arena *arena, struct Parser *parser);
 
 static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser);
@@ -212,7 +158,7 @@ static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser) 
         return NULL;
     
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, parser->current, "expected `{`");
+        parse_error(parser, peek(parser), "expected `{`");
         return NULL;
     }
 
@@ -222,7 +168,7 @@ static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser) 
 
     advance(parser);
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, parser->current, "expected `{`");
+        parse_error(parser, peek(parser), "expected `{`");
         return NULL;
     }
 
@@ -233,7 +179,7 @@ static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser) 
 static struct VarStmt *parse_var_stmt(struct Arena *arena, struct Parser *parser) {
     struct Token id = advance(parser);
     if (id.type != TOKEN_IDENTIFIER) {
-        parse_error(parser, parser->current, "expected identifier");
+        parse_error(parser, peek(parser), "expected identifier");
         return NULL;
     }
     switch (advance(parser).type) {
@@ -255,8 +201,8 @@ static struct VarStmt *parse_var_stmt(struct Arena *arena, struct Parser *parser
 }
 
 static struct BlockExpr *parse_block_expr(struct Arena *arena, struct Parser *parser) {
-    struct NodeList *head = arena_push(arena, sizeof(struct NodeList));
-    struct NodeList *tail = head;
+    struct NodeList *list = arena_push(arena, sizeof(struct NodeList));
+    struct BlockExpr *block = make_block_expr(arena, list);
     struct Node *node;
     enum TokenType type;
     while (true) {
@@ -290,25 +236,26 @@ static struct BlockExpr *parse_block_expr(struct Arena *arena, struct Parser *pa
             advance(parser);
             node = (struct Node*) make_expr_stmt(arena, node);
         }
-        tail->node = node;
-        tail->next = arena_push(arena, sizeof(struct NodeList));
-        tail = tail->next;
+        list->node = node;
+        list->next = arena_push(arena, sizeof(struct NodeList));
+        list = list->next;
     }
-    return make_block_expr(arena, head);
+    return block;
 }
 
 struct BlockExpr *parse(struct Arena *arena, const char *source) {
     struct Scanner scanner;
     init_scanner(&scanner, source);
-    if (!matching_braces(&scanner)) {
+    if (!matching_braces(&scanner))
         return NULL;
-    }
+    
     init_scanner(&scanner, source);
     struct Parser parser;
     parser.scanner = scanner,
     parser.next = next_token(&parser.scanner),
     parser.had_error = false;
     advance(&parser);
+    
     struct BlockExpr *block = parse_block_expr(arena, &parser);
     return parser.had_error ? NULL : block;
 }
