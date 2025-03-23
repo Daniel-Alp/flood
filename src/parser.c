@@ -67,13 +67,13 @@ bool matching_braces(struct Scanner *scanner) {
         } else if (token.type == TOKEN_RIGHT_BRACE ) {
             depth--;
             if (depth < 0) {
-                error(token, "unmatched bracket", scanner->source);
+                error(token, "unmatched brace", scanner->source);
                 return false;
             }
         }
     }
     if (depth > 0) {
-        error(stack[depth-1], "unmatched bracket", scanner->source);
+        error(stack[depth-1], "unmatched brace", scanner->source);
         return false;
     }
     return true;
@@ -212,7 +212,7 @@ static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser) 
         return NULL;
     
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, parser->current, "expected '{'");
+        parse_error(parser, parser->current, "expected `{`");
         return NULL;
     }
 
@@ -222,7 +222,7 @@ static struct IfExpr *parse_if_expr(struct Arena *arena, struct Parser *parser) 
 
     advance(parser);
     if (advance(parser).type != TOKEN_LEFT_BRACE) {
-        parse_error(parser, parser->current, "expected '{'");
+        parse_error(parser, parser->current, "expected `{`");
         return NULL;
     }
 
@@ -236,26 +236,22 @@ static struct VarStmt *parse_var_stmt(struct Arena *arena, struct Parser *parser
         parse_error(parser, parser->current, "expected identifier");
         return NULL;
     }
-    if (peek(parser).type == TOKEN_SEMICOLON) {
-        advance(parser).type;
-        return make_var_stmt(arena, id, NULL);
-    }
-    struct Node *expr;
-    if (peek(parser).type == TOKEN_EQUAL) {
-        advance(parser);
-        expr = parse_expr(arena, parser, 0);
-        if (!expr)
+    switch (advance(parser).type) {
+        case TOKEN_SEMICOLON:
+            return make_var_stmt(arena, id, NULL);
+        case TOKEN_EQUAL:
+            struct Node* expr = parse_expr(arena, parser, 0);
+            if (!expr)
+                return NULL;
+            if (peek(parser).type == TOKEN_SEMICOLON)
+                advance(parser);
+            else
+                parse_error(parser, peek(parser), "expected `;`");
+            return make_var_stmt(arena, id, expr);
+        default:
+            parse_error(parser, peek(parser), "expected `=`");
             return NULL;
-    } else {
-        parse_error(parser, peek(parser), "expected =");
-        return NULL;
     }
-    if (peek(parser).type == TOKEN_SEMICOLON) {
-        advance(parser);
-    } else {
-        parse_error(parser, peek(parser), "expected ';'");
-    }
-    return make_var_stmt(arena, id, expr);
 }
 
 static struct BlockExpr *parse_block_expr(struct Arena *arena, struct Parser *parser) {
