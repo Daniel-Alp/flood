@@ -1,0 +1,335 @@
+TEST 0
+Line 3
+            /
+            ^
+Error: expected expression
+Line 6
+        }
+        ^
+Error: expected expression
+Line 9
+        }
+        ^
+Error: expected expression
+
+========================================
+TEST 1
+(BlockExpr
+  (BinaryExpr
+    =
+    (LiteralExpr x)
+    (BinaryExpr
+      +
+      (BinaryExpr
+        +
+        (BinaryExpr
+          *
+          (UnaryExpr
+            -
+            (UnaryExpr
+              -
+              (LiteralExpr 2)))
+          (BinaryExpr
+            +
+            (LiteralExpr 3)
+            (LiteralExpr 4)))
+        (BinaryExpr
+          *
+          (LiteralExpr 5)
+          (LiteralExpr 6)))
+      (BinaryExpr
+        /
+        (LiteralExpr 7)
+        (LiteralExpr 8)))))
+========================================
+TEST 2
+(BlockExpr
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr x)
+      (LiteralExpr 4)))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr y)
+      (LiteralExpr 3))))
+========================================
+TEST 3
+(BlockExpr
+  (IfExpr
+    (BinaryExpr
+      ||
+      (BinaryExpr
+        &&
+        (LiteralExpr true)
+        (LiteralExpr false))
+      (BinaryExpr
+        >=
+        (BinaryExpr
+          +
+          (LiteralExpr 3)
+          (LiteralExpr 4))
+        (LiteralExpr 0)))
+    (BlockExpr
+      (BinaryExpr
+        =
+        (LiteralExpr z)
+        (BinaryExpr
+          +
+          (LiteralExpr 4)
+          (LiteralExpr 5))))))
+========================================
+TEST 4
+(BlockExpr
+  (IfExpr
+    (BinaryExpr
+      ||
+      (UnaryExpr
+        !
+        (BinaryExpr
+          &&
+          (LiteralExpr true)
+          (LiteralExpr false)))
+      (BinaryExpr
+        >=
+        (BinaryExpr
+          +
+          (LiteralExpr 3)
+          (LiteralExpr 4))
+        (LiteralExpr 0)))
+    (BlockExpr
+      (BinaryExpr
+        +
+        (LiteralExpr 2)
+        (LiteralExpr 3)))
+    (BlockExpr
+      (BinaryExpr
+        =
+        (LiteralExpr x)
+        (LiteralExpr false)))))
+========================================
+TEST 5
+(BlockExpr
+  (BlockExpr
+    (BlockExpr
+      (LiteralExpr 3))))
+========================================
+TEST 6
+(BlockExpr
+  (IfExpr
+    (LiteralExpr true)
+    (BlockExpr
+      (BinaryExpr
+        =
+        (LiteralExpr x)
+        (LiteralExpr 3)))
+    (BlockExpr
+      (IfExpr
+        (LiteralExpr true)
+        (BlockExpr
+          (BinaryExpr
+            =
+            (LiteralExpr y)
+            (LiteralExpr 4))))))
+  (IfExpr
+    (LiteralExpr false)
+    (BlockExpr
+      (ExprStmt
+        (BinaryExpr
+          =
+          (LiteralExpr y)
+          (BinaryExpr
+            +
+            (LiteralExpr z)
+            (LiteralExpr 4))))
+      (BinaryExpr
+        =
+        (LiteralExpr y)
+        (BinaryExpr
+          +
+          (LiteralExpr 6)
+          (LiteralExpr 8))))))
+========================================
+TEST 7
+(BlockExpr
+  (ExprStmt
+    (BlockExpr
+      (ExprStmt
+        (LiteralExpr 3))))
+  (BlockExpr
+    (ExprStmt
+      (LiteralExpr 3))
+    (BlockExpr
+      (LiteralExpr 4))))
+========================================
+TEST 8
+Line 3
+    }
+    ^
+Error: expected expression
+
+========================================
+TEST 9
+Line 2
+        2 + + 
+            ^
+Error: expected expression
+
+========================================
+TEST 10
+Line 2
+        if / {
+           ^
+Error: expected expression
+
+========================================
+TEST 11
+Line 5
+    }
+    ^
+Error: expected '{'
+
+========================================
+TEST 12
+Line 4
+        }
+        ^
+Error: expected expression
+Line 7
+            / ;
+            ^
+Error: expected expression
+Line 10
+            + 4
+            ^
+Error: expected expression
+
+========================================
+TEST 13
+Line 2
+        x = + {
+            ^
+Error: expected expression
+
+========================================
+TEST 14
+Line 11
+        {
+        ^
+Error: unexpected token
+
+========================================
+TEST 15
+(BlockExpr
+  (ExprStmt
+    (LiteralExpr true))
+  (ExprStmt
+    (LiteralExpr false))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr x)
+      (LiteralExpr 4)))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr x)
+      (BinaryExpr
+        +
+        (LiteralExpr 2)
+        (BinaryExpr
+          *
+          (LiteralExpr 3)
+          (LiteralExpr 4)))))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr y)
+      (BinaryExpr
+        *
+        (BinaryExpr
+          +
+          (LiteralExpr 3)
+          (LiteralExpr 4))
+        (BinaryExpr
+          +
+          (LiteralExpr 5)
+          (LiteralExpr 6)))))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr y)
+      (BinaryExpr
+        +
+        (UnaryExpr
+          -
+          (UnaryExpr
+            -
+            (LiteralExpr 2)))
+        (LiteralExpr 3))))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr y)
+      (BinaryExpr
+        ||
+        (BinaryExpr
+          &&
+          (BinaryExpr
+            &&
+            (LiteralExpr true)
+            (LiteralExpr false))
+          (UnaryExpr
+            !
+            (LiteralExpr false)))
+        (LiteralExpr true))))
+  (ExprStmt
+    (BinaryExpr
+      =
+      (LiteralExpr z)
+      (BinaryExpr
+        +
+        (LiteralExpr 6)
+        (LiteralExpr 5)))))
+========================================
+TEST 16
+Line 11
+                    {
+                    ^
+Error: unexpected token
+
+========================================
+TEST 17
+Line 3
+            /
+            ^
+Error: expected expression
+Line 6
+        if / {
+           ^
+Error: expected expression
+
+========================================
+TEST 18
+Line 7
+                /
+                ^
+Error: expected expression
+
+========================================
+TEST 19
+Line 3
+            /
+            ^
+Error: expected expression
+Line 6
+        }
+        ^
+Error: expected expression
+Line 9
+        }
+        ^
+Error: expected expression
+
+========================================

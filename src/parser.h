@@ -3,7 +3,7 @@
 #include "scanner.h"
 
 enum NodeType {
-    EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL, EXPR_IF, EXPR_BLOCK, STMT_EXPR
+    EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL, EXPR_IF, EXPR_BLOCK, STMT_EXPR, STMT_VAR
 };
 
 struct Node {
@@ -47,6 +47,12 @@ struct IfExpr {
 
 struct ExprStmt {
     struct Node base;
+    struct Node *expr;
+};
+
+struct VarStmt {
+    struct Node base;
+    struct Token id;
     struct Node *expr;
 };
 

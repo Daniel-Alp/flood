@@ -60,6 +60,15 @@ static void print_expr_stmt(struct ExprStmt *stmt, u32 offset) {
     printf(")");
 }
 
+static void print_var_stmt(struct VarStmt *stmt, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(VarStmt\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s\n", stmt->id.length, stmt->id.start);
+    print_node(stmt->expr, offset + 2);
+    printf(")");
+}
+
 void print_node(struct Node *node, u32 offset) {
     if (!node) {
         return;
@@ -82,6 +91,9 @@ void print_node(struct Node *node, u32 offset) {
             break;
         case STMT_EXPR:
             print_expr_stmt((struct ExprStmt*) node, offset);
+            break;
+        case STMT_VAR:
+            print_var_stmt((struct VarStmt*) node, offset);
             break;
     }
 }
