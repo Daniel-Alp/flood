@@ -1,7 +1,0 @@
-{
-    if !(true && false) || 3 + 4 >= 0 {
-        2 + 3
-    } else {
-        x = false
-    }
-}
