@@ -2,39 +2,40 @@
 #include "scanner.h"
 
 void init_scanner(struct Scanner *scanner, const char *source) {
+    scanner->source = source;
     scanner->current = source;
     scanner->start = source;
     scanner->line = 1;
 }
 
-static char peek(struct Scanner *scanner) {
+static char at(struct Scanner *scanner) {
     return scanner->current[0];
 }
 
 static bool is_at_end(struct Scanner *scanner) {
-    return peek(scanner) == '\0';
+    return at(scanner) == '\0';
 }
 
-static char peek_next(struct Scanner *scanner) {
+static char next(struct Scanner *scanner) {
     if (is_at_end(scanner))
         return '\0';
     return scanner->current[1];
 }
 
-static char advance(struct Scanner *scanner) {
+static char bump(struct Scanner *scanner) {
     scanner->current++;
     return scanner->current[-1];
 }
 
 static void skip_whitespace(struct Scanner *scanner) {
     while (true) {
-        char c = peek(scanner);
+        char c = at(scanner);
         switch (c) {
             case '\n':
                 scanner->line++;
             case ' ':
             case '\t':
-                advance(scanner);
+                bump(scanner);
                 break;
             default:
                 return;
@@ -56,33 +57,33 @@ static bool is_alpha_digit(char c) {
 
 struct Token make_token(struct Scanner *scanner, enum TokenType type) {
     struct Token token = {
-        .type   = type,
-        .start  = scanner->start,
+        .type = type,
+        .start = scanner->start,
         .length = (scanner->current - scanner->start),
-        .line   = scanner->line,
+        .line = scanner->line,
     };
     return token;
 }
 
 static void number(struct Scanner *scanner) {
-    while(is_digit(peek(scanner)))
-        advance(scanner);
+    while(is_digit(at(scanner)))
+        bump(scanner);
 
-    if (peek(scanner) == '.' && is_digit(peek_next(scanner))) {
-        advance(scanner);
-        while (is_digit(peek(scanner)))
-            advance(scanner);
+    if (at(scanner) == '.' && is_digit(next(scanner))) {
+        bump(scanner);
+        while (is_digit(at(scanner)))
+            bump(scanner);
     }
 }
 
 static void identifier(struct Scanner *scanner) {
-    while(is_alpha_digit(peek(scanner)))
-        advance(scanner);
+    while(is_alpha_digit(at(scanner)))
+        bump(scanner);
 }
 
 static struct Token check_next(struct Scanner *scanner, char next, enum TokenType type1, enum TokenType type2) {
-    if (peek(scanner) == next) {
-        advance(scanner);
+    if (at(scanner) == next) {
+        bump(scanner);
         return make_token(scanner, type1);
     }
     return make_token(scanner, type2);
@@ -102,7 +103,7 @@ struct Token next_token(struct Scanner *scanner) {
     if (is_at_end(scanner))
         return make_token(scanner, TOKEN_EOF);
 
-    char c = advance(scanner);
+    char c = bump(scanner);
     switch (c) {
         case '+': return make_token(scanner, TOKEN_PLUS);
         case '-': return make_token(scanner, TOKEN_MINUS);

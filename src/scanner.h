@@ -40,6 +40,7 @@ struct Token {
 };
 
 struct Scanner {
+    const char *source;
     const char *start;
     const char *current;  
     i32 line;
