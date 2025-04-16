@@ -24,7 +24,6 @@ int main () {
     if (!expr)
         exit(1);
     print_node((struct Node*)expr, 0);
-    printf("\n");
 
     free_arena(&arena);
     fclose(fp);

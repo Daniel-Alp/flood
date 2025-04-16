@@ -3,7 +3,7 @@
 
 static void print_unary(struct UnaryExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(UnaryExpr\n");
+    printf("(Unary\n");
     printf("%*s", offset + 2, "");
     printf("%.*s\n", expr->op.length, expr->op.start);
     print_node(expr->rhs, offset + 2);
@@ -12,7 +12,7 @@ static void print_unary(struct UnaryExpr *expr, u32 offset) {
 
 static void print_binary(struct BinaryExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(BinaryExpr\n");
+    printf("(Binary\n");
     printf("%*s", offset + 2, "");
     printf("%.*s\n", expr->op.length, expr->op.start);
     print_node(expr->lhs, offset + 2);
@@ -23,12 +23,12 @@ static void print_binary(struct BinaryExpr *expr, u32 offset) {
 
 static void print_literal(struct LiteralExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(LiteralExpr %.*s)", expr->val.length, expr->val.start);
+    printf("(Literal %.*s)", expr->val.length, expr->val.start);
 }
 
 static void print_block(struct BlockExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(BlockExpr");
+    printf("(Block");
     struct NodeList* stmts = expr->stmts;
     while (stmts) {
         if (stmts->next)
@@ -41,7 +41,7 @@ static void print_block(struct BlockExpr *expr, u32 offset) {
 
 static void print_if(struct IfExpr *expr, u32 offset) {
     printf("%*s", offset, "");
-    printf("(IfExpr\n");
+    printf("(If\n");
     print_node(expr->cond, offset + 2);
     printf("\n");
     print_node((struct Node*) expr->thn, offset + 2);
@@ -61,7 +61,7 @@ static void print_expr_stmt(struct ExprStmt *stmt, u32 offset) {
 
 static void print_var(struct VarStmt *stmt, u32 offset) {
     printf("%*s", offset, "");
-    printf("(VarStmt\n");
+    printf("(Var\n");
     printf("%*s", offset + 2, "");
     printf("%.*s", stmt->id.length, stmt->id.start);
     if (stmt->init) {
@@ -97,4 +97,6 @@ void print_node(struct Node *node, u32 offset) {
             print_var((struct VarStmt*) node, offset);
             break;
     }
+    if (!offset)
+        printf("\n");
 }
