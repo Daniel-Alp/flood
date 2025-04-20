@@ -149,7 +149,7 @@ static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 p
         case TOKEN_NUMBER:
         case TOKEN_IDENTIFIER:
             bump(parser);
-            lhs = (struct Node*) mk_literal(arena, token);
+            lhs = (struct Node*)mk_literal(arena, token);
             break;
         case TOKEN_LEFT_PAREN:
             bump(parser);
@@ -163,15 +163,15 @@ static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 p
             lhs = parse_expr(arena, parser, 15);
             if (!lhs)
                 return NULL;
-            lhs = (struct Node*) mk_unary(arena, lhs, token);
+            lhs = (struct Node*)mk_unary(arena, lhs, token);
             break;
         case TOKEN_IF:
-            lhs = (struct Node*) parse_if(arena, parser);
+            lhs = (struct Node*)parse_if(arena, parser);
             if (!lhs)
                 return NULL;
             break;
         case TOKEN_LEFT_BRACE:
-            lhs = (struct Node*) parse_block(arena, parser);
+            lhs = (struct Node*)parse_block(arena, parser);
             break;
         default:
             emit_parse_error(token, "unexpected token", parser);
@@ -215,7 +215,7 @@ static struct BlockExpr *parse_block(struct Arena *arena, struct Parser *parser)
         } else {
             node = parse_expr(arena, parser, 0);
             if (node && at(parser).type != TOKEN_RIGHT_BRACE && expect(parser, TOKEN_SEMICOLON, "expected `;`"))
-                node = (struct Node*) mk_expr_stmt(arena, node);
+                node = (struct Node*)mk_expr_stmt(arena, node);
         }
         if (!node)
             recover(parser);

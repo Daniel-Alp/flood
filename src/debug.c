@@ -44,10 +44,10 @@ static void print_if(struct IfExpr *expr, u32 offset) {
     printf("(If\n");
     print_node(expr->cond, offset + 2);
     printf("\n");
-    print_node((struct Node*) expr->thn, offset + 2);
+    print_node((struct Node*)expr->thn, offset + 2);
     if (expr->els) {
         printf("\n");
-        print_node((struct Node*) expr->els, offset + 2);
+        print_node((struct Node*)expr->els, offset + 2);
     }
     printf(")");
 }
@@ -76,25 +76,25 @@ void print_node(struct Node *node, u32 offset) {
         return;
     switch (node->type) {
         case EXPR_LITERAL:
-            print_literal((struct LiteralExpr*) node, offset);
+            print_literal((struct LiteralExpr*)node, offset);
             break;
         case EXPR_UNARY:
-            print_unary((struct UnaryExpr*) node, offset);
+            print_unary((struct UnaryExpr*)node, offset);
             break;
         case EXPR_BINARY:
-            print_binary((struct BinaryExpr*) node, offset);
+            print_binary((struct BinaryExpr*)node, offset);
             break;
         case EXPR_BLOCK:
-            print_block((struct BlockExpr*) node, offset);
+            print_block((struct BlockExpr*)node, offset);
             break;
         case EXPR_IF:
-            print_if((struct IfExpr*) node, offset);
+            print_if((struct IfExpr*)node, offset);
             break;
         case STMT_EXPR:
-            print_expr_stmt((struct ExprStmt*) node, offset);
+            print_expr_stmt((struct ExprStmt*)node, offset);
             break;
         case STMT_VAR:
-            print_var((struct VarStmt*) node, offset);
+            print_var((struct VarStmt*)node, offset);
             break;
     }
     if (!offset)
