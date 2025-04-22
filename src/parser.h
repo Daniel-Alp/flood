@@ -3,31 +3,38 @@
 #include "scanner.h"
 
 enum NodeType {
-    EXPR_UNARY, 
-    EXPR_BINARY, 
-    EXPR_LITERAL, 
-    EXPR_IF, 
-    EXPR_BLOCK, 
-    STMT_EXPR, 
-    STMT_VAR
+    NODE_UNARY, 
+    NODE_BINARY, 
+    NODE_LITERAL, 
+    NODE_VARIABLE,
+    NODE_IF, 
+    NODE_BLOCK, 
+    NODE_EXPR_STMT, 
+    NODE_VAR_DECL
 };
 
 struct Node {
     enum NodeType type;
 };
 
-struct LiteralExpr {
+struct LiteralNode {
     struct Node base;
     struct Token val;
 };
 
-struct UnaryExpr {
+struct VariableNode {
+    struct Node base;
+    struct Token name;
+    u32 id;
+};
+
+struct UnaryNode {
     struct Node base;
     struct Node *rhs;
     struct Token op;
 };
 
-struct BinaryExpr {
+struct BinaryNode {
     struct Node base;
     struct Node *lhs;
     struct Node *rhs;
@@ -39,26 +46,26 @@ struct NodeList {
     struct NodeList *next;
 };
 
-struct BlockExpr {
+struct BlockNode {
     struct Node base;
     struct NodeList *stmts;
 };
 
-struct IfExpr {
+struct IfNode {
     struct Node base;
     struct Node *cond;
-    struct BlockExpr *thn;
-    struct BlockExpr *els;
+    struct BlockNode *thn;
+    struct BlockNode *els;
 };
 
-struct ExprStmt {
+struct ExprStmtNode {
     struct Node base;
     struct Node *expr;
 };
 
-struct VarStmt {
+struct VarDeclNode {
     struct Node base;
-    struct Token id;
+    struct VariableNode *var;
     struct Node *init;
 };
 
@@ -66,6 +73,7 @@ struct Parser {
     struct Scanner scanner;
     struct Token at;
     bool had_error;
+    bool panic;
 };
 
-struct BlockExpr *parse(struct Arena *arena, const char *source);
+struct BlockNode *parse(struct Arena *arena, const char *source);

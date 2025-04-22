@@ -1,4 +1,7 @@
 {
-    var x;
-    x + 3;
+    var x = 1;
+    var y = x;
+    if true {
+        x + y
+    }
 }

@@ -18,7 +18,9 @@ void emit_error(struct Token token, const char *msg, const char *source) {
     printf("Error: %s\n", msg);
 }
 
-void emit_parse_error(struct Token token, const char *msg, struct Parser *parser) {
-    emit_error(token, msg, parser->scanner.source);
+void emit_parse_error(struct Parser *parser, const char *msg) {
+    if (!parser->panic)
+        emit_error(parser->at, msg, parser->scanner.source);
     parser->had_error = true;
+    parser->panic = true;
 }

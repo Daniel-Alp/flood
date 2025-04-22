@@ -20,7 +20,7 @@ int main () {
 
     struct Arena arena;
     init_arena(&arena);
-    struct BlockExpr *expr = parse(&arena, source);
+    struct BlockNode *expr = parse(&arena, source);
     if (!expr)
         exit(1);
     print_node((struct Node*)expr, 0);
