@@ -1,0 +1,164 @@
+#include <string.h>
+#include "symtable.h"
+#include "../util/memory.h"
+#include "error.h"
+
+// Name resolution associates every variable in the AST with an id
+// For example if our program was 
+// 
+//      var x = 40;
+//      var y = 50;
+//      {
+//          var x = 60;
+//          x = x + y;
+//      }
+// 
+// Then after name resolution we would have
+// 
+//      var $0 = 40;
+//      var $1 = 50;
+//      {
+//          var $2 = 60;
+//          $2 = $2 + $1;
+//      }
+// 
+// The symbol table is a map from these ids to a description of the variable, 
+// which is used in later stages (typechecking, bytecode generation)
+
+void init_symtable(struct SymTable *st) {
+    st->count = 0;
+    st->cap = 8;
+    st->symbols = allocate(st->cap * sizeof(struct Symbol));
+}
+
+void free_symtable(struct SymTable *st) {
+    st->count = 0;
+    st->cap = 0;
+    st->symbols = NULL;
+}
+
+static u32 push_symtable(struct SymTable *st, struct Symbol sym) {
+    if (st->count == st->cap) {
+        st->cap *= 2;
+        st->symbols = reallocate(st->symbols, st->cap * sizeof(struct Symbol));
+    }
+    st->symbols[st->count] = sym;
+    st->count++;
+    return st->count-1;
+}
+
+static struct Local *resolve_local(struct Resolver *resolver, struct Token name) {
+    for (i32 i = resolver->count-1; i >= 0; i--) {
+        struct Local *local = &resolver->locals[i];
+        // TODO speedup comparison
+        if (name.length == local->name.length && memcmp(name.start, local->name.start, name.length) == 0)
+            return local;
+    }
+    return NULL;
+}
+
+static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *resolver);
+static void visit_block(struct SymTable *st, struct BlockNode *node, struct Resolver *resolver);
+
+static void visit_variable(struct SymTable *st, struct VariableNode *node, struct Resolver *resolver) {
+    struct Local *local = resolve_local(resolver, node->name);
+    if (local) {
+        node->id = local->id;
+    } else {
+        node->id = -1;
+        emit_resolver_error(resolver, node->name, "unbound identifier");
+    }
+}
+
+static void visit_unary(struct SymTable *st, struct UnaryNode *node, struct Resolver *resolver) {
+    visit_node(st, node->rhs, resolver);
+}
+
+static void visit_binary(struct SymTable *st, struct BinaryNode *node, struct Resolver *resolver) {
+    visit_node(st, node->lhs, resolver);
+    visit_node(st, node->rhs, resolver);
+}
+
+static void visit_if(struct SymTable *st, struct IfNode *node, struct Resolver *resolver) {
+    visit_node(st, node->cond, resolver);
+    visit_block(st, node->thn, resolver);
+    if (node->els)
+        visit_block(st, node->els, resolver);
+}
+
+static void visit_block(struct SymTable *st, struct BlockNode *node, struct Resolver *resolver) {
+    resolver->depth++;
+    struct NodeList* stmts = node->stmts;
+    while (stmts) {
+        visit_node(st, stmts->node, resolver);
+        stmts = stmts->next;
+    }
+    resolver->depth--;
+    while (resolver->count-1 >= 0) {
+        if (resolver->locals[resolver->count-1].depth == resolver->depth)
+            break;
+        resolver->count--;
+    }
+}
+
+static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct Resolver *resolver) {
+    if (node->init)
+        visit_node(st, node->init, resolver);
+    
+    struct Local *local = resolve_local(resolver, node->var->name);
+    if (local && local->depth == resolver->depth) {
+        emit_resolver_error(resolver, node->var->name, "redeclared variable");
+    } else {
+        struct Symbol sym = {
+            .name = node->var->name,
+        };
+        u32 id = push_symtable(st, sym);
+        node->var->id = id;
+        // TODO error if more than 256 locals in scope
+        struct Local local = {
+            .depth = resolver->depth,
+            .id = id,
+            .name = node->var->name
+        };
+        resolver->locals[resolver->count] = local;
+        resolver->count++;
+    }
+}
+
+static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *resolver) {
+    switch (node->type) {
+        case NODE_LITERAL:
+            return;
+        case NODE_VARIABLE:
+            visit_variable(st, (struct VariableNode*)node, resolver);
+            break;
+        case NODE_UNARY:
+            visit_unary(st, (struct UnaryNode*)node, resolver);
+            break;
+        case NODE_BINARY:
+            visit_binary(st, (struct BinaryNode*)node, resolver);
+            break;
+        case NODE_IF:
+            visit_if(st, (struct IfNode*)node, resolver);
+            break;
+        case NODE_BLOCK:
+            visit_block(st, (struct BlockNode*)node, resolver);
+            break;
+        case NODE_EXPR_STMT:
+            visit_node(st, ((struct ExprStmtNode*)node)->expr, resolver);
+            break;
+        case NODE_VAR_DECL:
+            visit_var_decl(st, (struct VarDeclNode*)node, resolver);
+            break;
+    }
+}
+
+bool resolve(struct SymTable *st, struct Node *node) {
+    struct Resolver resolver = {
+        .count = 0,
+        .depth = 0,
+        .had_error = false
+    };
+    visit_node(st, node, &resolver);
+    return !resolver.had_error;
+}

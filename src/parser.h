@@ -25,7 +25,7 @@ struct LiteralNode {
 struct VariableNode {
     struct Node base;
     struct Token name;
-    u32 id;
+    i32 id;
 };
 
 struct UnaryNode {

@@ -28,7 +28,7 @@ static void print_literal(struct LiteralNode *node, u32 offset) {
 
 static void print_variable(struct VariableNode *node, u32 offset) {
     printf("%*s", offset, "");
-    printf("(Variable %.*s)", node->name.length, node->name.start);
+    printf("(Variable %.*s id: %d)", node->name.length, node->name.start, node->id);
 }
 
 static void print_block(struct BlockNode *node, u32 offset) {
@@ -36,8 +36,7 @@ static void print_block(struct BlockNode *node, u32 offset) {
     printf("(Block");
     struct NodeList* stmts = node->stmts;
     while (stmts) {
-        if (stmts->next)
-            printf("\n");
+        printf("\n");
         print_node(stmts->node, offset + 2);
         stmts = stmts->next;
     }
@@ -76,8 +75,6 @@ static void print_var(struct VarDeclNode *node, u32 offset) {
 }
 
 void print_node(struct Node *node, u32 offset) {
-    if (!node)
-        return;
     switch (node->type) {
         case NODE_LITERAL:
             print_literal((struct LiteralNode*)node, offset);

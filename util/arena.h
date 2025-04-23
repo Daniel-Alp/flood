@@ -12,4 +12,6 @@ void free_arena(struct Arena *arena);
 
 void *arena_push(struct Arena *arena, u64 size);
 
+void arena_pop(struct Arena *arena, u64 size);
+
 void *arena_clear(struct Arena *arena);

@@ -1,7 +1,10 @@
 {
-    var x = 1;
-    var y = x;
-    if true {
-        x + y
+    var y;
+    var x;
+    {
+        var x;
+        if x + y == 0 {
+            var x;
+        }
     }
 }

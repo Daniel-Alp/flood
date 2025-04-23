@@ -2,6 +2,7 @@
 #include "../util/arena.h"
 #include "parser.h"
 #include "error.h"
+#include "debug.h"
 
 struct PrecLvl {
     u32 old;
@@ -47,10 +48,10 @@ static struct LiteralNode *mk_literal(struct Arena *arena, struct Token val) {
 }
 
 static struct VariableNode *mk_variable(struct Arena *arena, struct Token name) {
-    struct VariableNode *node = arena_push(arena, sizeof(struct LiteralNode));
+    struct VariableNode *node = arena_push(arena, sizeof(struct VariableNode));
     node->base.type = NODE_VARIABLE;
     node->name = name;
-    node->id = 0;
+    node->id = -1;
     return node;
 }
 
@@ -201,9 +202,16 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
     if (parser->panic)
         return NULL;
     expect(parser, TOKEN_LEFT_BRACE, "expected `{`");
-    struct NodeList *stmts = arena_push(arena, sizeof(struct NodeList));
-    struct BlockNode *block = mk_block(arena, stmts);
+    struct NodeList *first = NULL;
+    struct NodeList *cur = NULL;
     while (!eat(parser, TOKEN_RIGHT_BRACE)) {
+        if (first) {
+            cur->next = arena_push(arena, sizeof(struct NodeList));
+            cur = cur->next;
+        } else {
+            cur = arena_push(arena, sizeof(struct NodeList));
+            first = cur;
+        }
         enum TokenType type = at(parser).type;
         struct Node *node;
         if (type == TOKEN_EOF) {
@@ -230,11 +238,10 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
             recover(parser);
             parser->panic = false;
         }
-        stmts->node = node;
-        stmts->next = arena_push(arena, sizeof(struct NodeList));
-        stmts = stmts->next;
+        cur->node = node;
+        cur->next = NULL;
     }
-    return block;
+    return mk_block(arena, first);
 }
 
 static struct IfNode *parse_if(struct Arena *arena, struct Parser *parser) {

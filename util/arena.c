@@ -19,6 +19,10 @@ void *arena_push(struct Arena *arena, u64 size) {
     return ptr;
 }
 
+void arena_pop(struct Arena *arena, u64 size) {
+    arena->stack_pos -= size;
+}
+
 void *arena_clear(struct Arena *arena) {
     arena->stack_pos = 0;
 }
