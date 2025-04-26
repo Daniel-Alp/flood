@@ -1,9 +1,8 @@
 #include <string.h>
-#include "symtable.h"
 #include "../util/memory.h"
 #include "error.h"
 
-// Name resolution associates every variable in the AST with an id
+// Name resolution associates every variable in the program with an id
 // For example if our program was 
 // 
 //      var x = 40;
@@ -32,9 +31,12 @@ void init_symtable(struct SymTable *st) {
 }
 
 void free_symtable(struct SymTable *st) {
+    for (i32 i = 0; i < st->count; i++)
+        free_ty(&st->symbols[i].ty);
+    release(st->symbols);
+    st->symbols = NULL;
     st->count = 0;
     st->cap = 0;
-    st->symbols = NULL;
 }
 
 static u32 push_symtable(struct SymTable *st, struct Symbol sym) {
@@ -88,7 +90,7 @@ static void visit_if(struct SymTable *st, struct IfNode *node, struct Resolver *
 
 static void visit_block(struct SymTable *st, struct BlockNode *node, struct Resolver *resolver) {
     resolver->depth++;
-    struct NodeList* stmts = node->stmts;
+    struct NodeList *stmts = node->stmts;
     while (stmts) {
         visit_node(st, stmts->node, resolver);
         stmts = stmts->next;
@@ -108,25 +110,26 @@ static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct
     struct Local *local = resolve_local(resolver, node->var->name);
     if (local && local->depth == resolver->depth) {
         emit_resolver_error(resolver, node->var->name, "redeclared variable");
-    } else {
-        struct Symbol sym = {
-            .name = node->var->name,
-        };
-        u32 id = push_symtable(st, sym);
-        node->var->id = id;
-        // TODO error if more than 256 locals in scope
-        struct Local local = {
-            .depth = resolver->depth,
-            .id = id,
-            .name = node->var->name
-        };
-        resolver->locals[resolver->count] = local;
-        resolver->count++;
+        return;
     }
+    struct Symbol sym;
+    init_ty(&sym.ty);
+    push_ty(&sym.ty, TY_ANY);
+    u32 id = push_symtable(st, sym);
+    node->var->id = id;
+
+    // TODO error if more than 256 locals in scope
+    struct Local new = {
+        .depth = resolver->depth,
+        .id = id,
+        .name = node->var->name
+    };
+    resolver->locals[resolver->count] = new;
+    resolver->count++;
 }
 
 static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *resolver) {
-    switch (node->type) {
+    switch (node->tag) {
         case NODE_LITERAL:
             return;
         case NODE_VARIABLE:
@@ -153,7 +156,7 @@ static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *
     }
 }
 
-bool resolve(struct SymTable *st, struct Node *node) {
+bool resolve_names(struct SymTable *st, struct Node *node) {
     struct Resolver resolver = {
         .count = 0,
         .depth = 0,

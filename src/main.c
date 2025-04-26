@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include "../util/memory.h"
 #include "common.h"
-#include "parser.h"
-#include "symtable.h"
+#include "parse.h"
+#include "resolve.h"
+#include "ty.h"
 #include "debug.h"
 
 int main () {
@@ -16,14 +17,13 @@ int main () {
     fseek(fp, 0, SEEK_SET);
 
     // TODO error if source code contains null bytes
-    char *source = allocate(length+2);
-    if (!source)
+    char *buf = allocate(length+2);
+    if (!buf)
         exit(1);
-    source[0] = '\0';
-    source++;
+    buf[0] = '\0';
+    buf[length+1] = '\0';
+    char *source = buf+1;
     fread(source, 1, length, fp);
-    source[length] = '\0';
-
     struct Arena arena;
     init_arena(&arena);
     struct BlockNode *block = parse(&arena, source);
@@ -32,11 +32,14 @@ int main () {
 
     struct SymTable st;
     init_symtable(&st);
-    if (!resolve(&st, (struct Node*)block))
+    if (!resolve_names(&st, (struct Node*)block))
         exit(1);
-    print_node((struct Node*)block, 0);
+
+    resolve_tys(&st, (struct Node*)block);
+    print_symtable(&st);
     
     free_symtable(&st);
     free_arena(&arena);
+    release(buf);
     fclose(fp);
 }

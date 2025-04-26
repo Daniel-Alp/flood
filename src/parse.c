@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "../util/arena.h"
-#include "parser.h"
+#include "parse.h"
 #include "error.h"
 #include "debug.h"
 
@@ -42,14 +42,14 @@ struct PrecLvl infix_prec[] = {
 
 static struct LiteralNode *mk_literal(struct Arena *arena, struct Token val) {
     struct LiteralNode *node = arena_push(arena, sizeof(struct LiteralNode));
-    node->base.type = NODE_LITERAL;
+    node->base.tag = NODE_LITERAL;
     node->val = val;
     return node;
 }
 
 static struct VariableNode *mk_variable(struct Arena *arena, struct Token name) {
     struct VariableNode *node = arena_push(arena, sizeof(struct VariableNode));
-    node->base.type = NODE_VARIABLE;
+    node->base.tag = NODE_VARIABLE;
     node->name = name;
     node->id = -1;
     return node;
@@ -57,24 +57,24 @@ static struct VariableNode *mk_variable(struct Arena *arena, struct Token name) 
 
 struct UnaryNode *mk_unary(struct Arena *arena, struct Node *rhs, struct Token op) {
     struct UnaryNode *node = arena_push(arena, sizeof(struct UnaryNode));
-    node->base.type = NODE_UNARY;
+    node->base.tag = NODE_UNARY;
     node->rhs = rhs;
     node->op = op;
     return node;
 }
 
 struct BinaryNode *mk_binary(struct Arena *arena, struct Node *lhs, struct Node *rhs, struct Token op) {
-    struct BinaryNode *expr = arena_push(arena, sizeof(struct BinaryNode));
-    expr->base.type = NODE_BINARY;
-    expr->lhs = lhs;
-    expr->rhs = rhs;
-    expr->op = op;
-    return expr;
+    struct BinaryNode *node = arena_push(arena, sizeof(struct BinaryNode));
+    node->base.tag = NODE_BINARY;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    node->op = op;
+    return node;
 }
 
 static struct IfNode *mk_if(struct Arena *arena, struct Node *cond, struct BlockNode *thn, struct BlockNode *els) {
     struct IfNode *node = arena_push(arena, sizeof(struct IfNode));
-    node->base.type = NODE_IF;
+    node->base.tag = NODE_IF;
     node->cond = cond;
     node->thn = thn;
     node->els = els;
@@ -82,23 +82,23 @@ static struct IfNode *mk_if(struct Arena *arena, struct Node *cond, struct Block
 }
 
 static struct VarDeclNode *mk_var_decl(struct Arena *arena, struct VariableNode *var, struct Node *init) {
-    struct VarDeclNode *stmt = arena_push(arena, sizeof(struct VarDeclNode));
-    stmt->base.type = NODE_VAR_DECL;
-    stmt->var = var;
-    stmt->init = init;
-    return stmt;
+    struct VarDeclNode *node = arena_push(arena, sizeof(struct VarDeclNode));
+    node->base.tag = NODE_VAR_DECL;
+    node->var = var;
+    node->init = init;
+    return node;
 }
 
 static struct BlockNode *mk_block(struct Arena *arena, struct NodeList *stmts) {
     struct BlockNode *node = arena_push(arena, sizeof(struct BlockNode));
-    node->base.type = NODE_BLOCK;
+    node->base.tag = NODE_BLOCK;
     node->stmts = stmts;
     return node;
 }
 
 static struct ExprStmtNode *mk_expr_stmt(struct Arena *arena, struct Node *expr) {
     struct ExprStmtNode *node = arena_push(arena, sizeof(struct ExprStmtNode));
-    node->base.type = NODE_EXPR_STMT;
+    node->base.tag = NODE_EXPR_STMT;
     node->expr = expr;
     return node;
 }
@@ -111,42 +111,40 @@ static void bump(struct Parser *parser) {
     parser->at = next_token(&(parser->scanner));
 }
 
-// advance if current token type equals expected type
-static bool eat(struct Parser *parser, enum TokenType type) {
-    if (at(parser).type == type) {
+// advance if current token kind equals expected kind
+static bool eat(struct Parser *parser, enum TokenKind kind) {
+    if (at(parser).kind == kind) {
         bump(parser);
         return true;
     }
     return false;
 }
 
-static bool expect(struct Parser *parser, enum TokenType type, const char *msg) {
-    if (eat(parser, type))
+static bool expect(struct Parser *parser, enum TokenKind kind, const char *msg) {
+    if (eat(parser, kind))
         return true;
     emit_parse_error(parser, msg);
     return false;
 }
 
-// discard unmatched tokens until at unmatched `}` or EOF
+// discard tokens until at unmatched `}` or EOF
 static void recover(struct Parser *parser) {
     i32 depth = 0;
-    enum TokenType type;
+    enum TokenKind kind;
     while (true) {
-        type = at(parser).type;
-        if (type == TOKEN_LEFT_BRACE)
+        kind = at(parser).kind;
+        if (kind == TOKEN_LEFT_BRACE)
             depth++;
-        if (type == TOKEN_RIGHT_BRACE)
+        if (kind == TOKEN_RIGHT_BRACE)
             depth--;
-        if (depth == -1 || type == TOKEN_EOF)
+        if (depth == -1 || kind == TOKEN_EOF)
             break;
         bump(parser);
     }
 }
 
 static struct IfNode *parse_if(struct Arena *arena, struct Parser *parser);
-
 static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser);
-
 static struct VarDeclNode *parse_var_decl(struct Arena *arena, struct Parser *parser);
 
 static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 prec_lvl) {
@@ -154,7 +152,7 @@ static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 p
         return NULL;
     struct Node *lhs = NULL;
     struct Token token = at(parser);
-    switch (token.type) {
+    switch (token.kind) {
         case TOKEN_TRUE:
         case TOKEN_FALSE:
         case TOKEN_NUMBER:
@@ -187,8 +185,8 @@ static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 p
     }
     while(true) {
         token = at(parser);
-        u32 old_lvl = infix_prec[token.type].old;
-        u32 new_lvl = infix_prec[token.type].new;
+        u32 old_lvl = infix_prec[token.kind].old;
+        u32 new_lvl = infix_prec[token.kind].new;
         if (old_lvl <= prec_lvl)
             break;
         bump(parser);
@@ -212,23 +210,23 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
             cur = arena_push(arena, sizeof(struct NodeList));
             first = cur;
         }
-        enum TokenType type = at(parser).type;
+        enum TokenKind kind = at(parser).kind;
         struct Node *node;
-        if (type == TOKEN_EOF) {
+        if (kind == TOKEN_EOF) {
             emit_parse_error(parser, "unexpected EOF");
             break;
-        } else if (type == TOKEN_SEMICOLON) {
+        } else if (kind == TOKEN_SEMICOLON) {
             bump(parser);
             continue;
-        } else if (type == TOKEN_LEFT_BRACE) {
+        } else if (kind == TOKEN_LEFT_BRACE) {
             node = (struct Node*) parse_block(arena, parser);
-        } else if (type == TOKEN_IF) {
+        } else if (kind == TOKEN_IF) {
             node = (struct Node*) parse_if(arena, parser);
-        } else if (type == TOKEN_VAR) {
+        } else if (kind == TOKEN_VAR) {
             node = (struct Node*) parse_var_decl(arena, parser);
         } else {
             node = parse_expr(arena, parser, 0);
-            if (!parser->panic && at(parser).type != TOKEN_RIGHT_BRACE) {
+            if (!parser->panic && at(parser).kind != TOKEN_RIGHT_BRACE) {
                 expect(parser, TOKEN_SEMICOLON, "expected `;`");
                 parser->panic = false;
                 node = (struct Node*)mk_expr_stmt(arena, node);
@@ -260,7 +258,7 @@ static struct VariableNode *parse_variable(struct Arena *arena, struct Parser *p
     if (parser->panic)
         return NULL;
     struct Token name = at(parser);
-    if (name.type != TOKEN_IDENTIFIER)
+    if (name.kind != TOKEN_IDENTIFIER)
         emit_parse_error(parser, "expected identifier");
     else
         bump(parser);

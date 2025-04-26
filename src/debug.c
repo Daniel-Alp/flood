@@ -75,7 +75,7 @@ static void print_var(struct VarDeclNode *node, u32 offset) {
 }
 
 void print_node(struct Node *node, u32 offset) {
-    switch (node->type) {
+    switch (node->tag) {
         case NODE_LITERAL:
             print_literal((struct LiteralNode*)node, offset);
             break;
@@ -103,4 +103,29 @@ void print_node(struct Node *node, u32 offset) {
     }
     if (!offset)
         printf("\n");
+}
+
+void print_ty(struct Ty *ty) {
+    switch(ty_head(ty)) {
+        case TY_ANY:
+            printf("`Any`");
+            break;
+        case TY_NUM:
+            printf("`Num`");
+            break;
+        case TY_BOOL:
+            printf("`Bool`");
+            break;
+        case TY_UNIT:
+            printf("`Unit`");
+            break;
+    }
+}
+
+void print_symtable(struct SymTable *st) {
+    for (i32 i = 0; i < st->count; i++) {
+        printf("id: %d\tty: ", i);
+        print_ty(&st->symbols[i].ty);
+        printf("\n");
+    }    
 }

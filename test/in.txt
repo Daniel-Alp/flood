@@ -1,10 +1,6 @@
 {
-    var y;
-    var x;
-    {
-        var x;
-        if x + y == 0 {
-            var x;
-        }
+    if true false {
+        var x = 3;
     }
+    var y;
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "../util/arena.h"
-#include "scanner.h"
+#include "scan.h"
 
 enum NodeType {
     NODE_UNARY, 
@@ -14,7 +14,7 @@ enum NodeType {
 };
 
 struct Node {
-    enum NodeType type;
+    enum NodeType tag;
 };
 
 struct LiteralNode {

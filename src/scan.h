@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-enum TokenType {
+enum TokenKind {
     TOKEN_PLUS,
     TOKEN_MINUS,
     TOKEN_STAR,
@@ -33,14 +33,13 @@ enum TokenType {
 };
 
 struct Token {
-    enum TokenType type;
+    enum TokenKind kind;
     const char *start;
     i32 length;    
     i32 line;
 };
 
 struct Scanner {
-    const char *source;
     const char *start;
     const char *current;  
     i32 line;

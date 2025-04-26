@@ -1,8 +1,7 @@
 #include <string.h>
-#include "scanner.h"
+#include "scan.h"
 
 void init_scanner(struct Scanner *scanner, const char *source) {
-    scanner->source = source;
     scanner->current = source;
     scanner->start = source;
     scanner->line = 1;
@@ -55,9 +54,9 @@ static bool is_alpha_digit(char c) {
     return is_digit(c) || is_alpha(c);
 }
 
-struct Token make_token(struct Scanner *scanner, enum TokenType type) {
+struct Token make_token(struct Scanner *scanner, enum TokenKind kind) {
     struct Token token = {
-        .type = type,
+        .kind = kind,
         .start = scanner->start,
         .length = (scanner->current - scanner->start),
         .line = scanner->line,
@@ -81,19 +80,19 @@ static void identifier(struct Scanner *scanner) {
         bump(scanner);
 }
 
-static struct Token check_next(struct Scanner *scanner, char next, enum TokenType type1, enum TokenType type2) {
+static struct Token check_next(struct Scanner *scanner, char next, enum TokenKind kind1, enum TokenKind kind2) {
     if (at(scanner) == next) {
         bump(scanner);
-        return make_token(scanner, type1);
+        return make_token(scanner, kind1);
     }
-    return make_token(scanner, type2);
+    return make_token(scanner, kind2);
 }
 
-static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenType type) {
+static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenKind kind) {
     u32 token_length = scanner->current - scanner->start;
     if (token_length != length || memcmp(scanner->start+1, rest, length-1) != 0)
         return make_token(scanner, TOKEN_IDENTIFIER);
-    return make_token(scanner, type);
+    return make_token(scanner, kind);
 }
 
 struct Token next_token(struct Scanner *scanner) {
