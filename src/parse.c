@@ -209,8 +209,7 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
             cur = arena_push(arena, sizeof(struct NodeList));
             first = cur;
         }
-        
-        // discard all semicolons
+
         while (eat(parser, TOKEN_SEMICOLON));
 
         enum TokenKind kind = at(parser).kind;
@@ -244,7 +243,6 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
         cur->node = node;
         cur->next = NULL;
 
-        // discard all semicolons
         while (eat(parser, TOKEN_SEMICOLON));
     }
     return mk_block(arena, first);

@@ -32,7 +32,7 @@ void init_ty(struct Ty *ty);
 
 void free_ty(struct Ty *ty);
 
-struct Ty *mk_primitive(enum TyKind primitive);
+struct Ty mk_primitive(enum TyKind primitive);
 
 void push_ty(struct Ty *ty, u32 val);
 
