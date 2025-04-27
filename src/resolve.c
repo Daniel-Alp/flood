@@ -112,7 +112,13 @@ static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct
         emit_resolver_error(resolver, node->var->name, "redeclared variable");
         return;
     }
-    struct Symbol sym;
+
+    struct Symbol sym = {
+        .span = {
+            .start = node->var->name.start,
+            .length = node->var->name.length
+        }
+    };
     init_ty(&sym.ty);
     push_ty(&sym.ty, TY_ANY);
     u32 id = push_symtable(st, sym);

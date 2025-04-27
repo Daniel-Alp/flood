@@ -37,7 +37,6 @@ int main () {
         exit(1);
 
     resolve_tys(&st, (struct Node*)block);
-    print_symtable(&st);
     
     free_symtable(&st);
     free_arena(&arena);

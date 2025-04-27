@@ -17,3 +17,5 @@ void emit_ty_error_if(struct Span span, struct Ty *ty_thn, struct Ty *ty_els, bo
 void emit_ty_error_if_cond(struct Span span, struct Ty *ty_cond, bool *had_error);
 
 void emit_ty_error_uninitialized(struct Token token, bool *had_error);
+
+void emit_ty_error_cannot_infer(struct Span span);

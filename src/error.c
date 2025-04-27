@@ -223,3 +223,16 @@ void emit_ty_error_uninitialized(struct Token token, bool *had_error) {
     print_underline(token.start, token.length);
     printf("`%.*s` used here before initialized\n\n", token.length, token.start);
 }
+
+void emit_ty_error_cannot_infer(struct Span span) {
+    u32 line = get_line_num(span.start);
+    print_pipe(line);
+    printf("\n");
+
+    print_line_num(line, line);
+    print_line(span.start);
+
+    print_pipe(line);
+    print_underline(span.start, span.length);
+    printf("cannot infer type\n\n");
+}

@@ -5,6 +5,7 @@
 #define U8_COUNT 256
 
 struct Symbol {
+    struct Span span;
     struct Ty ty;     
 };
 

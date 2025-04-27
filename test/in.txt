@@ -1,7 +1,7 @@
 {
+    var y = 4;
+    var x;
     if true {
-        4
-    } else {
-        5;
-    };
+        var z;
+    }
 }

@@ -116,7 +116,6 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
             goto err;
         }
         struct Ty *ty_lookup = &st->symbols[((struct VariableNode*)node->lhs)->id].ty;
-        // infer type
         // if rhs is TY_ANY the error is caught below
         if (ty_head(ty_lookup) == TY_ANY) {
             cpy_ty(ty_lookup, &ty_rhs);
@@ -183,12 +182,14 @@ static struct Ty visit_if(struct SymTable *st, struct IfNode *node, bool *had_er
     if (ty_head(&ty_cond) != TY_BOOL)
         emit_ty_error_if_cond(node->cond_span, &ty_cond, had_error);
     free_ty(&ty_cond);
+
     struct Ty ty_thn = visit_block(st, node->thn, had_error);
     struct Ty ty_els;
     if (node->els)
         ty_els = visit_block(st, node->els, had_error);
     else
         ty_els = mk_primitive(TY_UNIT);
+    
     if (cmp_ty(&ty_thn, &ty_els) && ty_head(&ty_thn) != TY_ANY && ty_head(&ty_thn) != TY_ERR) {
         free_ty(&ty_els);
         return ty_thn;
@@ -248,6 +249,11 @@ bool resolve_tys(struct SymTable *st, struct Node *node) {
     bool had_error = false;
     struct Ty ty = visit_node(st, node, &had_error);
     free_ty(&ty);
-    // TODO check that we know the type of every variable
+    for (i32 i = 0; i < st->count; i++) {
+        if (ty_head(&st->symbols[i].ty) == TY_ANY) {
+            emit_ty_error_cannot_infer(st->symbols[i].span);
+            had_error = true;
+        }
+    }
     return had_error;
 }
