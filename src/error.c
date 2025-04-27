@@ -111,5 +111,7 @@ void emit_ty_error_binary(struct Token token, struct Ty *ty_lhs, struct Ty *ty_r
 }
 
 void emit_ty_error_if(bool *had_error) {
+    // TODO improve error message
     *had_error = true;
+    printf("`if` and `else` have incompatible types\n");
 }

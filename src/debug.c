@@ -119,6 +119,9 @@ void print_ty(struct Ty *ty) {
         case TY_UNIT:
             printf("`Unit`");
             break;
+        case TY_ERR:
+            printf("`Err`");
+            break;
     }
 }
 

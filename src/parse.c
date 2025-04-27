@@ -197,9 +197,8 @@ static struct Node *parse_expr(struct Arena *arena, struct Parser *parser, u32 p
 }
 
 static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser) {
-    if (parser->panic)
+    if (parser->panic || !expect(parser, TOKEN_LEFT_BRACE, "expected `{`"))
         return NULL;
-    expect(parser, TOKEN_LEFT_BRACE, "expected `{`");
     struct NodeList *first = NULL;
     struct NodeList *cur = NULL;
     while (!eat(parser, TOKEN_RIGHT_BRACE)) {
@@ -210,14 +209,15 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
             cur = arena_push(arena, sizeof(struct NodeList));
             first = cur;
         }
+        
+        // discard all semicolons
+        while (eat(parser, TOKEN_SEMICOLON));
+
         enum TokenKind kind = at(parser).kind;
         struct Node *node;
         if (kind == TOKEN_EOF) {
             emit_parse_error(parser, "unexpected EOF");
             break;
-        } else if (kind == TOKEN_SEMICOLON) {
-            bump(parser);
-            continue;
         } else if (kind == TOKEN_LEFT_BRACE) {
             node = (struct Node*) parse_block(arena, parser);
         } else if (kind == TOKEN_IF) {
@@ -229,15 +229,23 @@ static struct BlockNode *parse_block(struct Arena *arena, struct Parser *parser)
             if (!parser->panic && at(parser).kind != TOKEN_RIGHT_BRACE) {
                 expect(parser, TOKEN_SEMICOLON, "expected `;`");
                 parser->panic = false;
-                node = (struct Node*)mk_expr_stmt(arena, node);
+                node = (struct Node*) mk_expr_stmt(arena, node); 
             }   
         }
+        if (!parser->panic 
+            && (kind == TOKEN_IF || kind == TOKEN_LEFT_BRACE) 
+            && eat(parser, TOKEN_SEMICOLON))
+            node = (struct Node*) mk_expr_stmt(arena, node); 
+
         if (parser->panic) {
             recover(parser);
             parser->panic = false;
         }
         cur->node = node;
         cur->next = NULL;
+
+        // discard all semicolons
+        while (eat(parser, TOKEN_SEMICOLON));
     }
     return mk_block(arena, first);
 }

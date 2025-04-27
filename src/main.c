@@ -34,6 +34,7 @@ int main () {
     init_symtable(&st);
     if (!resolve_names(&st, (struct Node*)block))
         exit(1);
+    print_node((struct Node*)block, 0);
 
     resolve_tys(&st, (struct Node*)block);
     print_symtable(&st);
