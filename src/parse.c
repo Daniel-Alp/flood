@@ -72,9 +72,16 @@ struct BinaryNode *mk_binary(struct Arena *arena, struct Node *lhs, struct Node 
     return node;
 }
 
-static struct IfNode *mk_if(struct Arena *arena, struct Node *cond, struct BlockNode *thn, struct BlockNode *els) {
+static struct IfNode *mk_if(struct Arena *arena, 
+                            struct Span if_span,
+                            struct Span cond_span, 
+                            struct Node *cond, 
+                            struct BlockNode *thn, 
+                            struct BlockNode *els) {
     struct IfNode *node = arena_push(arena, sizeof(struct IfNode));
     node->base.tag = NODE_IF;
+    node->if_span = if_span;
+    node->cond_span = cond_span;
     node->cond = cond;
     node->thn = thn;
     node->els = els;
@@ -107,7 +114,12 @@ static struct Token at(struct Parser *parser) {
     return parser->at;
 }
 
+static struct Token prev(struct Parser *parser) {
+    return parser->prev;
+}
+
 static void bump(struct Parser *parser) {
+    parser->prev = parser->at;
     parser->at = next_token(&(parser->scanner));
 }
 
@@ -252,12 +264,18 @@ static struct IfNode *parse_if(struct Arena *arena, struct Parser *parser) {
     if (parser->panic)
         return NULL;
     expect(parser, TOKEN_IF, "expected `if`");
+    struct Span if_span = {.start = prev(parser).start, .length = prev(parser).length};
+    
+    const char *cond_start = at(parser).start; 
     struct Node *cond = parse_expr(arena, parser, 0);
+    const char *cond_end = prev(parser).start + prev(parser).length;
+    struct Span cond_span = {.start = cond_start, .length = cond_end - cond_start};
+
     struct BlockNode *thn = parse_block(arena, parser);
     struct BlockNode *els = NULL;
     if (eat(parser, TOKEN_ELSE))
         els = parse_block(arena, parser);
-    return mk_if(arena, cond, thn, els);
+    return mk_if(arena, if_span, cond_span, cond, thn, els);
 }
 
 static struct VariableNode *parse_variable(struct Arena *arena, struct Parser *parser) {

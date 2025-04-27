@@ -4,7 +4,6 @@
 void init_scanner(struct Scanner *scanner, const char *source) {
     scanner->current = source;
     scanner->start = source;
-    scanner->line = 1;
 }
 
 static char at(struct Scanner *scanner) {
@@ -31,7 +30,6 @@ static void skip_whitespace(struct Scanner *scanner) {
         char c = at(scanner);
         switch (c) {
             case '\n':
-                scanner->line++;
             case ' ':
             case '\t':
                 bump(scanner);
@@ -59,7 +57,6 @@ struct Token make_token(struct Scanner *scanner, enum TokenKind kind) {
         .kind = kind,
         .start = scanner->start,
         .length = (scanner->current - scanner->start),
-        .line = scanner->line,
     };
     return token;
 }

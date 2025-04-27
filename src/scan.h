@@ -33,16 +33,14 @@ enum TokenKind {
 };
 
 struct Token {
-    enum TokenKind kind;
     const char *start;
-    i32 length;    
-    i32 line;
+    i32 length;
+    enum TokenKind kind;
 };
 
 struct Scanner {
     const char *start;
-    const char *current;  
-    i32 line;
+    const char *current;
 };
 
 void init_scanner(struct Scanner *scanner, const char *source);

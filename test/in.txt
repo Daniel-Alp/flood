@@ -1,20 +1,7 @@
 {
-   var x = 4;
-   var y = x;
-   var z = y + true;
-   if true {
-
-   } else {
-
-   }
-
-   if 3 {
-
-   }
-
-   x = {
-    var z = 1;
-    var w = 2;
-    z + w
-   }
+    if true {
+        4
+    } else {
+        5;
+    };
 }

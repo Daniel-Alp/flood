@@ -2,6 +2,11 @@
 #include "../util/arena.h"
 #include "scan.h"
 
+struct Span {
+    const char *start;
+    i32 length;    
+};
+
 enum NodeType {
     NODE_UNARY, 
     NODE_BINARY, 
@@ -53,6 +58,8 @@ struct BlockNode {
 
 struct IfNode {
     struct Node base;
+    struct Span if_span;
+    struct Span cond_span;
     struct Node *cond;
     struct BlockNode *thn;
     struct BlockNode *els;
@@ -72,6 +79,7 @@ struct VarDeclNode {
 struct Parser {
     struct Scanner scanner;
     struct Token at;
+    struct Token prev;
     bool had_error;
     bool panic;
 };

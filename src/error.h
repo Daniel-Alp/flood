@@ -12,4 +12,8 @@ void emit_ty_error_unary(struct Token token, struct Ty *ty, bool *had_error);
 
 void emit_ty_error_binary(struct Token token, struct Ty *ty_lhs, struct Ty *ty_rhs, bool *had_error);
 
-void emit_ty_error_if(bool *had_error);
+void emit_ty_error_if(struct Span span, struct Ty *ty_thn, struct Ty *ty_els, bool *had_error);
+
+void emit_ty_error_if_cond(struct Span span, struct Ty *ty_cond, bool *had_error);
+
+void emit_ty_error_uninitialized(struct Token token, bool *had_error);

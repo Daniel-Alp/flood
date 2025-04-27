@@ -83,15 +83,21 @@ static struct Ty visit_literal(struct SymTable *st, struct LiteralNode *node, bo
 
 // assumes that the variable exists in the symbol table
 static struct Ty visit_variable(struct SymTable *st, struct VariableNode *node, bool *had_error) {
+    struct Ty *ty_lookup = &st->symbols[node->id].ty;
+    // set the type of the variable to be ERR, this prevents unintialized variable error from being emitted later
+    if (ty_head(ty_lookup) == TY_ANY) {
+        emit_ty_error_uninitialized(node->name, had_error);
+        struct Ty ty_err = mk_primitive(TY_ERR);
+        cpy_ty(ty_lookup, &ty_err);
+    }
     struct Ty ty;
     init_ty(&ty);
-    cpy_ty(&ty, &st->symbols[node->id].ty);
+    cpy_ty(&ty, ty_lookup);
     return ty;
 }
 
 static struct Ty visit_unary(struct SymTable *st, struct UnaryNode *node, bool *had_error) {
     struct Ty ty = visit_node(st, node->rhs, had_error);
-    // Suffices to check head of ty
     if ((node->op.kind == TOKEN_MINUS && ty_head(&ty) == TY_NUM)
         || (node->op.kind == TOKEN_NOT && ty_head(&ty) == TY_BOOL))
         return ty;
@@ -101,18 +107,23 @@ static struct Ty visit_unary(struct SymTable *st, struct UnaryNode *node, bool *
 }
 
 static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool *had_error) {
-    struct Ty ty_lhs = visit_node(st, node->lhs, had_error);
+    struct Ty ty_lhs;
+    init_ty(&ty_lhs);
+    // lookup ty_lhs after because if lhs is a variable that is currently uninitialized we infer its type
     struct Ty ty_rhs = visit_node(st, node->rhs, had_error);
     if (node->op.kind == TOKEN_EQUAL) {
         if (node->lhs->tag != NODE_VARIABLE) {
             goto err;
         }
+        struct Ty *ty_lookup = &st->symbols[((struct VariableNode*)node->lhs)->id].ty;
         // infer type
         // if rhs is TY_ANY the error is caught below
-        if (ty_head(&ty_lhs) == TY_ANY) {
-            cpy_ty(&st->symbols[((struct VariableNode*)node->lhs)->id].ty, &ty_rhs);
-            cpy_ty(&ty_lhs, &ty_rhs);
+        if (ty_head(ty_lookup) == TY_ANY) {
+            cpy_ty(ty_lookup, &ty_rhs);
         }
+        cpy_ty(&ty_lhs, ty_lookup);
+    } else {
+        ty_lhs = visit_node(st, node->lhs, had_error);
     }
     switch(node->op.kind) {
         case TOKEN_PLUS:
@@ -170,8 +181,7 @@ err:
 static struct Ty visit_if(struct SymTable *st, struct IfNode *node, bool *had_error) {
     struct Ty ty_cond = visit_node(st, node->cond, had_error);
     if (ty_head(&ty_cond) != TY_BOOL)
-        // TODO improve error reporting
-        printf("ERROR WITH IF CONDITION\n");
+        emit_ty_error_if_cond(node->cond_span, &ty_cond, had_error);
     free_ty(&ty_cond);
     struct Ty ty_thn = visit_block(st, node->thn, had_error);
     struct Ty ty_els;
@@ -183,7 +193,7 @@ static struct Ty visit_if(struct SymTable *st, struct IfNode *node, bool *had_er
         free_ty(&ty_els);
         return ty_thn;
     }
-    emit_ty_error_if(had_error);
+    emit_ty_error_if(node->if_span, &ty_thn, &ty_els, had_error);
     free_ty(&ty_thn);
     free_ty(&ty_els);
     return mk_primitive(TY_ERR);

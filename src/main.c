@@ -13,6 +13,7 @@ int main () {
         exit(1);
     
     fseek(fp, 0, SEEK_END);
+    // TODO error if file size > 4 GB
     u64 length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
@@ -34,7 +35,6 @@ int main () {
     init_symtable(&st);
     if (!resolve_names(&st, (struct Node*)block))
         exit(1);
-    // print_node((struct Node*)block, 0);
 
     resolve_tys(&st, (struct Node*)block);
     print_symtable(&st);
