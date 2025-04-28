@@ -106,16 +106,15 @@ static void visit_block(struct SymTable *st, struct BlockNode *node, struct Reso
 static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct Resolver *resolver) {
     if (node->init)
         visit_node(st, node->init, resolver);
-    
-    struct Local *local = resolve_local(resolver, node->base.span);
+
+    struct Span var_span = node->var->base.span;
+    struct Local *local = resolve_local(resolver, var_span);
     if (local && local->depth == resolver->depth) {
-        emit_resolver_error(node->base.span, "redeclared variable", resolver);
+        emit_resolver_error(var_span, "redeclared variable", resolver);
         return;
     }
 
-    struct Symbol sym = {
-        .span = node->base.span
-    };
+    struct Symbol sym = {.span = var_span};
     init_ty(&sym.ty);
     push_ty(&sym.ty, TY_ANY);
     u32 id = push_symtable(st, sym);
@@ -125,7 +124,7 @@ static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct
     struct Local new = {
         .depth = resolver->depth,
         .id = id,
-        .span = node->base.span
+        .span = var_span
     };
     resolver->locals[resolver->count] = new;
     resolver->count++;

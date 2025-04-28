@@ -78,7 +78,7 @@ static void print_line(const char *offset) {
 static void print_span(const char *span_lo, const char *span_hi) {
     u32 lo_line = line_num(span_lo);
     u32 hi_line = line_num(span_hi);
-    print_pipe(lo_line);
+    print_pipe(hi_line);
     printf("\n");
 
     print_line_num(lo_line, hi_line);
@@ -86,7 +86,7 @@ static void print_span(const char *span_lo, const char *span_hi) {
     if (lo_line == hi_line) {
         print_line(span_lo);
 
-        print_pipe(lo_line);
+        print_pipe(hi_line);
         printf("%*s", lo_indent, "");
         for (i32 i = 0; i < span_hi - span_lo + 1; i++)
             printf("^");
@@ -95,7 +95,7 @@ static void print_span(const char *span_lo, const char *span_hi) {
         printf(" ");
         print_line(span_lo);
 
-        print_pipe(lo_line);
+        print_pipe(hi_line);
         printf(" ");
         for (i32 i = 0; i < lo_indent; i++)
             printf("_");
@@ -157,9 +157,9 @@ void emit_ty_error_if(struct Span span, struct Ty *ty_thn, struct Ty *ty_els, bo
     *had_error = true;
     print_span(span.start, span.start + span.length-1);
     printf("`if` and `else` have incompatible types. ");
-    print_ty(ty_els);
-    printf(" and ");
     print_ty(ty_thn);
+    printf(" and ");
+    print_ty(ty_els);
     printf("\n\n");    
 }
 
@@ -177,6 +177,12 @@ void emit_ty_error_uninitialized(struct Span span, bool *had_error) {
     *had_error = true;
     print_span(span.start, span.start + span.length-1);
     printf("`%.*s` used here before initialized\n\n", span.length, span.start);
+}
+
+void emit_ty_error_invalid_assignment(struct Span span, bool *had_error) {
+    *had_error = true;
+    print_span(span.start, span.start + span.length-1);
+    printf("cannot assign to this expression\n\n", span.length, span.start);
 }
 
 void emit_ty_error_cannot_infer(struct Span span) {

@@ -16,4 +16,6 @@ void emit_ty_error_if_cond(struct Span span, struct Ty *ty_cond, bool *had_error
 
 void emit_ty_error_uninitialized(struct Span span, bool *had_error);
 
+void emit_ty_error_invalid_assignment(struct Span span, bool *had_error);
+
 void emit_ty_error_cannot_infer(struct Span span);

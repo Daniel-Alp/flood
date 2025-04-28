@@ -95,8 +95,8 @@ static struct Ty visit_variable(struct SymTable *st, struct VariableNode *node, 
 
 static struct Ty visit_unary(struct SymTable *st, struct UnaryNode *node, bool *had_error) {
     struct Ty ty = visit_node(st, node->rhs, had_error);
-    if ((node->op.kind == TOKEN_MINUS && ty_head(&ty) == TY_NUM)
-        || (node->op.kind == TOKEN_NOT && ty_head(&ty) == TY_BOOL))
+    if ((node->op.kind == UNOP_NEG && ty_head(&ty) == TY_NUM)
+        || (node->op.kind == UNOP_NOT && ty_head(&ty) == TY_BOOL))
         return ty;
     emit_ty_error_unary(node->op.span, &ty, had_error);
     free_ty(&ty);
@@ -108,10 +108,11 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
     init_ty(&ty_lhs);
     // lookup ty_lhs after because if lhs is a variable that is currently uninitialized we infer its type
     struct Ty ty_rhs = visit_node(st, node->rhs, had_error);
-    if (node->op.kind == TOKEN_EQ) {
+    if (node->op.kind == BINOP_EQ) {
         if (node->lhs->kind != NODE_VARIABLE) {
-            // TODO handle invalid assignment target
-            goto err;
+            emit_ty_error_invalid_assignment(node->lhs->span, had_error);
+            free_ty(&ty_rhs);
+            return mk_primitive(TY_ERR);
         }
         struct Ty *ty_lookup = &st->symbols[((struct VariableNode*)node->lhs)->id].ty;
         // if rhs is TY_ANY the error is caught below
