@@ -16,7 +16,7 @@ struct SymTable {
 };
 
 struct Local {
-    struct Token name;
+    struct Span span;
     u32 id;
     i32 depth;
 };

@@ -7,7 +7,7 @@ struct Span {
     i32 length;    
 };
 
-enum NodeType {
+enum NodeKind {
     NODE_UNARY, 
     NODE_BINARY, 
     NODE_LITERAL, 
@@ -18,48 +18,83 @@ enum NodeType {
     NODE_VAR_DECL
 };
 
+enum LitKind {
+    LIT_NUMBER,
+    LIT_TRUE,
+    LIT_FALSE,
+};
+
+enum UnOpKind {
+    UNOP_NOT, 
+    UNOP_NEG
+};
+
+enum BinOpKind {
+    BINOP_ADD,
+    BINOP_SUB,
+    BINOP_MUL,
+    BINOP_DIV,
+    BINOP_AND,
+    BINOP_OR,
+    BINOP_LT,
+    BINOP_LEQ,
+    BINOP_GT,
+    BINOP_GEQ,
+    BINOP_EQEQ,
+    BINOP_NEQ,
+    BINOP_EQ
+};
+
+struct UnOp {
+    enum UnOpKind kind;
+    struct Span span;
+};
+
+struct BinOp {
+    enum BinOpKind kind;
+    struct Span span;
+};
+
 struct Node {
-    enum NodeType tag;
+    struct Span span;
+    enum NodeKind kind;
 };
 
 struct LiteralNode {
     struct Node base;
-    struct Token val;
+    enum LitKind kind;
 };
 
 struct VariableNode {
     struct Node base;
-    struct Token name;
     i32 id;
 };
 
 struct UnaryNode {
     struct Node base;
     struct Node *rhs;
-    struct Token op;
+    struct UnOp op;
 };
 
 struct BinaryNode {
     struct Node base;
     struct Node *lhs;
     struct Node *rhs;
-    struct Token op;
+    struct UnOp op;
 };
 
-struct NodeList {
+struct NodeLinkedList {
     struct Node *node;
-    struct NodeList *next;
+    struct NodeLinkedList *next;
 };
 
 struct BlockNode {
     struct Node base;
-    struct NodeList *stmts;
+    struct NodeLinkedList *stmts;
 };
 
 struct IfNode {
     struct Node base;
-    struct Span if_span;
-    struct Span cond_span;
     struct Node *cond;
     struct BlockNode *thn;
     struct BlockNode *els;

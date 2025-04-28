@@ -11,16 +11,17 @@ enum TyKind {
 
 // Types are represented by arrays
 // The type `List[List[Num]]` would be 
-//
+// ```
 //      TY_NUM TY_LIST TY_LIST
-//
+// ```
 // The type Map[Str, List[Num]] would be
-// 
+// ```
 //      TY_NUM TY_LIST TY_STR TY_MAP
-//
+// ```
 // The type Tuple(Num, Num, Str) would be 
-// 
+// ```
 //      TY_STR TY_NUM TY_NUM 3 TY_TUP
+// ```
 //
 struct Ty {
     u32 count; 

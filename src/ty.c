@@ -1,6 +1,5 @@
 #include <string.h>
 #include "../util/memory.h"
-#include "debug.h" // DELETE THIS 
 #include "error.h"
 #include "ty.h"
 
@@ -10,7 +9,6 @@ void init_ty(struct Ty *ty) {
     ty->arr = allocate(ty->cap * sizeof(u32));
 }
 
-// free contents of a type
 void free_ty(struct Ty *ty) {
     ty->count = 0;
     ty->cap = 0;
@@ -71,13 +69,12 @@ static struct Ty visit_node(struct SymTable *st, struct Node *node, bool *had_er
 static struct Ty visit_block(struct SymTable *st, struct BlockNode *node, bool *had_error);
 
 static struct Ty visit_literal(struct SymTable *st, struct LiteralNode *node, bool *had_error) {
-    switch(node->val.kind) {
-        case TOKEN_NUMBER:
+    switch(node->kind) {
+        case LIT_NUMBER:
             return mk_primitive(TY_NUM);
-        case TOKEN_FALSE:
-        case TOKEN_TRUE:
+        case LIT_FALSE:
+        case LIT_TRUE:
             return mk_primitive(TY_BOOL);
-        default: // Unreachable
     }
 }
 
@@ -86,7 +83,7 @@ static struct Ty visit_variable(struct SymTable *st, struct VariableNode *node, 
     struct Ty *ty_lookup = &st->symbols[node->id].ty;
     // set the type of the variable to be ERR, this prevents unintialized variable error from being emitted later
     if (ty_head(ty_lookup) == TY_ANY) {
-        emit_ty_error_uninitialized(node->name, had_error);
+        emit_ty_error_uninitialized(node->base.span, had_error);
         struct Ty ty_err = mk_primitive(TY_ERR);
         cpy_ty(ty_lookup, &ty_err);
     }
@@ -101,7 +98,7 @@ static struct Ty visit_unary(struct SymTable *st, struct UnaryNode *node, bool *
     if ((node->op.kind == TOKEN_MINUS && ty_head(&ty) == TY_NUM)
         || (node->op.kind == TOKEN_NOT && ty_head(&ty) == TY_BOOL))
         return ty;
-    emit_ty_error_unary(node->op, &ty, had_error);
+    emit_ty_error_unary(node->op.span, &ty, had_error);
     free_ty(&ty);
     return mk_primitive(TY_ERR);
 }
@@ -111,8 +108,9 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
     init_ty(&ty_lhs);
     // lookup ty_lhs after because if lhs is a variable that is currently uninitialized we infer its type
     struct Ty ty_rhs = visit_node(st, node->rhs, had_error);
-    if (node->op.kind == TOKEN_EQUAL) {
-        if (node->lhs->tag != NODE_VARIABLE) {
+    if (node->op.kind == TOKEN_EQ) {
+        if (node->lhs->kind != NODE_VARIABLE) {
+            // TODO handle invalid assignment target
             goto err;
         }
         struct Ty *ty_lookup = &st->symbols[((struct VariableNode*)node->lhs)->id].ty;
@@ -125,20 +123,20 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
         ty_lhs = visit_node(st, node->lhs, had_error);
     }
     switch(node->op.kind) {
-        case TOKEN_PLUS:
-        case TOKEN_MINUS:
-        case TOKEN_STAR:
-        case TOKEN_SLASH:
+        case BINOP_ADD:
+        case BINOP_SUB:
+        case BINOP_MUL:
+        case BINOP_DIV:
         if (ty_head(&ty_lhs) == TY_NUM && ty_head(&ty_rhs) == TY_NUM) {
             free_ty(&ty_rhs);
             return ty_lhs;
         } else {
             goto err;
         }
-        case TOKEN_LESS:
-        case TOKEN_GREATER:
-        case TOKEN_LESS_EQUAL:
-        case TOKEN_GREATER_EQUAL:
+        case BINOP_LT:
+        case BINOP_GT:
+        case BINOP_LEQ:
+        case BINOP_GEQ:
         if (ty_head(&ty_lhs) == TY_NUM && ty_head(&ty_rhs) == TY_NUM) {
             free_ty(&ty_lhs);
             free_ty(&ty_rhs);
@@ -146,23 +144,23 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
         } else {
             goto err;
         }
-        case TOKEN_EQUAL_EQUAL:
-        if (cmp_ty(&ty_lhs, &ty_lhs) && ty_head(&ty_lhs) != TY_ANY && ty_head(&ty_lhs) != TY_ERR) {
+        case BINOP_EQEQ:
+        if (cmp_ty(&ty_lhs, &ty_rhs) && ty_head(&ty_lhs) != TY_ANY && ty_head(&ty_lhs) != TY_ERR) {
             free_ty(&ty_lhs);
             free_ty(&ty_rhs);
             return mk_primitive(TY_BOOL);
         } else {
             goto err;
         }
-        case TOKEN_AND:
-        case TOKEN_OR:
+        case BINOP_AND:
+        case BINOP_OR:
         if (ty_head(&ty_lhs) == TY_BOOL && ty_head(&ty_rhs) == TY_BOOL) {
             free_ty(&ty_rhs);
             return ty_lhs;
         } else {
             goto err;
         }
-        case TOKEN_EQUAL:
+        case BINOP_EQ:
         if (cmp_ty(&ty_lhs, &ty_rhs) && ty_head(&ty_lhs) != TY_ANY && ty_head(&ty_lhs) != TY_ERR) {
             free_ty(&ty_rhs);
             return ty_lhs;
@@ -171,7 +169,7 @@ static struct Ty visit_binary(struct SymTable *st, struct BinaryNode *node, bool
         }
     }
 err:
-    emit_ty_error_binary(node->op, &ty_lhs, &ty_rhs, had_error);
+    emit_ty_error_binary(node->op.span, &ty_lhs, &ty_rhs, had_error);
     free_ty(&ty_lhs);
     free_ty(&ty_rhs);
     return mk_primitive(TY_ERR);
@@ -180,7 +178,7 @@ err:
 static struct Ty visit_if(struct SymTable *st, struct IfNode *node, bool *had_error) {
     struct Ty ty_cond = visit_node(st, node->cond, had_error);
     if (ty_head(&ty_cond) != TY_BOOL)
-        emit_ty_error_if_cond(node->cond_span, &ty_cond, had_error);
+        emit_ty_error_if_cond(node->cond->span, &ty_cond, had_error);
     free_ty(&ty_cond);
 
     struct Ty ty_thn = visit_block(st, node->thn, had_error);
@@ -194,14 +192,14 @@ static struct Ty visit_if(struct SymTable *st, struct IfNode *node, bool *had_er
         free_ty(&ty_els);
         return ty_thn;
     }
-    emit_ty_error_if(node->if_span, &ty_thn, &ty_els, had_error);
+    emit_ty_error_if(node->base.span, &ty_thn, &ty_els, had_error);
     free_ty(&ty_thn);
     free_ty(&ty_els);
     return mk_primitive(TY_ERR);
 }
 
 static struct Ty visit_block(struct SymTable *st, struct BlockNode *node, bool *had_error) {
-    struct NodeList *stmts = node->stmts;
+    struct NodeLinkedList *stmts = node->stmts;
     if (!stmts)
         return mk_primitive(TY_UNIT);
     while (true) {
@@ -223,7 +221,7 @@ static struct Ty visit_var_decl(struct SymTable *st, struct VarDeclNode *node, b
 }
 
 static struct Ty visit_node(struct SymTable *st, struct Node *node, bool *had_error) {
-    switch(node->tag) {
+    switch(node->kind) {
         case NODE_LITERAL:
             return visit_literal(st, (struct LiteralNode*)node, had_error);
         case NODE_VARIABLE:

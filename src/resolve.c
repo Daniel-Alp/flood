@@ -49,11 +49,11 @@ static u32 push_symtable(struct SymTable *st, struct Symbol sym) {
     return st->count-1;
 }
 
-static struct Local *resolve_local(struct Resolver *resolver, struct Token name) {
+static struct Local *resolve_local(struct Resolver *resolver, struct Span span) {
     for (i32 i = resolver->count-1; i >= 0; i--) {
         struct Local *local = &resolver->locals[i];
         // TODO speedup comparison
-        if (name.length == local->name.length && memcmp(name.start, local->name.start, name.length) == 0)
+        if (span.length == local->span.length && memcmp(span.start, local->span.start, span.length) == 0)
             return local;
     }
     return NULL;
@@ -63,12 +63,12 @@ static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *
 static void visit_block(struct SymTable *st, struct BlockNode *node, struct Resolver *resolver);
 
 static void visit_variable(struct SymTable *st, struct VariableNode *node, struct Resolver *resolver) {
-    struct Local *local = resolve_local(resolver, node->name);
+    struct Local *local = resolve_local(resolver, node->base.span);
     if (local) {
         node->id = local->id;
     } else {
         node->id = -1;
-        emit_resolver_error(resolver, node->name, "unbound identifier");
+        emit_resolver_error(node->base.span, "unbound identifier", resolver);
     }
 }
 
@@ -90,7 +90,7 @@ static void visit_if(struct SymTable *st, struct IfNode *node, struct Resolver *
 
 static void visit_block(struct SymTable *st, struct BlockNode *node, struct Resolver *resolver) {
     resolver->depth++;
-    struct NodeList *stmts = node->stmts;
+    struct NodeLinkedList *stmts = node->stmts;
     while (stmts) {
         visit_node(st, stmts->node, resolver);
         stmts = stmts->next;
@@ -107,17 +107,14 @@ static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct
     if (node->init)
         visit_node(st, node->init, resolver);
     
-    struct Local *local = resolve_local(resolver, node->var->name);
+    struct Local *local = resolve_local(resolver, node->base.span);
     if (local && local->depth == resolver->depth) {
-        emit_resolver_error(resolver, node->var->name, "redeclared variable");
+        emit_resolver_error(node->base.span, "redeclared variable", resolver);
         return;
     }
 
     struct Symbol sym = {
-        .span = {
-            .start = node->var->name.start,
-            .length = node->var->name.length
-        }
+        .span = node->base.span
     };
     init_ty(&sym.ty);
     push_ty(&sym.ty, TY_ANY);
@@ -128,14 +125,14 @@ static void visit_var_decl(struct SymTable *st, struct VarDeclNode *node, struct
     struct Local new = {
         .depth = resolver->depth,
         .id = id,
-        .name = node->var->name
+        .span = node->base.span
     };
     resolver->locals[resolver->count] = new;
     resolver->count++;
 }
 
 static void visit_node(struct SymTable *st, struct Node *node, struct Resolver *resolver) {
-    switch (node->tag) {
+    switch (node->kind) {
         case NODE_LITERAL:
             return;
         case NODE_VARIABLE:

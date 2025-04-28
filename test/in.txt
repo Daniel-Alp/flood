@@ -1,7 +1,10 @@
 {
-    var y = 4;
-    var x;
-    if true {
-        var z;
+    if 1 
+    
+    
+    + 4 {
+        3
+    } else {
+        4;
     }
 }

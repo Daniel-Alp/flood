@@ -110,12 +110,12 @@ struct Token next_token(struct Scanner *scanner) {
         case '{': return make_token(scanner, TOKEN_LEFT_BRACE);
         case '}': return make_token(scanner, TOKEN_RIGHT_BRACE);
         case ';': return make_token(scanner, TOKEN_SEMICOLON);
-        case '=': return check_next(scanner, '=', TOKEN_EQUAL_EQUAL, TOKEN_EQUAL);
-        case '<': return check_next(scanner, '=', TOKEN_LESS_EQUAL, TOKEN_LESS);
-        case '>': return check_next(scanner, '=', TOKEN_GREATER, TOKEN_LESS);
+        case '=': return check_next(scanner, '=', TOKEN_EQEQ, TOKEN_EQ);
+        case '<': return check_next(scanner, '=', TOKEN_LEQ, TOKEN_LT);
+        case '>': return check_next(scanner, '=', TOKEN_GT, TOKEN_LT);
         case '&': return check_next(scanner, '&', TOKEN_AND, TOKEN_ERROR);
         case '|': return check_next(scanner, '|', TOKEN_OR, TOKEN_ERROR);
-        case '!': return check_next(scanner, '=', TOKEN_NOT_EQUAL, TOKEN_NOT);
+        case '!': return check_next(scanner, '=', TOKEN_NEQ, TOKEN_NOT);
         default:
             if (is_digit(c)) {
                 number(scanner);

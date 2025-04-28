@@ -5,7 +5,7 @@ static void print_unary(struct UnaryNode *node, u32 offset) {
     printf("%*s", offset, "");
     printf("(Unary\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s\n", node->op.length, node->op.start);
+    printf("%.*s\n", node->op.span.length, node->op.span.start);
     print_node(node->rhs, offset + 2);
     printf(")");
 }
@@ -14,7 +14,7 @@ static void print_binary(struct BinaryNode *node, u32 offset) {
     printf("%*s", offset, "");
     printf("(Binary\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s\n", node->op.length, node->op.start);
+    printf("%.*s\n", node->op.span.length, node->op.span.start);
     print_node(node->lhs, offset + 2);
     printf("\n");
     print_node(node->rhs, offset + 2);
@@ -23,18 +23,18 @@ static void print_binary(struct BinaryNode *node, u32 offset) {
 
 static void print_literal(struct LiteralNode *node, u32 offset) {
     printf("%*s", offset, "");
-    printf("(Literal %.*s)", node->val.length, node->val.start);
+    printf("(Literal %.*s)", node->base.span.length, node->base.span.start);
 }
 
 static void print_variable(struct VariableNode *node, u32 offset) {
     printf("%*s", offset, "");
-    printf("(Variable %.*s id: %d)", node->name.length, node->name.start, node->id);
+    printf("(Variable %.*s id: %d)", node->base.span.length, node->base.span.start, node->id);
 }
 
 static void print_block(struct BlockNode *node, u32 offset) {
     printf("%*s", offset, "");
     printf("(Block");
-    struct NodeList* stmts = node->stmts;
+    struct NodeLinkedList* stmts = node->stmts;
     while (stmts) {
         printf("\n");
         print_node(stmts->node, offset + 2);
@@ -75,7 +75,7 @@ static void print_var(struct VarDeclNode *node, u32 offset) {
 }
 
 void print_node(struct Node *node, u32 offset) {
-    switch (node->tag) {
+    switch (node->kind) {
         case NODE_LITERAL:
             print_literal((struct LiteralNode*)node, offset);
             break;
