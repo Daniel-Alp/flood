@@ -116,7 +116,7 @@ struct Cons {
     next: ?Cons 
 }
 
-fn has_entry(cons: ?Cons, n: Num) Bool {
+fn has_entry(cons: ?Cons, n: Num) -> Bool {
     if (cons) {
         if (cons.data == n) {
             return true;
@@ -133,11 +133,11 @@ var cons2: Cons = .{.data = 3, .next = .{.data = 4, .next = Null}};
 struct Rectangle {
     height: Num,
     width: Num,
-    fn area(self) Num {
+    fn area(self) -> Num {
         return self.height * self.width;
     }
 
-    fn dimensions(self) Void {
+    fn dimensions(self) {
         print("{}x{}\n", height, width);
     }
 }
@@ -177,4 +177,27 @@ var expr = Aexpr.Mul{
     .lhs = .Add{.lhs = .Lit(1), .rhs = .Lit(2)},
     .rhs = .Sub{.lhs = .Lit(3), .rhs = .Lit(4)}
 };
+```
+
+## First class Functions
+```
+fn foo(x: Num) -> fn() {
+    fn bar() {
+        print(x);
+    }
+    return bar;
+}
+
+let b = foo(3);
+b();
+
+fn baz(x: Num) -> fn(Num) -> Num {
+    fn qux(y: Num) {
+        return x * y;
+    }
+    return qux;
+} 
+
+let q = baz(4);
+let z = q(5);
 ```
