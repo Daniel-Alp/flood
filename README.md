@@ -18,53 +18,60 @@ w = 32;
 var u: Num;
 ```
 
+## Printing
+```
+let x = 4;
+// prints `4 4`
+print("{x} {}", x);
+```
+
 ## Optionals and Control Flow
 ```
-var x_opt: ?Num = 32;
-var y_opt: ?Num = Null;
-var z_opt: ?Str = "true";
+var x: ?Num = 32;
+var y: ?Num = Null;
+var y: ?Str = "true";
 
-// error, `x_opt` may be Null
-print("{}\n", x_opt+4);
+// error, `x` may be Null
+print("{}\n", x+4);
 
-if (x_opt) |x| {
+if (x) {
     print("{}\n", x+4);
 }
 
-if (3 > 2 and x_opt and z_opt) |x, z| {
+if (3 > 2 and x and z) {
     print("{} {}\n", x, z);
 }
 
-while(x_opt) |x| {
+while(x) {
 
 }
 
-// error, expected capture
-if (x_opt) {
-          
+if (x or z) {
+    // error, `x` may be Null and `y` may be Null
+    print("{} {}\n", x, z);
 }
 
-// error, do not know which variable to capture
-if (x_opt or z_opt) |v| {
-
+if (3 > 2 or x) {
+    // error, `x` may be Null
+    print("{} {}\n", x);
 }
-
-// error, condition can short circuit before we determine if `x_opt` is Null or not
-if (3 > 2 or x_opt) |x| {
-
-} 
-
-// in general, when optionals appear in the condition of an if or while then 
-// if the conditional evalutes to true, every optional must be not Null 
-// and must be captured.
 ```
 
-## Lists, Tuples, and Maps
+## Lists, Ranges, Tuples, and Maps
 ```
 var list1 = [1, 2, 3, 4];
 
 for (list1) |x| {
     print("{}\n", x);
+}
+
+for (list1, 0..) |x, i| {
+    print("{} {}\n", x, i);
+}
+
+// prints 0 to 3
+for (0..4) |i| {
+    print("{}\n", i);
 }
 
 list1.push(5);
@@ -86,12 +93,12 @@ tup2.1 = 2;
 var map = Map(Str, []Num);
 map.insert("alice", [1, 2, 3]);
 
-var entry_opt = map.get("alice");
+var entry = map.get("alice");
 
-// error, `entry_opt` may be Null
-print("{}\n", entry_opt);
+// error, `entry` may be Null
+print("{}\n", entry);
 
-if (entry_opt) |entry| {
+if (entry_opt) {
     print("{}\n", entry);
 }
 
@@ -110,8 +117,7 @@ struct Cons {
 }
 
 fn has_entry(cons: ?Cons, n: Num) Bool {
-    // captured cons shadows other cons
-    if (cons) |cons| {
+    if (cons) {
         if (cons.data == n) {
             return true;
         }
@@ -149,19 +155,13 @@ var msg1 = Message.Move{.x = 1, .y = 2};
 var msg2: Message = .Move{.x = 1, .y = 2};
 var msg3 = Message.Color(1, 2, 3);
 
-print("{}\n", msg1.Move.x);
+// error, do not know that msg2 is .Move variant
+print("Move {} {}\n", msg2.x, msg2.y);
 
 switch msg1 {
     .Quit => print("Quit\n");
-    .Move => |move| print("Move {} {}\n", move.x, move.y);
-    .Color => |color| print("Color {} {} {}\n", color.0, color.1, color.2);
-}
-
-// error, we do not know that msg2 is .Move variant
-print("Move {} {}\n", msg2.Move.x, msg2.Move.y);
-
-if (msg2 == .Move) {
-    print("Move {} {}\n", msg2.Move.x, msg2.Move.y);
+    .Move => print("Move {} {}\n", msg1.x, msg1.y);
+    .Color => print("Color {} {} {}\n", msg1.0, msg1.1, msg1.2);
 }
 
 union Aexpr {
@@ -178,6 +178,3 @@ var expr = Aexpr.Mul{
     .rhs = .Sub{.lhs = .Lit(3), .rhs = .Lit(4)}
 };
 ```
-
-## Modules and Imports
-I have not gotten to this yet...
