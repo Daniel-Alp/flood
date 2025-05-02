@@ -1,0 +1,5 @@
+{
+   // this is a comment
+   var x = 4;
+   x *= 4;
+}
