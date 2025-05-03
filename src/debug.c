@@ -74,7 +74,6 @@ static void print_var_decl(struct VarDeclNode *node, u32 offset) {
 }
 
 void print_node(struct Node *node, u32 offset) {
-    node->tag;
     switch (node->tag) {
         case NODE_LITERAL:
             print_literal((struct LiteralNode*)node, offset);

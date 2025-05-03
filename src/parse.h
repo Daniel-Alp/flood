@@ -1,16 +1,8 @@
 #pragma once
 #include "arena.h"
+#include "error.h"
 #include "scan.h"
-
-enum TyTag {
-    TY_NUM,
-    TY_BOOL,
-};
-
-struct TyNode {
-    struct Span span;
-    enum TyTag tag;
-};
+#include "ty.h"
 
 enum NodeTag {
     NODE_LITERAL,
@@ -34,17 +26,20 @@ struct LiteralNode {
 };
 
 struct IdentNode {
+    // span is identifier
     struct Node base;
     i32 id;
 };
 
 struct UnaryNode {
+    // span is op
     struct Node base;
     struct Node *rhs;
     enum TokenTag op_tag;
 };
 
 struct BinaryNode {
+    // span is op
     struct Node base;
     struct Node *lhs;
     struct Node *rhs;
@@ -59,36 +54,28 @@ struct VarDeclNode {
 };
 
 struct ExprStmtNode {
+    // span is identifier
     struct Node base;
     struct Node *expr;
 };
 
 struct BlockNode {
+    // span is `{`
     struct Node base;
     struct Node **stmts;
     u32 count;
 };
 
 struct IfNode {
+    // span is `if`
     struct Node base;
     struct Node *cond;
     struct BlockNode *thn;
     struct BlockNode *els;
 };
 
-struct ParseErr {
-    struct Span span;
-    const char *msg;
-};
-
-struct ParseErrList {
-    u32 count;
-    u32 cap;
-    struct ParseErr *errs;
-};
-
 struct Parser {
-    struct ParseErrList errlist;
+    struct ErrList errlist;
     struct Arena arena;
     struct Node *ast;
     struct Scanner scanner;

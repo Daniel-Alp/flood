@@ -118,17 +118,8 @@ static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct 
     return node;
 }
 
-static struct TyNode *mk_primitive_ty(struct Arena *arena, struct Token token) {
-    struct TyNode *node = push_arena(arena, sizeof(struct TyNode));
-    node->tag = token.tag;
-    node->span = token.span;
-    return node;
-}
-
 void init_parser(struct Parser *parser, const char *source) {
-    parser->errlist.count  = 0;
-    parser->errlist.cap = 8;
-    parser->errlist.errs = allocate(parser->errlist.cap * sizeof(struct ParseErr));
+    init_errlist(&parser->errlist);
     init_arena(&parser->arena);
     init_scanner(&parser->scanner, source);
     parser->at = next_token(&parser->scanner);
@@ -136,21 +127,8 @@ void init_parser(struct Parser *parser, const char *source) {
 }
 
 void release_parser(struct Parser *parser) {
-    parser->errlist.cap = 0;
-    parser->errlist.count = 0;
-    release(parser->errlist.errs);
-    parser->errlist.errs = NULL;
+    release_errlist(&parser->errlist);
     release_arena(&parser->arena);
-}
-
-void push_parse_err(struct ParseErrList *errlist, struct Span span, const char *msg) {
-    struct ParseErr err = {.span = span, .msg = msg};
-    if (errlist->count == errlist->cap) {
-        errlist->cap *= 2;
-        errlist->errs = reallocate(errlist->errs, errlist->cap * sizeof(struct ParseErr));
-    }
-    errlist->errs[errlist->count] = err;
-    errlist->count++;
 }
 
 static struct Token at(struct Parser *parser) {
@@ -178,7 +156,7 @@ static bool expect(struct Parser *parser, enum TokenTag tag, const char *msg) {
     if (eat(parser, tag))
         return true;
     if (!parser->panic)
-        push_parse_err(&parser->errlist, at(parser).span, msg);
+        push_errlist(&parser->errlist, at(parser).span, msg);
     parser->panic = true;
     return false;
 }
@@ -189,16 +167,16 @@ static void recover(struct Parser *parser) {
     i32 depth = 0;
     while (prev(parser).tag != TOKEN_SEMI && at(parser).tag != TOKEN_EOF) {
         switch(at(parser).tag) {
-            case TOKEN_IF:
-            case TOKEN_VAR:
-                return;
-            case TOKEN_L_BRACE:
-                depth++;
-                break;
-            case TOKEN_R_BRACE:
-                depth--;
-            default:
-                break;
+        case TOKEN_IF:
+        case TOKEN_VAR:
+            return;
+        case TOKEN_L_BRACE:
+            depth++;
+            break;
+        case TOKEN_R_BRACE:
+            depth--;
+        default:
+            break;
         }
         if (depth == -1)
             return;
@@ -212,32 +190,32 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
     struct Token token = at(parser);
     struct Node *lhs = NULL;
     switch (token.tag) {
-        case TOKEN_TRUE:
-        case TOKEN_FALSE:
-        case TOKEN_NUMBER:
-            bump(parser);
-            lhs = (struct Node*)mk_literal(&parser->arena, token);
-            break;
-        case TOKEN_IDENTIFIER:
-            bump(parser);
-            lhs = (struct Node*)mk_ident(&parser->arena, token);
-            break;
-        case TOKEN_L_PAREN:
-            bump(parser);
-            lhs = (struct Node*)parse_expr(parser, 0);
-            expect(parser, TOKEN_R_PAREN, "expected `)`");
-            break;
-        case TOKEN_MINUS:
-        case TOKEN_NOT:
-            bump(parser);
-            lhs = parse_expr(parser, 15);
-            lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
-            break;
-        default:
-            if (!parser->panic)
-                push_parse_err(&parser->errlist, token.span, "expected expression");
-            parser->panic = true;
-            return NULL;
+    case TOKEN_TRUE:
+    case TOKEN_FALSE:
+    case TOKEN_NUMBER:
+        bump(parser);
+        lhs = (struct Node*)mk_literal(&parser->arena, token);
+        break;
+    case TOKEN_IDENTIFIER:
+        bump(parser);
+        lhs = (struct Node*)mk_ident(&parser->arena, token);
+        break;
+    case TOKEN_L_PAREN:
+        bump(parser);
+        lhs = (struct Node*)parse_expr(parser, 0);
+        expect(parser, TOKEN_R_PAREN, "expected `)`");
+        break;
+    case TOKEN_MINUS:
+    case TOKEN_NOT:
+        bump(parser);
+        lhs = parse_expr(parser, 15);
+        lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
+        break;
+    default:
+        if (!parser->panic)
+            push_errlist(&parser->errlist, token.span, "expected expression");
+        parser->panic = true;
+        return NULL;
     }
     while(true) {
         token = at(parser);
@@ -255,15 +233,17 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
 static struct TyNode *parse_ty_expr(struct Parser *parser) {
     struct Token token = at(parser);
     switch(token.tag) {
-        case TOKEN_TY_NUM:
-        case TOKEN_TY_BOOL:
-            bump(parser);
-            return mk_primitive_ty(&parser->arena, token);
-        default:
-            if (!parser->panic)
-                push_parse_err(&parser->errlist, token.span, "expected type");
-            parser->panic = true;
-            return NULL;
+    case TOKEN_TY_NUM:
+        bump(parser);
+        return mk_primitive_ty(&parser->arena, TY_NUM);
+    case TOKEN_TY_BOOL:
+        bump(parser);
+        return mk_primitive_ty(&parser->arena, TY_BOOL);
+    default:
+        if (!parser->panic)
+            push_errlist(&parser->errlist, token.span, "expected type");
+        parser->panic = true;
+        return NULL;
     }
 }
 

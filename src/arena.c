@@ -27,3 +27,11 @@ void *push_arena(struct Arena *arena, u64 size) {
 void clear_arena(struct Arena *arena) {
     arena->stack_pos = 0;
 }
+
+u64 get_stack_pos_arena(struct Arena *arena) {
+    return arena->stack_pos;
+}
+
+void set_stack_pos_arena(struct Arena *arena, u64 stack_pos) {
+    arena->stack_pos = stack_pos;
+}

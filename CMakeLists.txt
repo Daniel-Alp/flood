@@ -4,4 +4,4 @@ project(flood)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
-add_executable(flood src/arena.c src/debug.c src/error.c src/main.c src/memory.c src/parse.c src/scan.c)
+add_executable(flood src/arena.c src/debug.c src/error.c src/main.c src/memory.c src/parse.c src/sema.c src/scan.c src/ty.c)

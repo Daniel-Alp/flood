@@ -13,3 +13,7 @@ void release_arena(struct Arena *arena);
 void *push_arena(struct Arena *arena, u64 size);
 
 void clear_arena(struct Arena *arena);
+
+u64 get_stack_pos_arena(struct Arena *arena);
+
+void set_stack_pos_arena(struct Arena *arena, u64 stack_pos);

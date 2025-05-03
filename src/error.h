@@ -1,4 +1,21 @@
 #pragma once
-#include "parse.h"
+#include "scan.h"
 
-void print_parse_errs(struct ParseErrList *errlist);
+struct ErrMsg {
+    struct Span span;
+    const char *msg;
+};
+
+struct ErrList {
+    u32 count;
+    u32 cap;
+    struct ErrMsg *errs;
+};
+
+void init_errlist(struct ErrList *errlist);
+
+void release_errlist(struct ErrList *errlist);
+
+void push_errlist(struct ErrList *errlist, struct Span span, const char *msg);
+
+void print_errlist(struct ErrList *errlist);

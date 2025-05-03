@@ -110,40 +110,40 @@ struct Token next_token(struct Scanner *scanner) {
 
     char c = bump(scanner);
     switch (c) {
-       case '+': return check_at(scanner, '=', TOKEN_PLUS_EQ, TOKEN_PLUS);
-       case '-': return check_at(scanner, '=', TOKEN_MINUS_EQ, TOKEN_MINUS);
-       case '*': return check_at(scanner, '=', TOKEN_STAR_EQ, TOKEN_STAR);
-       case '/': return check_at(scanner, '=', TOKEN_SLASH_EQ, TOKEN_SLASH);
-       case '<': return check_at(scanner, '=', TOKEN_LEQ, TOKEN_LT);
-       case '>': return check_at(scanner, '=', TOKEN_GEQ, TOKEN_GT);
-       case '=': return check_at(scanner, '=', TOKEN_EQ_EQ, TOKEN_EQ);
-       case '!': return check_at(scanner, '=', TOKEN_NEQ, TOKEN_NOT);
-       case '(': return mk_token(scanner, TOKEN_L_PAREN);
-       case ')': return mk_token(scanner, TOKEN_R_PAREN);
-       case '{': return mk_token(scanner, TOKEN_L_BRACE);
-       case '}': return mk_token(scanner, TOKEN_R_BRACE);
-       case ';': return mk_token(scanner, TOKEN_SEMI);
-       case ':': return mk_token(scanner, TOKEN_COLON);
-       default:
-        if (is_digit(c)) {
-            number(scanner);
-            return mk_token(scanner, TOKEN_NUMBER);
-        } else if (is_alpha(c)) {
-            identifier(scanner);
-            switch (c) {
-                case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
-                case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
-                case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
-                case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
-                case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
-                case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
-                case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
-                case 'N': return check_keyword(scanner, "um", 3, TOKEN_TY_NUM);
-                case 'B': return check_keyword(scanner, "ool", 4, TOKEN_TY_BOOL);
-                default:  return mk_token(scanner, TOKEN_IDENTIFIER);
-            }
-        } else {
-            return mk_token(scanner, TOKEN_ERR);
+    case '+': return check_at(scanner, '=', TOKEN_PLUS_EQ, TOKEN_PLUS);
+    case '-': return check_at(scanner, '=', TOKEN_MINUS_EQ, TOKEN_MINUS);
+    case '*': return check_at(scanner, '=', TOKEN_STAR_EQ, TOKEN_STAR);
+    case '/': return check_at(scanner, '=', TOKEN_SLASH_EQ, TOKEN_SLASH);
+    case '<': return check_at(scanner, '=', TOKEN_LEQ, TOKEN_LT);
+    case '>': return check_at(scanner, '=', TOKEN_GEQ, TOKEN_GT);
+    case '=': return check_at(scanner, '=', TOKEN_EQ_EQ, TOKEN_EQ);
+    case '!': return check_at(scanner, '=', TOKEN_NEQ, TOKEN_NOT);
+    case '(': return mk_token(scanner, TOKEN_L_PAREN);
+    case ')': return mk_token(scanner, TOKEN_R_PAREN);
+    case '{': return mk_token(scanner, TOKEN_L_BRACE);
+    case '}': return mk_token(scanner, TOKEN_R_BRACE);
+    case ';': return mk_token(scanner, TOKEN_SEMI);
+    case ':': return mk_token(scanner, TOKEN_COLON);
+    default:
+    if (is_digit(c)) {
+        number(scanner);
+        return mk_token(scanner, TOKEN_NUMBER);
+    } else if (is_alpha(c)) {
+        identifier(scanner);
+        switch (c) {
+        case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
+        case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+        case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+        case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
+        case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
+        case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
+        case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
+        case 'N': return check_keyword(scanner, "um", 3, TOKEN_TY_NUM);
+        case 'B': return check_keyword(scanner, "ool", 4, TOKEN_TY_BOOL);
+        default:  return mk_token(scanner, TOKEN_IDENTIFIER);
         }
+    } else {
+        return mk_token(scanner, TOKEN_ERR);
+    }
     };
 }

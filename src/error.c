@@ -1,5 +1,29 @@
 #include <stdio.h>
+#include "memory.h"
 #include "error.h"
+
+void init_errlist(struct ErrList *errlist) {
+    errlist->count = 0;
+    errlist->cap = 8;
+    errlist->errs = allocate(errlist->cap * sizeof(struct ErrMsg));
+}
+
+void release_errlist(struct ErrList *errlist) {
+    errlist->count = 0;
+    errlist->cap = 0;
+    release(errlist->errs);
+    errlist->errs = NULL;
+}
+
+void push_errlist(struct ErrList *errlist, struct Span span, const char *msg) {
+    struct ErrMsg err = {.span = span, .msg = msg};
+    if (errlist->count == errlist->cap) {
+        errlist->cap *= 2;
+        errlist->errs = reallocate(errlist->errs, errlist->cap * sizeof(struct ErrMsg));
+    }
+    errlist->errs[errlist->count] = err;
+    errlist->count++;
+}
 
 // n != 0
 static u32 num_digits(u32 n) {
@@ -39,19 +63,27 @@ static void print_line(const char *ptr) {
     printf("%.*s\n", length, start);
 }
 
-void print_parse_errs(struct ParseErrList *errlist) {
+// precondition: at least one error
+// TODO let error messages have extra info
+void print_errlist(struct ErrList *errlist) {
+    u32 last_line = line_num(errlist->errs[errlist->count-1].span.start);
+    u32 max_pad = num_digits(last_line);
+
     for (i32 i = 0; i < errlist->count; i++) {
-        struct ParseErr err = errlist->errs[i];
+        struct ErrMsg err = errlist->errs[i];
         
         u32 line = line_num(err.span.start);
-        u32 pad = num_digits(line_num(err.span.start));
+        u32 pad = num_digits(line);
         
-        printf("%d | ", line);
+        printf("%d", line);
+        printf("%*s | ", max_pad - pad, "");
         print_line(err.span.start);
 
-        printf("%*s | ", pad, "");
+        printf("%*s | ", max_pad, "");
         printf("%*s", line_indent(err.span.start), "");
         printf("^");
+        for (i32 i = 0; i < err.span.length - 1; i++)
+            printf("~");
         printf(" %s\n\n", err.msg);
     }
 }
