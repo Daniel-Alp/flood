@@ -1,0 +1,11 @@
+{
+    1 + 2 + 3;
+
+    1 + 2 * 3;
+
+    2 + -1;
+
+    (1 + 2) * (3 + 4);
+
+    true and false or false and true and true;
+}

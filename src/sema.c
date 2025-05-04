@@ -157,6 +157,7 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
             push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
         // even if the types were not Num, the inequality operator always returns bool
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
+    case TOKEN_NEQ:
     case TOKEN_EQ_EQ:
         if (!cmp_ty(ty_lhs, ty_rhs) 
             && ty_lhs->tag != TY_ERR 
@@ -166,7 +167,7 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
     case TOKEN_AND:
     case TOKEN_OR:
         if ((ty_lhs->tag != TY_BOOL || ty_rhs->tag != TY_BOOL) 
-            && ty_lhs->tag!= TY_ERR 
+            && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR)
             push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
@@ -214,11 +215,6 @@ static struct TyNode *analyze_var_decl(struct SemaState *sema, struct VarDeclNod
     u32 id = push_symtable(&sema->st, node->base.span);
     node->id = id;
 
-    // TODO error if more than 256 locals
-    sema->locals[sema->count].id = id;
-    sema->locals[sema->count].span = node->base.span;
-    sema->count++;
-
     if (node->ty_hint)
         sema->st.symbols[id].ty = cpy_ty(&sema->st.arena, node->ty_hint);
     
@@ -239,6 +235,12 @@ static struct TyNode *analyze_var_decl(struct SemaState *sema, struct VarDeclNod
             push_errlist(&sema->errlist, node->base.span, "value does not match type hint");
         }
     }
+    
+    // TODO error if more than 256 locals
+    sema->locals[sema->count].id = id;
+    sema->locals[sema->count].span = node->base.span;
+    sema->count++;
+
     return mk_primitive_ty(&sema->scratch, TY_VOID);
 }
 
@@ -265,4 +267,8 @@ static struct TyNode *analyze_node(struct SemaState *sema, struct Node *node) {
 
 void analyze(struct SemaState *sema, struct Node *node) {
     analyze_node(sema, node);
+    for (i32 i = 0; i < sema->st.count; i++) {
+        if (!sema->st.symbols[i].ty)
+            push_errlist(&sema->errlist, sema->st.symbols[i].span, "unable to infer type");
+    }
 }

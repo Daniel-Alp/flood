@@ -1,0 +1,4 @@
+{
+    var x: Num = false;
+    var y: Bool = 3;
+}

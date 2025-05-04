@@ -7,8 +7,12 @@
 #include "debug.h"
 #include "error.h"
 
-int main () {
-    FILE *fp = fopen("test/in.txt", "rb");
+int main (int argc, char **argv) {
+    if (argc != 2)
+        exit(1);
+
+    printf("%s\n", argv[1]);
+    FILE *fp = fopen(argv[1], "rb");
     if (!fp)
         exit(1);
     
@@ -34,8 +38,6 @@ int main () {
         print_errlist(&parser.errlist);
         goto err_release_parser;
     }
-    print_node(parser.ast, 0);
-    printf("\n");
 
     struct SemaState sema;
     init_sema_state(&sema);
@@ -45,6 +47,8 @@ int main () {
         print_errlist(&sema.errlist);
         goto err_release_sema_state;
     }
+
+    print_node(parser.ast, 0);
 
 err_release_sema_state:
     release_sema_state(&sema);

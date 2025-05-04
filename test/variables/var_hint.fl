@@ -1,0 +1,4 @@
+{
+    var x: Num;
+    var y: Bool;
+}
