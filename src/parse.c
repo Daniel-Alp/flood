@@ -274,6 +274,19 @@ static struct VarDeclNode *parse_var_decl(struct Parser *parser){
     return mk_var_decl(&parser->arena, span, ty_hint, init);
 }
 
+// TEMP remove when we add functions
+// precondition: `print` token consumed
+static struct PrintNode *parse_print(struct Parser *parser) {
+    struct Span span = prev(parser).span;
+    struct Node *expr = parse_expr(parser, 0);
+    struct PrintNode *node = push_arena(&parser->arena, sizeof(struct PrintNode));
+    node->base.tag = NODE_PRINT;
+    node->base.span = span;
+    node->expr = expr;
+    expect(parser, TOKEN_SEMI, "expected `;`");
+    return node;
+}
+
 static struct BlockNode *parse_block(struct Parser *parser) {
     struct Span span = at(parser).span;
     if (!expect(parser, TOKEN_L_BRACE, "expected `{`"))
@@ -291,6 +304,8 @@ static struct BlockNode *parse_block(struct Parser *parser) {
             node = (struct Node*)parse_if(parser);
         } else if (eat(parser, TOKEN_VAR)) {
             node = (struct Node*)parse_var_decl(parser);
+        } else if (eat(parser, TOKEN_PRINT)) {
+            node = (struct Node*)parse_print(parser);
         } else {
             node = parse_expr(parser, 0);
             if (node) {

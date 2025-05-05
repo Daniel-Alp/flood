@@ -45,6 +45,9 @@ enum TokenTag {
 
     TOKEN_EOF,
     TOKEN_ERR,
+
+    // TEMP remove when we add functions
+    TOKEN_PRINT
 };
 
 struct Scanner {

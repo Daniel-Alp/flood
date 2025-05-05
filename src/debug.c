@@ -73,32 +73,43 @@ static void print_var_decl(struct VarDeclNode *node, u32 offset) {
     printf(")");
 }
 
+// TEMP remove when we add functions
+static void print_print(struct PrintNode *node, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(Print\n");
+    print_node(node->expr, offset + 2);
+    printf(")");
+}
+
 void print_node(struct Node *node, u32 offset) {
     switch (node->tag) {
-        case NODE_LITERAL:
-            print_literal((struct LiteralNode*)node, offset);
-            break;
-        case NODE_IDENT:
-            print_ident((struct IdentNode*)node, offset);
-            break;
-        case NODE_UNARY:
-            print_unary((struct UnaryNode*)node, offset);
-            break;
-        case NODE_BINARY:
-            print_binary((struct BinaryNode*)node, offset);
-            break;
-        case NODE_BLOCK:
-            print_block((struct BlockNode*)node, offset);
-            break;
-        case NODE_IF:
-            print_if((struct IfNode*)node, offset);
-            break;
-        case NODE_EXPR_STMT:
-            print_expr_stmt((struct ExprStmtNode*)node, offset);
-            break;
-        case NODE_VAR_DECL:
-            print_var_decl((struct VarDeclNode*)node, offset);
-            break;
+    case NODE_LITERAL:
+        print_literal((struct LiteralNode*)node, offset);
+        break;
+    case NODE_IDENT:
+        print_ident((struct IdentNode*)node, offset);
+        break;
+    case NODE_UNARY:
+        print_unary((struct UnaryNode*)node, offset);
+        break;
+    case NODE_BINARY:
+        print_binary((struct BinaryNode*)node, offset);
+        break;
+    case NODE_BLOCK:
+        print_block((struct BlockNode*)node, offset);
+        break;
+    case NODE_IF:
+        print_if((struct IfNode*)node, offset);
+        break;
+    case NODE_EXPR_STMT:
+        print_expr_stmt((struct ExprStmtNode*)node, offset);
+        break;
+    case NODE_VAR_DECL:
+        print_var_decl((struct VarDeclNode*)node, offset);
+        break;
+    case NODE_PRINT:
+        print_print((struct PrintNode*)node, offset);
+        break; 
     }
     if (offset == 0)
         printf("\n");

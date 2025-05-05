@@ -49,6 +49,7 @@ int main (int argc, char **argv) {
     }
 
     print_node(parser.ast, 0);
+    printf("\n");
 
 err_release_sema_state:
     release_sema_state(&sema);

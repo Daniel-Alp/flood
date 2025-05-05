@@ -134,6 +134,8 @@ struct Token next_token(struct Scanner *scanner) {
         case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
         case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
         case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+        // TEMP remove when we add functions
+        case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);
         case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
         case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
         case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);

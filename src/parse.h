@@ -13,6 +13,8 @@ enum NodeTag {
     NODE_EXPR_STMT,
     NODE_BLOCK,
     NODE_IF,
+    // TEMP remove when we add functions
+    NODE_PRINT
 };
 
 struct Node {
@@ -51,6 +53,13 @@ struct VarDeclNode {
     struct TyNode *ty_hint;
     struct Node *init;
     i32 id;
+};
+
+// TEMP remove when we add functions
+struct PrintNode {
+    // span is `print`
+    struct Node base;
+    struct Node *expr;
 };
 
 struct ExprStmtNode {

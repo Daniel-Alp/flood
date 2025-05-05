@@ -70,6 +70,7 @@ static struct TyNode *analyze_literal(struct SemaState *sema, struct LiteralNode
 
 static struct TyNode *analyze_ident(struct SemaState *sema, struct IdentNode *node) {
     struct Local *loc = resolve_ident(sema, node->base.span);
+    // TODO only error on first occurence of not in scope
     if (!loc) {
         push_errlist(&sema->errlist, node->base.span, "not found in this scope");
         return mk_primitive_ty(&sema->scratch, TY_ERR);
@@ -98,7 +99,8 @@ static struct TyNode *analyze_unary(struct SemaState *sema, struct UnaryNode *no
 
 static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *node) {
     if ((node->op_tag == TOKEN_EQ 
-        || node->op_tag == TOKEN_PLUS_EQ || node->op_tag == TOKEN_MINUS_EQ
+        || node->op_tag == TOKEN_PLUS_EQ 
+        || node->op_tag == TOKEN_MINUS_EQ
         || node->op_tag == TOKEN_STAR_EQ
         || node->op_tag == TOKEN_SLASH_EQ)
         && node->lhs->tag != NODE_IDENT) {
@@ -137,6 +139,7 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
     case TOKEN_SLASH:
     case TOKEN_PLUS_EQ:
     case TOKEN_MINUS_EQ:
+    case TOKEN_STAR_EQ:
     case TOKEN_SLASH_EQ:
         if ((ty_lhs->tag != TY_NUM || ty_rhs->tag != TY_NUM) 
             && ty_lhs->tag != TY_ERR 
@@ -154,7 +157,7 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
         if ((ty_lhs->tag != TY_NUM || ty_rhs->tag != TY_NUM) 
             && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR)
-            push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
+            push_errlist(&sema->errlist, node->base.span, "operands must be numbers");
         // even if the types were not Num, the inequality operator always returns bool
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_NEQ:
@@ -162,20 +165,20 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
         if (!cmp_ty(ty_lhs, ty_rhs) 
             && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR)
-            push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
+            push_errlist(&sema->errlist, node->base.span, "operands must of be of same type");
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_AND:
     case TOKEN_OR:
         if ((ty_lhs->tag != TY_BOOL || ty_rhs->tag != TY_BOOL) 
             && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR)
-            push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
+            push_errlist(&sema->errlist, node->base.span, "operands must be bools");
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_EQ:
         if (!cmp_ty(ty_lhs, ty_rhs) 
             && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR) {
-            push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
+            push_errlist(&sema->errlist, node->base.span, "operands must be of same type");
             return mk_primitive_ty(&sema->scratch, TY_ERR);
         }
         return ty_lhs;
@@ -194,7 +197,7 @@ static struct TyNode *analyze_block(struct SemaState *sema, struct BlockNode *no
 static struct TyNode *analyze_if(struct SemaState *sema, struct IfNode *node) {
     struct TyNode *ty_cond = analyze_node(sema, node->cond);
     if (ty_cond->tag != TY_BOOL && ty_cond->tag != TY_ERR)
-        push_errlist(&sema->errlist, node->base.span, "expected `Bool`");
+        push_errlist(&sema->errlist, node->base.span, "expected bool");
 
     analyze_block(sema, node->thn);
     if (node->els)
@@ -204,6 +207,11 @@ static struct TyNode *analyze_if(struct SemaState *sema, struct IfNode *node) {
 }
 
 static struct TyNode *analyze_expr_stmt(struct SemaState *sema, struct ExprStmtNode *node) {
+    analyze_node(sema, node->expr);
+    return mk_primitive_ty(&sema->scratch, TY_VOID);
+}
+
+static struct TyNode *analyze_print(struct SemaState *sema, struct PrintNode *node) {
     analyze_node(sema, node->expr);
     return mk_primitive_ty(&sema->scratch, TY_VOID);
 }
@@ -260,6 +268,9 @@ static struct TyNode *analyze_node(struct SemaState *sema, struct Node *node) {
         return analyze_if(sema, (struct IfNode*)node);
     case NODE_EXPR_STMT:
         return analyze_expr_stmt(sema, (struct ExprStmtNode*)node);
+    // TEMP remove when we add functions
+    case NODE_PRINT:
+        return analyze_print(sema, (struct PrintNode*)node);
     case NODE_VAR_DECL:
         return analyze_var_decl(sema, (struct VarDeclNode*)node);
     }
