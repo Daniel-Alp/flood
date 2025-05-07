@@ -1,7 +1,13 @@
 {
     if (true) {
-
+        print 3;
     } else {
-        
+        print 4;
+    }
+
+    if (false) {
+        print 3;
+    } else {
+        print 4;
     }
 }

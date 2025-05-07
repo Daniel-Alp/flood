@@ -1,4 +1,4 @@
 {
-    3 == 4;
-    true == false;
+    print 3 == 4;
+    print true == false;
 }

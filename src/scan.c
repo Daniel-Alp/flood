@@ -29,21 +29,20 @@ static char bump(struct Scanner *scanner) {
 static void skip_whitespace(struct Scanner *scanner) {
     while (true) {
         switch (at(scanner)) {
-            case '\n':
-            case ' ':
-            case '\t':
-                bump(scanner);
-                break;
-            default:
-                return;
+        case '\n':
+        case ' ':
+        case '\t':
+            bump(scanner);
+            break;
+        default:
+            return;
         }
     }
 }
 
 static void skip_comment(struct Scanner *scanner) {
-    while (at(scanner) != '\n') {
+    while (at(scanner) != '\n')
         bump(scanner);
-    }
     bump(scanner);
 }
 
@@ -100,9 +99,10 @@ static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32
 
 struct Token next_token(struct Scanner *scanner) {
     skip_whitespace(scanner);
-    if (at(scanner) == '/' && next(scanner) == '/')
+    while (at(scanner) == '/' && next(scanner) == '/') {
         skip_comment(scanner);
-    skip_whitespace(scanner);
+        skip_whitespace(scanner);
+    }
     scanner->start = scanner->current;
 
     if (is_at_end(scanner))
@@ -125,27 +125,27 @@ struct Token next_token(struct Scanner *scanner) {
     case ';': return mk_token(scanner, TOKEN_SEMI);
     case ':': return mk_token(scanner, TOKEN_COLON);
     default:
-    if (is_digit(c)) {
-        number(scanner);
-        return mk_token(scanner, TOKEN_NUMBER);
-    } else if (is_alpha(c)) {
-        identifier(scanner);
-        switch (c) {
-        case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
-        case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
-        case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
-        // TEMP remove when we add functions
-        case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);
-        case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
-        case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
-        case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
-        case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
-        case 'N': return check_keyword(scanner, "um", 3, TOKEN_TY_NUM);
-        case 'B': return check_keyword(scanner, "ool", 4, TOKEN_TY_BOOL);
-        default:  return mk_token(scanner, TOKEN_IDENTIFIER);
+        if (is_digit(c)) {
+            number(scanner);
+            return mk_token(scanner, TOKEN_NUMBER);
+        } else if (is_alpha(c)) {
+            identifier(scanner);
+            switch (c) {
+            case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
+            case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+            case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+            // TEMP remove when we add functions
+            case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);
+            case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
+            case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
+            case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
+            case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
+            case 'N': return check_keyword(scanner, "um", 3, TOKEN_TY_NUM);
+            case 'B': return check_keyword(scanner, "ool", 4, TOKEN_TY_BOOL);
+            default:  return mk_token(scanner, TOKEN_IDENTIFIER);
+            }
+        } else {
+            return mk_token(scanner, TOKEN_ERR);
         }
-    } else {
-        return mk_token(scanner, TOKEN_ERR);
-    }
     };
 }

@@ -9,6 +9,9 @@ struct Symbol {
     // NULL means unknown type
     struct TyNode *ty;
     u32 flags;
+    // if local, index into stack
+    // if global, index into global array
+    i32 idx;
 };
 
 struct SymTable {

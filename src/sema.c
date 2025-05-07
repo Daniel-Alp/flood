@@ -29,6 +29,8 @@ u32 push_symtable(struct SymTable *st, struct Span span) {
     st->symbols[st->count].ty = NULL;
     st->symbols[st->count].span = span;
     st->symbols[st->count].flags = SYM_FLAG_NONE;
+    // for now every variable is local, later we will add flags to indicate the kind of variable it is
+    st->symbols[st->count].idx = -1;
     st->count++;
     return st->count-1;
 }
@@ -84,6 +86,7 @@ static struct TyNode *analyze_ident(struct SemaState *sema, struct IdentNode *no
         push_errlist(&sema->errlist, node->base.span, "used before initialization");
         return mk_primitive_ty(&sema->scratch, TY_ERR);
     }
+    node->id = loc->id;
     return cpy_ty(&sema->scratch, symbol.ty);
 }
 
@@ -98,12 +101,7 @@ static struct TyNode *analyze_unary(struct SemaState *sema, struct UnaryNode *no
 }
 
 static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *node) {
-    if ((node->op_tag == TOKEN_EQ 
-        || node->op_tag == TOKEN_PLUS_EQ 
-        || node->op_tag == TOKEN_MINUS_EQ
-        || node->op_tag == TOKEN_STAR_EQ
-        || node->op_tag == TOKEN_SLASH_EQ)
-        && node->lhs->tag != NODE_IDENT) {
+    if (node->op_tag == TOKEN_EQ && node->lhs->tag != NODE_IDENT) {
         push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
         return mk_primitive_ty(&sema->scratch, TY_ERR);
     }
@@ -137,17 +135,14 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_SLASH:
-    case TOKEN_PLUS_EQ:
-    case TOKEN_MINUS_EQ:
-    case TOKEN_STAR_EQ:
-    case TOKEN_SLASH_EQ:
         if ((ty_lhs->tag != TY_NUM || ty_rhs->tag != TY_NUM) 
             && ty_lhs->tag != TY_ERR 
             && ty_rhs->tag != TY_ERR) {
-            push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
+            push_errlist(&sema->errlist, node->base.span, "operands must be numbers");
             return mk_primitive_ty(&sema->scratch, TY_ERR);
         } else {
             // return ty_lhs because later we'll want to support adding lists and adding strings
+            // (maybe not since I conver x += y to x = x + y)
             return ty_lhs;
         }
     case TOKEN_LT:
@@ -232,7 +227,7 @@ static struct TyNode *analyze_var_decl(struct SemaState *sema, struct VarDeclNod
         // if no type hint provided, infer type based on assignment
         if (!node->ty_hint) {
             sema->st.symbols[id].ty = cpy_ty(&sema->st.arena, ty_init);
-        } else if (!cmp_ty(ty_init, node->ty_hint)) {
+        } else if (!cmp_ty(ty_init, node->ty_hint) && ty_init->tag != TY_ERR) {
             // type hints take precedence over init type. For example
             //      let x: Bool = 3;
             //      x && false;
@@ -254,25 +249,16 @@ static struct TyNode *analyze_var_decl(struct SemaState *sema, struct VarDeclNod
 
 static struct TyNode *analyze_node(struct SemaState *sema, struct Node *node) {
     switch (node->tag) {
-    case NODE_LITERAL:
-        return analyze_literal(sema, (struct LiteralNode*)node);
-    case NODE_IDENT:
-        return analyze_ident(sema, (struct IdentNode*)node);
-    case NODE_UNARY:
-        return analyze_unary(sema, (struct UnaryNode*)node);
-    case NODE_BINARY:
-        return analyze_binary(sema, (struct BinaryNode*)node);
-    case NODE_BLOCK:
-        return analyze_block(sema, (struct BlockNode*)node);
-    case NODE_IF:
-        return analyze_if(sema, (struct IfNode*)node);
-    case NODE_EXPR_STMT:
-        return analyze_expr_stmt(sema, (struct ExprStmtNode*)node);
+    case NODE_LITERAL:   return analyze_literal(sema, (struct LiteralNode*)node);
+    case NODE_IDENT:     return analyze_ident(sema, (struct IdentNode*)node);
+    case NODE_UNARY:     return analyze_unary(sema, (struct UnaryNode*)node);
+    case NODE_BINARY:    return analyze_binary(sema, (struct BinaryNode*)node);
+    case NODE_BLOCK:     return analyze_block(sema, (struct BlockNode*)node);
+    case NODE_IF:        return analyze_if(sema, (struct IfNode*)node);
+    case NODE_EXPR_STMT: return analyze_expr_stmt(sema, (struct ExprStmtNode*)node);
     // TEMP remove when we add functions
-    case NODE_PRINT:
-        return analyze_print(sema, (struct PrintNode*)node);
-    case NODE_VAR_DECL:
-        return analyze_var_decl(sema, (struct VarDeclNode*)node);
+    case NODE_PRINT:     return analyze_print(sema, (struct PrintNode*)node);
+    case NODE_VAR_DECL:  return analyze_var_decl(sema, (struct VarDeclNode*)node);
     }
 }
 

@@ -1,5 +1,9 @@
 {
     if (true) {
+        print 3;
+    }
 
+    if (false) {
+        print 4;
     }
 }

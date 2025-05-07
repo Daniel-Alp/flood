@@ -1,7 +1,9 @@
 {
     var x = 5;
     x = 6;
+    print x;
 
     var y = true;
     y = false;
+    print y;
 }

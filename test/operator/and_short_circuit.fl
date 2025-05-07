@@ -1,0 +1,13 @@
+{
+    var x = 3;
+    true and (x = 4) < 5;
+    print x;
+
+    var y = 3;
+    false and (y = 4) < 5;
+    print y;
+
+    5 >= 2 and true and 3 + 4 < 5 * 5 and true and 3 <= 4 and true and (x = 5) < 6 and (y = 5) < 7;
+    print x;
+    print y;
+}

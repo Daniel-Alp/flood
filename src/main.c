@@ -4,6 +4,8 @@
 #include "common.h"
 #include "parse.h"
 #include "sema.h"
+#include "compile.h"
+#include "vm.h"
 #include "debug.h"
 #include "error.h"
 
@@ -28,8 +30,8 @@ int main (int argc, char **argv) {
     buf[length+1] = '\0';
     char *source = buf+1;
     fread(source, 1, length, fp);
+    printf("%s\n\n", source);
 
-    struct Scanner scanner;
     struct Parser parser;
     init_parser(&parser, source);
     parse(&parser);
@@ -48,9 +50,14 @@ int main (int argc, char **argv) {
         goto err_release_sema_state;
     }
 
-    print_node(parser.ast, 0);
-    printf("\n");
+    struct Compiler compiler;
+    init_compiler(&compiler);
+    compile(&compiler, parser.ast, &sema.st);
 
+    // disassemble_chunk(&compiler.chunk);
+    run(&compiler.chunk);
+
+    release_compiler(&compiler);
 err_release_sema_state:
     release_sema_state(&sema);
 err_release_parser:

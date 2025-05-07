@@ -1,3 +1,4 @@
 {
-    !true;
+    print !true;
+    print !false;
 }

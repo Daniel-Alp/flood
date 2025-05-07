@@ -13,8 +13,8 @@ struct PrecLvl infix_prec[] = {
     [TOKEN_MINUS_EQ]   = {1, 2},
     [TOKEN_STAR_EQ]    = {1, 2},
     [TOKEN_SLASH_EQ]   = {1, 2},
-    [TOKEN_OR]         = {3, 4},
-    [TOKEN_AND]        = {5, 6},
+    [TOKEN_OR]         = {3, 3},
+    [TOKEN_AND]        = {5, 5},
     [TOKEN_EQ_EQ]      = {7, 8},
     [TOKEN_NEQ]        = {7, 8},
     [TOKEN_LT]         = {9, 10},
@@ -71,11 +71,11 @@ static struct UnaryNode *mk_unary(struct Arena *arena, struct Token token, struc
     return node;
 }
 
-static struct BinaryNode *mk_binary(struct Arena *arena, struct Token token, struct Node *lhs, struct Node *rhs) {
+static struct BinaryNode *mk_binary(struct Arena *arena, struct Span span, enum TokenTag tag, struct Node *lhs, struct Node *rhs) {
     struct BinaryNode *node = push_arena(arena, sizeof(struct BinaryNode));
     node->base.tag = NODE_BINARY;
-    node->base.span = token.span;
-    node->op_tag = token.tag;
+    node->base.span = span;
+    node->op_tag = tag;
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
@@ -188,26 +188,23 @@ static struct BlockNode *parse_block(struct Parser *parser);
 
 static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
     struct Token token = at(parser);
+    bump(parser);
     struct Node *lhs = NULL;
     switch (token.tag) {
     case TOKEN_TRUE:
     case TOKEN_FALSE:
     case TOKEN_NUMBER:
-        bump(parser);
         lhs = (struct Node*)mk_literal(&parser->arena, token);
         break;
     case TOKEN_IDENTIFIER:
-        bump(parser);
         lhs = (struct Node*)mk_ident(&parser->arena, token);
         break;
     case TOKEN_L_PAREN:
-        bump(parser);
-        lhs = (struct Node*)parse_expr(parser, 0);
+        lhs = (struct Node*)parse_expr(parser, 1);
         expect(parser, TOKEN_R_PAREN, "expected `)`");
         break;
     case TOKEN_MINUS:
     case TOKEN_NOT:
-        bump(parser);
         lhs = parse_expr(parser, 15);
         lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
         break;
@@ -221,11 +218,34 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
         token = at(parser);
         u32 old_lvl = infix_prec[token.tag].old;
         u32 new_lvl = infix_prec[token.tag].new;
-        if (old_lvl <= prec_lvl)
+        if (old_lvl < prec_lvl) {
             break;
+        }
         bump(parser);
         struct Node *rhs = parse_expr(parser, new_lvl);
-        lhs = (struct Node*) mk_binary(&parser->arena, token, lhs, rhs);
+        
+        enum TokenTag tag = token.tag;
+        // desugar +=, -=, *=, /=
+        switch(tag) {
+        case TOKEN_PLUS_EQ:
+            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_PLUS, lhs, rhs);
+            tag = TOKEN_EQ;
+            break;
+        case TOKEN_MINUS_EQ:
+            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_MINUS, lhs, rhs);
+            tag = TOKEN_EQ;
+            break;
+        case TOKEN_STAR_EQ:
+            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_STAR, lhs, rhs);
+            tag = TOKEN_EQ;
+            break;
+        case TOKEN_SLASH_EQ:
+            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_SLASH, lhs, rhs);
+            tag = TOKEN_EQ;
+            break;
+        }
+        
+        lhs = (struct Node*) mk_binary(&parser->arena, token.span, tag, lhs, rhs);
     }
     return lhs;
 }
@@ -251,7 +271,7 @@ static struct TyNode *parse_ty_expr(struct Parser *parser) {
 static struct IfNode *parse_if(struct Parser *parser) {
     struct Span span = prev(parser).span;
     expect(parser, TOKEN_L_PAREN, "expected `(`");
-    struct Node *cond = parse_expr(parser, 0);
+    struct Node *cond = parse_expr(parser, 1);
     expect(parser, TOKEN_R_PAREN, "expected `)`");
     struct BlockNode *thn = parse_block(parser);
     struct BlockNode *els = NULL;
@@ -269,7 +289,7 @@ static struct VarDeclNode *parse_var_decl(struct Parser *parser){
         ty_hint = parse_ty_expr(parser);
     struct Node *init = NULL;
     if (eat(parser, TOKEN_EQ))
-        init = parse_expr(parser, 0);
+        init = parse_expr(parser, 1);
     expect(parser, TOKEN_SEMI, "expected `;`");
     return mk_var_decl(&parser->arena, span, ty_hint, init);
 }
@@ -278,7 +298,7 @@ static struct VarDeclNode *parse_var_decl(struct Parser *parser){
 // precondition: `print` token consumed
 static struct PrintNode *parse_print(struct Parser *parser) {
     struct Span span = prev(parser).span;
-    struct Node *expr = parse_expr(parser, 0);
+    struct Node *expr = parse_expr(parser, 1);
     struct PrintNode *node = push_arena(&parser->arena, sizeof(struct PrintNode));
     node->base.tag = NODE_PRINT;
     node->base.span = span;
@@ -307,7 +327,7 @@ static struct BlockNode *parse_block(struct Parser *parser) {
         } else if (eat(parser, TOKEN_PRINT)) {
             node = (struct Node*)parse_print(parser);
         } else {
-            node = parse_expr(parser, 0);
+            node = parse_expr(parser, 1);
             if (node) {
                 expect(parser, TOKEN_SEMI, "expected `;`"); 
                 node = (struct Node*) mk_expr_stmt(&parser->arena, node->span, node);
