@@ -124,6 +124,7 @@ struct Token next_token(struct Scanner *scanner) {
     case '}': return mk_token(scanner, TOKEN_R_BRACE);
     case ';': return mk_token(scanner, TOKEN_SEMI);
     case ':': return mk_token(scanner, TOKEN_COLON);
+    case ',': return mk_token(scanner, TOKEN_COMMA);
     default:
         if (is_digit(c)) {
             number(scanner);
@@ -131,18 +132,23 @@ struct Token next_token(struct Scanner *scanner) {
         } else if (is_alpha(c)) {
             identifier(scanner);
             switch (c) {
-            case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
-            case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+            case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
+            case 'B': return check_keyword(scanner, "ool", 4, TOKEN_BOOL);
             case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+            case 'f':
+                if (scanner->start[1] == 'n')
+                    return check_keyword(scanner, "n", 2, TOKEN_FN);
+                else
+                    return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
+            case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+            case 'N': return check_keyword(scanner, "um", 3, TOKEN_NUM);
+            case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
             // TEMP remove when we add functions
             case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);
+            case 'r': return check_keyword(scanner, "eturn", 6, TOKEN_RETURN);
             case 't': return check_keyword(scanner, "rue", 4, TOKEN_TRUE);
-            case 'f': return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
-            case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
-            case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
-            case 'N': return check_keyword(scanner, "um", 3, TOKEN_TY_NUM);
-            case 'B': return check_keyword(scanner, "ool", 4, TOKEN_TY_BOOL);
-            default:  return mk_token(scanner, TOKEN_IDENTIFIER);
+            case 'v': return check_keyword(scanner, "ar", 3, TOKEN_VAR);
+            default: return mk_token(scanner, TOKEN_IDENTIFIER);
             }
         } else {
             return mk_token(scanner, TOKEN_ERR);

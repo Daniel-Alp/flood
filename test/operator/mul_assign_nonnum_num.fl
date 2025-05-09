@@ -1,4 +1,4 @@
-{
+fn main() {
     var x = true;
     x *= 4;
 }

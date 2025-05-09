@@ -24,6 +24,24 @@ const char *bin_op_to_str(enum TokenTag op_tag) {
     }
 }
 
+static void print_ty(struct TyNode *ty) {
+    switch (ty->tag) {
+    case TY_NUM:  printf("Num"); break;
+    case TY_BOOL: printf("Bool"); break;
+    case TY_VOID: printf("Void"); break;
+    }
+}
+
+static void print_literal(struct LiteralNode *node, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(Literal %.*s)", node->base.span.length, node->base.span.start);
+}
+
+static void print_ident(struct IdentNode *node, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(Ident %.*s)", node->base.span.length, node->base.span.start);
+}
+
 static void print_unary(struct UnaryNode *node, u32 offset) {
     printf("%*s", offset, "");
     printf("(Unary\n");
@@ -44,14 +62,15 @@ static void print_binary(struct BinaryNode *node, u32 offset) {
     printf(")");
 }
 
-static void print_literal(struct LiteralNode *node, u32 offset) {
+static void print_fn_call(struct FnCallNode *node, u32 offset) {
     printf("%*s", offset, "");
-    printf("(Literal %.*s)", node->base.span.length, node->base.span.start);
-}
-
-static void print_ident(struct IdentNode *node, u32 offset) {
-    printf("%*s", offset, "");
-    printf("(Ident %.*s)", node->base.span.length, node->base.span.start);
+    printf("(FnCall\n");    
+    print_node(node->lhs, offset + 2);
+    for (i32 i = 0; i < node->arity; i++) {
+        printf("\n");
+        print_node(node->args[i], offset + 2);
+    }
+    printf(")");
 }
 
 static void print_block(struct BlockNode *node, u32 offset) {
@@ -84,15 +103,47 @@ static void print_expr_stmt(struct ExprStmtNode *node, u32 offset) {
     printf(")");
 }
 
+static void print_return(struct ReturnNode *node, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(Return\n");
+    print_node(node->expr, offset + 2);
+    printf(")");
+}
+
 static void print_var_decl(struct VarDeclNode *node, u32 offset) {
     printf("%*s", offset, "");
     printf("(VarDecl\n");
     printf("%*s", offset + 2, "");
     printf("%.*s", node->base.span.length, node->base.span.start);
+    if (node->ty_hint) {
+        printf(": ");
+        print_ty(node->ty_hint);
+    }
     if (node->init) {
         printf("\n");
         print_node(node->init, offset + 2);
     }
+    printf(")");
+}
+
+static void print_fn_decl(struct FnDeclNode *node, u32 offset) {
+    printf("%*s", offset, "");
+    printf("(FnDeclNode\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node->base.span.length, node->base.span.start);
+    printf("(");
+    for (i32 i = 0; i < node->arity; i++) {
+        struct Span span = node->param_names[i]->base.span;
+        printf("%.*s", span.length, span.start);
+        printf(": ");
+        print_ty(node->param_tys[i]);
+        if (i < node->arity-1)
+            printf(", ");
+    }
+    printf(") ");
+    print_ty(node->ret_ty);
+    printf("\n");
+    print_block(node->body, offset + 2);
     printf(")");
 }
 
@@ -106,33 +157,19 @@ static void print_print(struct PrintNode *node, u32 offset) {
 
 void print_node(struct Node *node, u32 offset) {
     switch (node->tag) {
-    case NODE_LITERAL:
-        print_literal((struct LiteralNode*)node, offset);
-        break;
-    case NODE_IDENT:
-        print_ident((struct IdentNode*)node, offset);
-        break;
-    case NODE_UNARY:
-        print_unary((struct UnaryNode*)node, offset);
-        break;
-    case NODE_BINARY:
-        print_binary((struct BinaryNode*)node, offset);
-        break;
-    case NODE_BLOCK:
-        print_block((struct BlockNode*)node, offset);
-        break;
-    case NODE_IF:
-        print_if((struct IfNode*)node, offset);
-        break;
-    case NODE_EXPR_STMT:
-        print_expr_stmt((struct ExprStmtNode*)node, offset);
-        break;
-    case NODE_VAR_DECL:
-        print_var_decl((struct VarDeclNode*)node, offset);
-        break;
-    case NODE_PRINT:
-        print_print((struct PrintNode*)node, offset);
-        break; 
+    case NODE_LITERAL:   print_literal((struct LiteralNode*)node, offset); break;
+    case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
+    case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
+    case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
+    case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
+    case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
+    case NODE_IF:        print_if((struct IfNode*)node, offset); break;
+    case NODE_EXPR_STMT: print_expr_stmt((struct ExprStmtNode*)node, offset); break;
+    case NODE_VAR_DECL:  print_var_decl((struct VarDeclNode*)node, offset); break;
+    case NODE_FN_DECL:   print_fn_decl((struct FnDeclNode*)node, offset); break;
+    case NODE_RETURN:    print_return((struct ReturnNode*)node, offset); break;
+    // TEMP remove when we add functions
+    case NODE_PRINT:     print_print((struct PrintNode*)node, offset); break; 
     }
     if (offset == 0)
         printf("\n");

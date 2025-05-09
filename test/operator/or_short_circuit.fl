@@ -1,4 +1,4 @@
-{
+fn main() {
     var x = 3;
     true or (x = 4) < 5;
     print x;

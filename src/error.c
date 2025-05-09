@@ -37,6 +37,9 @@ static u32 num_digits(u32 n) {
 
 static u32 line_num(const char *ptr) {
     u32 line = 1;
+    // error at EOF
+    if (*ptr == '\0')
+        ptr--;
     while (*ptr) {
         if (*ptr == '\n')
             line++;

@@ -13,7 +13,7 @@ int main (int argc, char **argv) {
     if (argc != 2)
         exit(1);
 
-    printf("%s\n", argv[1]);
+    // printf("%s\n", argv[1]);
     FILE *fp = fopen(argv[1], "rb");
     if (!fp)
         exit(1);
@@ -30,6 +30,7 @@ int main (int argc, char **argv) {
     buf[length+1] = '\0';
     char *source = buf+1;
     fread(source, 1, length, fp);
+    printf("%s\n", argv[1]);
     printf("%s\n\n", source);
 
     struct Parser parser;
@@ -41,25 +42,31 @@ int main (int argc, char **argv) {
         goto err_release_parser;
     }
 
-    struct SemaState sema;
-    init_sema_state(&sema);
-    analyze(&sema, parser.ast);
-
-    if (sema.errlist.count > 0) {
-        print_errlist(&sema.errlist);
-        goto err_release_sema_state;
+    struct FileNode *module = (struct FileNode*)parser.ast;
+    for (i32 i = 0; i < module->count; i++) {
+        print_node(module->stmts[i], 0);
+        printf("\n");
     }
 
-    struct Compiler compiler;
-    init_compiler(&compiler);
-    compile(&compiler, parser.ast, &sema.st);
+    // struct SemaState sema;
+    // init_sema_state(&sema);
+    // analyze(&sema, parser.ast);
+
+    // if (sema.errlist.count > 0) {
+    //     print_errlist(&sema.errlist);
+    //     goto err_release_sema_state;
+    // }
+
+    // struct Compiler compiler;
+    // init_compiler(&compiler);
+    // compile(&compiler, parser.ast, &sema.st);
 
     // disassemble_chunk(&compiler.chunk);
-    run(&compiler.chunk);
+    // run(&compiler.chunk);
 
-    release_compiler(&compiler);
-err_release_sema_state:
-    release_sema_state(&sema);
+//     release_compiler(&compiler);
+// err_release_sema_state:
+//     release_sema_state(&sema);
 err_release_parser:
     release_parser(&parser);
 err_release_buf:

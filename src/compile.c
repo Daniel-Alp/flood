@@ -11,7 +11,6 @@ void init_compiler(struct Compiler *compiler) {
     compiler->stack_count = 0;
 }
 
-
 void release_compiler(struct Compiler *compiler) {
     release_chunk(&compiler->chunk);
     compiler->stack_count = 0;
@@ -36,7 +35,7 @@ static u32 emit_jump(struct Compiler *compiler, enum OpCode op) {
 static void patch_jump(struct Compiler *compiler, u32 offset) {
     // as seen above, offset points to the OP_JUMP instr
     // compiler->chunk.count points to the to-be-executed instr
-    u16 jump = compiler->chunk.count - (offset+3);
+    u32 jump = compiler->chunk.count - (offset+3);
     // TODO error if jump > max u16
     compiler->chunk.code[offset+1] = (jump >> 8) & 0xff;
     compiler->chunk.code[offset+2] = jump & 0xff; 
@@ -161,7 +160,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node, struct Sy
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node, st); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node, st); break;
     case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node, st); break;
-    case NODE_IF:        compile_if(compiler, (struct IfNode*)node, st);       break;
+    case NODE_IF:        compile_if(compiler, (struct IfNode*)node, st); break;
     case NODE_EXPR_STMT: compile_expr_stmt(compiler, (struct ExprStmtNode*)node, st); break;
     // TEMP remove when we add functions
     case NODE_PRINT:     compile_print_node(compiler, (struct PrintNode*)node, st); break;

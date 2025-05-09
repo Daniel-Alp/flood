@@ -1,4 +1,4 @@
-{
+fn main() {
     var x = 4;
     x *= 5;
     print x;

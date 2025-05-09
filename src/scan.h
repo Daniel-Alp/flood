@@ -35,14 +35,16 @@ enum TokenTag {
     TOKEN_FALSE,
     TOKEN_IDENTIFIER,
 
+    TOKEN_FN,
     TOKEN_VAR,
     TOKEN_IF,
     TOKEN_ELSE,
+    TOKEN_RETURN,
     TOKEN_SEMI,
-
     TOKEN_COLON,
-    TOKEN_TY_NUM,
-    TOKEN_TY_BOOL,
+    TOKEN_COMMA,
+    TOKEN_NUM,
+    TOKEN_BOOL,
 
     TOKEN_EOF,
     TOKEN_ERR,
