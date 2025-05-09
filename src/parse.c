@@ -77,6 +77,15 @@ static void push_node_array(struct NodeArray *arr, struct Node *node) {
     arr->count++;
 }
 
+// moves contents of node array onto arena and release node array
+static struct Node **move_node_array_to_arena(struct Arena *arena, struct NodeArray *arr) {
+    struct Node **nodes = push_arena(arena, arr->count * sizeof(struct Node*));
+    for (i32 i = 0; i < arr->count; i++)
+        nodes[i] = arr->nodes[i];
+    release_node_array(arr);
+    return nodes;
+}
+
 static struct LiteralNode *mk_literal(struct Arena *arena, struct Token token) {
     struct LiteralNode *node = push_arena(arena, sizeof(struct LiteralNode));
     node->base.tag = NODE_LITERAL;
@@ -297,11 +306,9 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
                 expect(parser, TOKEN_COMMA, "expected `,`");
         }
         expect(parser, TOKEN_R_PAREN, "expected `)`");
-        struct Node** args = push_arena(&parser->arena, scratch_args.count * sizeof(struct Node*));
-        for (i32 i = 0; i < scratch_args.count; i++)
-            args[i] = scratch_args.nodes[i];
-        lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, scratch_args.count);
-        release_node_array(&scratch_args);
+        u32 count = scratch_args.count;
+        struct Node** args = move_node_array_to_arena(&parser->arena, &scratch_args);
+        lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, count);
     }
     while(true) {
         token = at(parser);
@@ -406,14 +413,8 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser) {
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
     u32 arity = scratch_names.count;
-    struct IdentNode **param_names = push_arena(&parser->arena, arity * sizeof(struct IdentNode*));
-    struct TyNode **param_tys = push_arena(&parser->arena, arity * sizeof(struct TyNode*));
-    for (i32 i = 0; i < arity; i++) {
-        param_names[i] = (struct IdentNode*)scratch_names.nodes[i];
-        param_tys[i] = (struct TyNode*)scratch_tys.nodes[i];
-    }
-    release_node_array(&scratch_names);
-    release_node_array(&scratch_tys);
+    struct IdentNode **param_names = (struct IdentNode**)move_node_array_to_arena(&parser->arena, &scratch_names);
+    struct TyNode **param_tys = (struct TyNode**)move_node_array_to_arena(&parser->arena, &scratch_tys);
     struct TyNode *ret_ty;
     if (at(parser).tag == TOKEN_L_BRACE)
         ret_ty = mk_primitive_ty(&parser->arena, TY_VOID);
@@ -477,10 +478,7 @@ static struct BlockNode *parse_block(struct Parser *parser) {
     }
     expect(parser, TOKEN_R_BRACE, "expected `}`");
     u32 count = scratch.count;
-    struct Node **stmts = push_arena(&parser->arena, count * sizeof(struct Node*));
-    for (i32 i = 0; i < count; i++)
-        stmts[i] = scratch.nodes[i];
-    release_node_array(&scratch);
+    struct Node **stmts = move_node_array_to_arena(&parser->arena, &scratch);
     return mk_block(&parser->arena, span, stmts, count);
 }
 
@@ -493,10 +491,7 @@ static struct FileNode *parse_file(struct Parser *parser) {
         push_node_array(&scratch, node);
     }
     u32 count = scratch.count;
-    struct Node **stmts = push_arena(&parser->arena, count * sizeof(struct Node*));
-    for (i32 i = 0; i < count; i++)
-        stmts[i] = scratch.nodes[i];
-    release_node_array(&scratch);
+    struct Node **stmts = move_node_array_to_arena(&parser->arena, &scratch);
     return mk_file(&parser->arena, stmts, count);
 }
 
