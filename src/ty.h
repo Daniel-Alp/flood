@@ -5,7 +5,7 @@ enum TyTag {
     TY_NUM,
     TY_BOOL,
     TY_VOID,
-    TY_ERR,
+    TY_ANY,
 };
 
 struct TyNode {

@@ -354,6 +354,9 @@ static struct TyNode *parse_ty_expr(struct Parser *parser) {
     case TOKEN_BOOL:
         bump(parser);
         return mk_primitive_ty(&parser->arena, TY_BOOL);
+    case TOKEN_ANY:
+        bump(parser);
+        return mk_primitive_ty(&parser->arena, TY_ANY);
     default:
         if (!parser->panic)
             push_errlist(&parser->errlist, token.span, "expected type");

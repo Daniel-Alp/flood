@@ -4,7 +4,6 @@
 #include "sema.h"
 
 // TODO reset arena stack_pos when traversing tree because current implementation is wasteful of memory
-
 void init_symtable(struct SymTable *st) {
     st->count = 0;
     st->cap = 8;
@@ -75,16 +74,16 @@ static struct TyNode *analyze_ident(struct SemaState *sema, struct IdentNode *no
     // TODO only error on first occurence of not in scope
     if (!loc) {
         push_errlist(&sema->errlist, node->base.span, "not found in this scope");
-        return mk_primitive_ty(&sema->scratch, TY_ERR);
+        return mk_primitive_ty(&sema->scratch, TY_ANY);
     }
     struct Symbol symbol = sema->st.symbols[loc->id];
     if (!symbol.ty) {
         push_errlist(&sema->errlist, node->base.span, "unknown type");
-        return mk_primitive_ty(&sema->scratch, TY_ERR);
+        return mk_primitive_ty(&sema->scratch, TY_ANY);
     }
     if ((symbol.flags & SYM_FLAG_INITIALIZED) == 0) {
         push_errlist(&sema->errlist, node->base.span, "used before initialization");
-        return mk_primitive_ty(&sema->scratch, TY_ERR);
+        return mk_primitive_ty(&sema->scratch, TY_ANY);
     }
     node->id = loc->id;
     return cpy_ty(&sema->scratch, symbol.ty);
@@ -93,9 +92,9 @@ static struct TyNode *analyze_ident(struct SemaState *sema, struct IdentNode *no
 static struct TyNode *analyze_unary(struct SemaState *sema, struct UnaryNode *node) {
     struct TyNode *ty = analyze_node(sema, node->rhs);
     if (((node->op_tag == TOKEN_MINUS && ty->tag != TY_NUM) || (node->op_tag == TOKEN_NOT && ty->tag != TY_BOOL))
-        && ty->tag != TY_ERR) {
+        && ty->tag != TY_ANY) {
         push_errlist(&sema->errlist, node->base.span, "cannot apply operator");
-        return mk_primitive_ty(&sema->scratch, TY_ERR);
+        return mk_primitive_ty(&sema->scratch, TY_ANY);
     }
     return ty;
 }
@@ -103,7 +102,7 @@ static struct TyNode *analyze_unary(struct SemaState *sema, struct UnaryNode *no
 static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *node) {
     if (node->op_tag == TOKEN_EQ && node->lhs->tag != NODE_IDENT) {
         push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
-        return mk_primitive_ty(&sema->scratch, TY_ERR);
+        return mk_primitive_ty(&sema->scratch, TY_ANY);
     }
 
     struct TyNode *ty_rhs = analyze_node(sema, node->rhs);
@@ -115,7 +114,7 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
         struct Local *loc = resolve_ident(sema, ((struct IdentNode*)node->lhs)->base.span);
         if (!loc) {
             push_errlist(&sema->errlist, ((struct IdentNode*)node->lhs)->base.span, "not found in this scope");
-            return mk_primitive_ty(&sema->scratch, TY_ERR);
+            return mk_primitive_ty(&sema->scratch, TY_ANY);
         }
 
         u32 id = loc->id;
@@ -136,13 +135,11 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
     case TOKEN_STAR:
     case TOKEN_SLASH:
         if ((ty_lhs->tag != TY_NUM || ty_rhs->tag != TY_NUM) 
-            && ty_lhs->tag != TY_ERR 
-            && ty_rhs->tag != TY_ERR) {
+            && ty_lhs->tag != TY_ANY 
+            && ty_rhs->tag != TY_ANY) {
             push_errlist(&sema->errlist, node->base.span, "operands must be numbers");
-            return mk_primitive_ty(&sema->scratch, TY_ERR);
+            return mk_primitive_ty(&sema->scratch, TY_ANY);
         } else {
-            // return ty_lhs because later we'll want to support adding lists and adding strings
-            // (maybe not since I conver x += y to x = x + y)
             return ty_lhs;
         }
     case TOKEN_LT:
@@ -150,31 +147,31 @@ static struct TyNode *analyze_binary(struct SemaState *sema, struct BinaryNode *
     case TOKEN_GT:
     case TOKEN_GEQ:
         if ((ty_lhs->tag != TY_NUM || ty_rhs->tag != TY_NUM) 
-            && ty_lhs->tag != TY_ERR 
-            && ty_rhs->tag != TY_ERR)
+            && ty_lhs->tag != TY_ANY 
+            && ty_rhs->tag != TY_ANY)
             push_errlist(&sema->errlist, node->base.span, "operands must be numbers");
         // even if the types were not Num, the inequality operator always returns bool
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_NEQ:
     case TOKEN_EQ_EQ:
         if (!cmp_ty(ty_lhs, ty_rhs) 
-            && ty_lhs->tag != TY_ERR 
-            && ty_rhs->tag != TY_ERR)
+            && ty_lhs->tag != TY_ANY 
+            && ty_rhs->tag != TY_ANY)
             push_errlist(&sema->errlist, node->base.span, "operands must of be of same type");
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_AND:
     case TOKEN_OR:
         if ((ty_lhs->tag != TY_BOOL || ty_rhs->tag != TY_BOOL) 
-            && ty_lhs->tag != TY_ERR 
-            && ty_rhs->tag != TY_ERR)
+            && ty_lhs->tag != TY_ANY 
+            && ty_rhs->tag != TY_ANY)
             push_errlist(&sema->errlist, node->base.span, "operands must be bools");
         return mk_primitive_ty(&sema->scratch, TY_BOOL);
     case TOKEN_EQ:
         if (!cmp_ty(ty_lhs, ty_rhs) 
-            && ty_lhs->tag != TY_ERR 
-            && ty_rhs->tag != TY_ERR) {
+            && ty_lhs->tag != TY_ANY 
+            && ty_rhs->tag != TY_ANY) {
             push_errlist(&sema->errlist, node->base.span, "operands must be of same type");
-            return mk_primitive_ty(&sema->scratch, TY_ERR);
+            return mk_primitive_ty(&sema->scratch, TY_ANY);
         }
         return ty_lhs;
     }
@@ -191,7 +188,7 @@ static struct TyNode *analyze_block(struct SemaState *sema, struct BlockNode *no
 
 static struct TyNode *analyze_if(struct SemaState *sema, struct IfNode *node) {
     struct TyNode *ty_cond = analyze_node(sema, node->cond);
-    if (ty_cond->tag != TY_BOOL && ty_cond->tag != TY_ERR)
+    if (ty_cond->tag != TY_BOOL && ty_cond->tag != TY_ANY)
         push_errlist(&sema->errlist, node->base.span, "expected bool");
 
     analyze_block(sema, node->thn);
@@ -227,7 +224,9 @@ static struct TyNode *analyze_var_decl(struct SemaState *sema, struct VarDeclNod
         // if no type hint provided, infer type based on assignment
         if (!node->ty_hint) {
             sema->st.symbols[id].ty = cpy_ty(&sema->st.arena, ty_init);
-        } else if (!cmp_ty(ty_init, node->ty_hint) && ty_init->tag != TY_ERR) {
+        } else if (!cmp_ty(ty_init, node->ty_hint) 
+                    && ty_init->tag != TY_ANY
+                    && node->ty_hint->tag != TY_ANY) {
             // type hints take precedence over init type. For example
             //      let x: Bool = 3;
             //      x && false;
@@ -266,6 +265,6 @@ void analyze(struct SemaState *sema, struct Node *node) {
     analyze_node(sema, node);
     for (i32 i = 0; i < sema->st.count; i++) {
         if (!sema->st.symbols[i].ty)
-            push_errlist(&sema->errlist, sema->st.symbols[i].span, "unable to infer type");
+            push_errlist(&sema->errlist, sema->st.symbols[i].span, "add type hint");
     }
 }

@@ -16,7 +16,8 @@ struct TyNode *cpy_ty(struct Arena *arena, struct TyNode *ty) {
     switch (ty->tag) {
     case TY_NUM:
     case TY_BOOL:
-    case TY_ERR:
+    case TY_ANY:
+    case TY_VOID:
         return mk_primitive_ty(arena, ty->tag);
     }
 }

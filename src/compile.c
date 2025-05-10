@@ -53,7 +53,7 @@ static void compile_literal(struct Compiler *compiler, struct LiteralNode *node)
         break;
     case TOKEN_NUMBER:
         emit_byte(&compiler->chunk, OP_GET_CONST);
-        Value val = strtod(node->base.span.start, NULL);
+        Value val = NUM_VAL(strtod(node->base.span.start, NULL));
         emit_byte(&compiler->chunk, add_constant(&compiler->chunk, val));
         break;
     }

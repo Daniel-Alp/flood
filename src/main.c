@@ -48,25 +48,29 @@ int main (int argc, char **argv) {
         printf("\n");
     }
 
-    // struct SemaState sema;
-    // init_sema_state(&sema);
-    // analyze(&sema, parser.ast);
+    // for now just compile and execute the body of the first function
+    // this is a hack but needed for testing
+    struct Node *body = (struct Node*)((struct FnDeclNode*)module->stmts[0])->body;
 
-    // if (sema.errlist.count > 0) {
-    //     print_errlist(&sema.errlist);
-    //     goto err_release_sema_state;
-    // }
+    struct SemaState sema;
+    init_sema_state(&sema);
+    analyze(&sema, body);
 
-    // struct Compiler compiler;
-    // init_compiler(&compiler);
-    // compile(&compiler, parser.ast, &sema.st);
+    if (sema.errlist.count > 0) {
+        print_errlist(&sema.errlist);
+        goto err_release_sema_state;
+    }
 
-    // disassemble_chunk(&compiler.chunk);
-    // run(&compiler.chunk);
+    struct Compiler compiler;
+    init_compiler(&compiler);
+    compile(&compiler, body, &sema.st);
 
-//     release_compiler(&compiler);
-// err_release_sema_state:
-//     release_sema_state(&sema);
+    disassemble_chunk(&compiler.chunk);
+    run(&compiler.chunk);
+
+    release_compiler(&compiler);
+err_release_sema_state:
+    release_sema_state(&sema);
 err_release_parser:
     release_parser(&parser);
 err_release_buf:

@@ -1,13 +1,6 @@
 #pragma once
 #include "common.h"
-
-typedef double Value;
-
-struct ValArray {
-    u32 count;
-    u32 cap;
-    Value *values;
-};
+#include "value.h"
 
 struct Chunk {
     u32 count;

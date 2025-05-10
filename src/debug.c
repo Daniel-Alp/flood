@@ -28,6 +28,7 @@ static void print_ty(struct TyNode *ty) {
     switch (ty->tag) {
     case TY_NUM:  printf("Num"); break;
     case TY_BOOL: printf("Bool"); break;
+    case TY_ANY:  printf("Any"); break;
     case TY_VOID: printf("Void"); break;
     }
 }
@@ -165,7 +166,13 @@ void disassemble_chunk(struct Chunk *chunk) {
         case OP_NEGATE:        printf("OP_NEGATE\n"); break;
         case OP_NOT:           printf("OP_NOT\n"); break;    
         case OP_GET_CONST:
-            printf("OP_GET_CONST     %.4f\n", chunk->constants.values[chunk->code[++i]]);
+            Value val = chunk->constants.values[chunk->code[++i]];
+            printf("OP_GET_CONST     ");
+            switch (val.tag) {
+                case VAL_NUM:  printf("%.4f\n", AS_NUM(val)); break;
+                case VAL_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
+                case VAL_NIL:  printf("null\n"); break; 
+            }
             break;
         case OP_GET_LOCAL:
             printf("OP_GET_LOCAL     %d\n", chunk->code[++i]);

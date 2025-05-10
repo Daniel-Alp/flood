@@ -132,6 +132,7 @@ struct Token next_token(struct Scanner *scanner) {
         } else if (is_alpha(c)) {
             identifier(scanner);
             switch (c) {
+            case 'A': return check_keyword(scanner, "ny", 3, TOKEN_ANY);
             case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
             case 'B': return check_keyword(scanner, "ool", 4, TOKEN_BOOL);
             case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);

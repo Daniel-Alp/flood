@@ -45,6 +45,7 @@ enum TokenTag {
     TOKEN_COMMA,
     TOKEN_NUM,
     TOKEN_BOOL,
+    TOKEN_ANY,
 
     TOKEN_EOF,
     TOKEN_ERR,
