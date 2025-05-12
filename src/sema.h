@@ -1,13 +1,15 @@
 #pragma once
 #include "parse.h"
-#define SYM_FLAG_NONE 0
-#define SYM_FLAG_INITIALIZED 1
-#define MAX_LOCALS 256
+#define SYM_FLAG_NONE (0)
+#define SYM_FLAG_INITIALIZED (1)
+#define MAX_LOCALS (256)
 
 struct Symbol {
     struct Span span;
     // NULL means unknown type
-    struct TyNode *ty;
+    // points to the symbol table arena, or into the type info of an AST node 
+    // (e.g. function signatures) which lives on a separate arena
+    struct TyNode *ty; 
     u32 flags;
     // if local, index into stack
     // if global, index into global array
@@ -18,7 +20,6 @@ struct SymTable {
     u32 count;
     u32 cap;
     struct Symbol *symbols;
-    // symbol type info lives on this arena
     struct Arena arena;
 };
 

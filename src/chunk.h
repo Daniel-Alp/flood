@@ -32,11 +32,15 @@ enum OpCode {
     OP_GET_CONST,
     OP_GET_LOCAL,
     OP_SET_LOCAL,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
+    // TODO add OP for accessing and setting variable in another file
 
     OP_JUMP,
     OP_JUMP_IF_FALSE,
     // TODO bench
     OP_JUMP_IF_TRUE,
+    OP_CALL,
     OP_RETURN,
 
     OP_POP,

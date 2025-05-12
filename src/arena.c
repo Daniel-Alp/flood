@@ -3,7 +3,7 @@
 #include "arena.h"
 #include "memory.h"
 
-#define ARENA_SIZE 1 << 20
+#define ARENA_SIZE (1 << 20)
 
 void init_arena(struct Arena *arena) {
     arena->stack_mem = allocate(ARENA_SIZE);

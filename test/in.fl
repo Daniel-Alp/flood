@@ -1,5 +1,7 @@
-fn main() {
+fn main() Any {
     var x: Any = 4;
-    var y: Any = true;
-    print x + y;
+    print x;
+    x += 5;
+    x *= 6;
+    print x;
 }

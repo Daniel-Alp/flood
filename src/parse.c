@@ -1,4 +1,6 @@
+#define _XOPEN_SOURCE 700
 #include <stdlib.h>
+#include <stdio.h>
 #include "memory.h"
 #include "parse.h"
 
@@ -48,11 +50,67 @@ struct PrecLvl infix_prec[] = {
     [TOKEN_ERR]        = {0, 0},
 };
 
+void init_file_array(struct FileArr *arr) {
+    arr->count = 0;
+    arr->cap = 8;
+    arr->real_paths = allocate(arr->cap * sizeof(const char*));
+    arr->bufs = allocate(arr->cap * sizeof(const char*));
+    arr->files = allocate(arr->cap * sizeof(struct FileNode*));
+}
+
+void release_file_array(struct FileArr *arr) {
+    for (i32 i = 0; i < arr->count; i++) {
+        release(arr->real_paths[i]);
+        release(arr->bufs[i]);
+        arr->real_paths[i] = NULL;
+        arr->bufs[i] = NULL;
+    }
+    arr->count = 0;
+    arr->cap = 0;
+    release(arr->real_paths);
+    release(arr->bufs);
+    release(arr->files);
+    arr->real_paths = NULL;
+    arr->bufs = NULL;
+    arr->files = NULL;
+}
+
+void push_file_array(struct FileArr *arr, const char *real_path, const char *buf, struct FileNode *file) {
+    if (arr->count == arr->cap) {
+        arr->cap *= 2;
+        arr->real_paths = reallocate(arr->real_paths, arr->cap * sizeof(const char*));
+        arr->bufs = reallocate(arr->bufs, arr->cap * sizeof(const char*));
+        arr->files = reallocate(arr->files, arr->cap * sizeof(struct FileNode*));
+    }
+    arr->real_paths[arr->count] = real_path;
+    arr->bufs[arr->count] = buf;
+    arr->files[arr->count] = file;
+    arr->count++;
+}
+
+void init_parser(struct Parser *parser) {
+    init_errlist(&parser->errlist);
+    init_arena(&parser->arena);
+    parser->panic = false;
+}
+
+void release_parser(struct Parser *parser) {
+    release_errlist(&parser->errlist);
+    release_arena(&parser->arena);
+}
+
 // dynarray of Node*
 struct NodeArray {
     u32 cap;
     u32 count;
     struct Node **nodes;
+};
+
+// dynarray of Span
+struct SpanArray {
+    u32 cap;
+    u32 count;
+    struct Span *spans;
 };
 
 static void init_node_array(struct NodeArray *arr) {
@@ -84,6 +142,37 @@ static struct Node **move_node_array_to_arena(struct Arena *arena, struct NodeAr
         nodes[i] = arr->nodes[i];
     release_node_array(arr);
     return nodes;
+}
+
+static void init_span_array(struct SpanArray *arr) {
+    arr->count = 0;
+    arr->cap = 8;
+    arr->spans = allocate(arr->cap * sizeof(struct Span));
+}
+
+static void release_span_array(struct SpanArray *arr) {
+    arr->count = 0;
+    arr->cap = 0;
+    release(arr->spans);
+    arr->spans = NULL;
+}
+
+static void push_span_array(struct SpanArray *arr, struct Span span) {
+    if (arr->count == arr->cap) {
+        arr->cap *= 2;
+        arr->spans = reallocate(arr->spans, arr->cap * sizeof(struct Node*));
+    }
+    arr->spans[arr->count] = span;
+    arr->count++;
+}
+
+// moves contents of span array onto arena and release span array
+static struct Span *move_span_array_to_arena(struct Arena *arena, struct SpanArray *arr) {
+    struct Span *spans = push_arena(arena, arr->count * sizeof(struct Span));
+    for (i32 i = 0; i < arr->count; i++)
+        spans[i] = arr->spans[i];
+    release_span_array(arr);
+    return spans;
 }
 
 static struct LiteralNode *mk_literal(struct Arena *arena, struct Token token) {
@@ -121,11 +210,12 @@ static struct BinaryNode *mk_binary(struct Arena *arena, struct Span span, enum 
     return node;
 }
 
-static struct FnCallNode *mk_fn_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, u32 arity) {
+static struct FnCallNode *mk_fn_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Span *args_spans, struct Node **args, u32 arity) {
     struct FnCallNode *node = push_arena(arena, sizeof(struct FnCallNode));
     node->base.tag = NODE_FN_CALL;
     node->base.span = span;
     node->lhs = lhs;
+    node->arg_spans = args_spans;
     node->args = args;
     node->arity = arity;
     return node;
@@ -141,15 +231,12 @@ static struct VarDeclNode *mk_var_decl(struct Arena *arena, struct Span span, st
     return node;
 }
 
-static struct FnDeclNode *mk_fn_decl(struct Arena *arena, struct Span span, struct IdentNode **param_names, struct TyNode **param_tys, u32 arity, struct BlockNode *body, struct TyNode *ret_ty) {
+static struct FnDeclNode *mk_fn_decl(struct Arena *arena, struct Span span, struct FnTyNode *ty, struct BlockNode *body) {
     struct FnDeclNode *node = push_arena(arena, sizeof(struct FnDeclNode));
     node->base.tag = NODE_FN_DECL;
     node->base.span = span;
-    node->param_names = param_names;
-    node->param_tys = param_tys;
-    node->arity = arity;
+    node->ty = ty;
     node->body = body;
-    node->ret_ty = ret_ty;
     return node;
 }
 
@@ -181,27 +268,15 @@ static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct 
     return node;
 }
 
-static struct FileNode *mk_file(struct Arena *arena, struct Node **stmts, u32 count) {
+static struct FileNode *mk_file(struct Arena *arena, struct Node **stmts, struct FileTyNode *ty, u32 count) {
     struct FileNode *node = push_arena(arena, sizeof(struct FileNode));
     node->base.tag = NODE_FILE;
     node->base.span.length = 0;
     node->base.span.start = NULL;
     node->stmts = stmts;
     node->count = count;
+    node->ty = ty;
     return node;
-}
-
-void init_parser(struct Parser *parser, const char *source) {
-    init_errlist(&parser->errlist);
-    init_arena(&parser->arena);
-    init_scanner(&parser->scanner, source);
-    parser->at = next_token(&parser->scanner);
-    parser->panic = false;
-}
-
-void release_parser(struct Parser *parser) {
-    release_errlist(&parser->errlist);
-    release_arena(&parser->arena);
 }
 
 static struct Token at(struct Parser *parser) {
@@ -235,9 +310,9 @@ static bool expect(struct Parser *parser, enum TokenTag tag, const char *msg) {
 }
 
 static void advance_with_err(struct Parser *parser, const char *msg) {
-    bump(parser);
     if (!parser->panic)
         push_errlist(&parser->errlist, at(parser).span, msg);
+    bump(parser);
     parser->panic = true;
 }
 
@@ -297,18 +372,25 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) {
     // parse fn calls
     while(eat(parser, TOKEN_L_PAREN)) {
         struct Span fn_call_span = prev(parser).span;
+        struct SpanArray scratch_spans;
         struct NodeArray scratch_args;
+        init_span_array(&scratch_spans);
         init_node_array(&scratch_args);
         while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
+            const char *span_lo = at(parser).span.start;
             struct Node *arg = parse_expr(parser, 1);
+            const char *span_hi = prev(parser).span.start + prev(parser).span.length;
+            struct Span span = {.start = span_lo, .length = span_hi-span_lo};
+            push_span_array(&scratch_spans, span);
             push_node_array(&scratch_args, arg);
             if (at(parser).tag != TOKEN_R_PAREN)
-                expect(parser, TOKEN_COMMA, "expected `,`");
+                expect(parser, TOKEN_COMMA, "expected `,`");            
         }
         expect(parser, TOKEN_R_PAREN, "expected `)`");
         u32 count = scratch_args.count;
-        struct Node** args = move_node_array_to_arena(&parser->arena, &scratch_args);
-        lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, count);
+        struct Span *arg_spans = move_span_array_to_arena(&parser->arena, &scratch_spans);
+        struct Node **args = move_node_array_to_arena(&parser->arena, &scratch_args);
+        lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, arg_spans, args, count);
     }
     while(true) {
         token = at(parser);
@@ -397,34 +479,35 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser) {
     struct Span span = at(parser).span;
     expect(parser, TOKEN_IDENTIFIER, "expected identifier");
     expect(parser, TOKEN_L_PAREN, "expected `(`");  
-    struct NodeArray scratch_names;
+    struct SpanArray scratch_spans;
     struct NodeArray scratch_tys;
-    init_node_array(&scratch_names);
+    init_span_array(&scratch_spans);
     init_node_array(&scratch_tys);
     while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
         if (eat(parser, TOKEN_IDENTIFIER)) {
-            struct IdentNode *ident = mk_ident(&parser->arena, prev(parser).span);
+            struct Span param_span = prev(parser).span;
             expect(parser, TOKEN_COLON, "expected `:`");
             struct TyNode *ty = parse_ty_expr(parser);
             if (at(parser).tag != TOKEN_R_PAREN)
                 expect(parser, TOKEN_COMMA, "expected `,`");
-            push_node_array(&scratch_names, (struct Node*)ident);
+            push_span_array(&scratch_spans, param_span);
             push_node_array(&scratch_tys, (struct Node*)ty);
         } else {
             advance_with_err(parser, "expected identifier");
         }
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
-    u32 arity = scratch_names.count;
-    struct IdentNode **param_names = (struct IdentNode**)move_node_array_to_arena(&parser->arena, &scratch_names);
+    u32 arity = scratch_spans.count;
+    struct Span *param_spans = (struct Span*)move_span_array_to_arena(&parser->arena, &scratch_spans);
     struct TyNode **param_tys = (struct TyNode**)move_node_array_to_arena(&parser->arena, &scratch_tys);
     struct TyNode *ret_ty;
     if (at(parser).tag == TOKEN_L_BRACE)
         ret_ty = mk_primitive_ty(&parser->arena, TY_VOID);
     else 
         ret_ty = parse_ty_expr(parser);
+    struct FnTyNode *ty = mk_fn_ty(&parser->arena, param_spans, param_tys, ret_ty, arity);
     struct BlockNode *body = parse_block(parser);
-    return mk_fn_decl(&parser->arena, span, param_names, param_tys, arity, body, ret_ty);
+    return mk_fn_decl(&parser->arena, span, ty, body);
 }
 
 // precondition: `return` token consumed
@@ -486,19 +569,53 @@ static struct BlockNode *parse_block(struct Parser *parser) {
 }
 
 static struct FileNode *parse_file(struct Parser *parser) {
+    struct PropArr prop_arr;
     struct NodeArray scratch;
+    init_prop_array(&prop_arr);
     init_node_array(&scratch);
     while (at(parser).tag != TOKEN_EOF) {
+        // TODO allow global variables
         expect(parser, TOKEN_FN, "expected function declaration");
-        struct Node *node = (struct Node*)parse_fn_decl(parser);
-        push_node_array(&scratch, node);
+        struct FnDeclNode *node = parse_fn_decl(parser);
+        push_node_array(&scratch, (struct Node*)node);
+        struct Property prop = {.span = node->base.span, .ty = (struct TyNode*)node->ty};
+        push_prop_array(&prop_arr, prop);
     }
     u32 count = scratch.count;
     struct Node **stmts = move_node_array_to_arena(&parser->arena, &scratch);
-    return mk_file(&parser->arena, stmts, count);
+    u32 prop_count = prop_arr.count;
+    struct Property *props = move_prop_array_to_arena(&parser->arena, &prop_arr);
+    struct FileTyNode *ty = mk_file_ty(&parser->arena, props, count);
+    return mk_file(&parser->arena, stmts, ty, count); // FIXME!
 }
 
 // TODO disallow trailing comma in function declarations and calls
-void parse(struct Parser *parser) {
-    parser->ast = (struct Node*)parse_file(parser);
+void parse(struct Parser *parser, struct FileArr *arr, const char *path) {
+    // TODO when we add imports this will become DFS
+    const char *real_path = realpath(path, NULL);
+    FILE *fp = fopen(path, "rb");
+    if (!fp) {
+        printf("File `%s` does not exist\n", path);
+        exit(1);
+    }
+    fseek(fp, 0, SEEK_END);
+    u64 length = ftell(fp); 
+    fseek(fp, 0, SEEK_SET);
+    char *buf = allocate(length+2);
+    if (!buf) {
+        printf("Failed to allocate buffer for file `%s`\n", path);
+        exit(1);
+    }
+    buf[0] = '\0';
+    buf[length+1] = '\0';
+    char *source = buf+1;
+    fread(source, 1, length, fp);
+
+    init_scanner(&parser->scanner, source);
+    parser->at = next_token(&parser->scanner);
+    parser->panic = false;
+
+    struct FileNode *file = parse_file(parser);
+    push_file_array(arr, real_path, buf, file);
+    fclose(fp);
 }

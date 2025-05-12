@@ -57,6 +57,12 @@ struct FnCallNode {
     struct Node base;
     // the expression that is being called
     struct Node *lhs;
+    // span for each argument provided e.g.
+    // ```  
+    // foo(3+4   , 5, "hello world" )
+    //     ^~~ span   ^~~~~~~~~~~~~ span 
+    // ```
+    struct Span *arg_spans;
     struct Node **args;
     u32 arity;
 };
@@ -72,11 +78,8 @@ struct VarDeclNode {
 struct FnDeclNode {
     // span is identifier
     struct Node base;
-    struct IdentNode **param_names;
-    struct TyNode **param_tys;
-    struct TyNode *ret_ty;
     struct BlockNode *body;
-    u32 arity;
+    struct FnTyNode *ty;
 };
 
 // TEMP remove when we add functions
@@ -117,21 +120,37 @@ struct FileNode {
     // span is unused
     struct Node base;
     struct Node **stmts;
+    struct FileTyNode *ty;
     u32 count;
 };
 
 struct Parser {
     struct ErrList errlist;
     struct Arena arena;
-    struct Node *ast;
     struct Scanner scanner;
     struct Token at;
     struct Token prev;
     bool panic;
 };
 
-void init_parser(struct Parser *parser, const char *source);
+// array of every file being compiled
+struct FileArr {
+    u32 cap;
+    u32 count;
+    // absolute filepaths
+    // malloc'd by realpath
+    const char **real_paths;
+    // buf[0] = '\0', buf[1] = source[0], buf[length+1] = '\0'
+    const char **bufs;
+    struct FileNode **files;
+};
+
+void init_parser(struct Parser *parser);
 
 void release_parser(struct Parser *parser);
 
-void parse(struct Parser *parser);
+void init_file_array(struct FileArr *arr);
+
+void release_file_array(struct FileArr *arr);
+
+void parse(struct Parser *parser, struct FileArr *arr, const char *path);

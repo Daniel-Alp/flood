@@ -88,7 +88,7 @@ static void print_return(struct ReturnNode *node, u32 offset) {
 }
 
 static void print_var_decl(struct VarDeclNode *node, u32 offset) {
-    printf("VarDecl");
+    printf("VarDecl\n");
     printf("%*s", offset + 2, "");
     printf("%.*s", node->base.span.length, node->base.span.start);
     if (node->ty_hint) {
@@ -104,15 +104,16 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset) {
     printf("%*s", offset + 2, "");
     printf("%.*s", node->base.span.length, node->base.span.start);
     printf("(");
-    for (i32 i = 0; i < node->arity; i++) {
-        struct Span span = node->param_names[i]->base.span;
+    struct FnTyNode *ty = node->ty;
+    for (i32 i = 0; i < ty->arity; i++) {
+        struct Span span = ty->param_spans[i];
         printf("%.*s: ", span.length, span.start);
-        print_ty(node->param_tys[i]);
-        if (i < node->arity-1)
+        print_ty(ty->param_tys[i]);
+        if (i < ty->arity-1)
             printf(", ");
     }
     printf(") ");
-    print_ty(node->ret_ty);
+    print_ty(ty->ret_ty);
     print_node(node->body, offset + 2);
 }
 

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vm.h"
-#define MAX_STACK 1024
+#define MAX_STACK (1024)
 
 void run(struct Chunk *chunk) {
     // TODO error if exceed max stack size
