@@ -1,7 +1,12 @@
-fn main() Any {
-    var x: Any = 4;
-    print x;
-    x += 5;
-    x *= 6;
-    print x;
+fn fact() Num {
+
+}
+
+fn bar() {
+
+}
+
+fn main(x: Num) {
+    var y = bar;
+    y = fact;
 }

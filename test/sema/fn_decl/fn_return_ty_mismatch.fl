@@ -1,0 +1,6 @@
+fn foo() Num {
+    if (3 <= 4) {
+        return true and false;
+    }
+    return true;
+}

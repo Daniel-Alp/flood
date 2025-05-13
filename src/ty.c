@@ -57,20 +57,43 @@ struct FileTyNode *mk_file_ty(struct Arena *arena, struct Property *props, u32 c
     return ty;
 }
 
-// LOOKATME!
 bool cmp_ty(struct TyNode *ty1, struct TyNode *ty2) {
+    if (ty1->tag == TY_ANY || ty2->tag == TY_ANY)
+        return true;
     if (ty1->tag != ty2->tag)
         return false;
+    if (ty1->tag == TY_FN) {
+        struct FnTyNode *ty1_cast = (struct FnTyNode*)ty1;
+        struct FnTyNode *ty2_cast = (struct FnTyNode*)ty2;
+        if (ty1_cast->arity != ty2_cast->arity || !cmp_ty(ty1_cast->ret_ty, ty2_cast->ret_ty))
+            return false;
+        for (i32 i = 0; i < ty1_cast->arity; i++) {
+            if (!cmp_ty(ty1_cast->param_tys[i], ty2_cast->param_tys[i]))
+                return false;
+        }
+    }    
     return true;
 }
 
-// LOOKATME!
+// deep copy of the type
 struct TyNode *cpy_ty(struct Arena *arena, struct TyNode *ty) {
+    // TY_NEVER will never be a case
     switch (ty->tag) {
     case TY_NUM:
     case TY_BOOL:
     case TY_ANY:
     case TY_VOID:
         return mk_primitive_ty(arena, ty->tag);
+    case TY_FN: {
+        struct FnTyNode *ty_cast = (struct FnTyNode*)ty;
+        struct Span *param_spans = push_arena(arena, ty_cast->arity * sizeof(struct Span));
+        struct TyNode **param_tys = push_arena(arena, ty_cast->arity * sizeof(struct TyNode*));
+        for (i32 i = 0; i < ty_cast->arity; i++) {
+            param_spans[i] = ty_cast->param_spans[i];
+            param_tys[i] = cpy_ty(arena, ty_cast->param_tys[i]);
+        }
+        struct TyNode *ret_ty = cpy_ty(arena, ty_cast->ret_ty);
+        return mk_fn_ty(arena, param_spans, param_tys, ret_ty, ty_cast->arity);
+    }
     }
 }

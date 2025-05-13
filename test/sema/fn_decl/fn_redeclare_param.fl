@@ -1,0 +1,3 @@
+fn foo(x: Num, x: Bool, y: Bool, z: Num, y: Num) {
+    
+}

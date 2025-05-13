@@ -1,0 +1,7 @@
+fn foo(x: Num) {
+    
+}
+
+fn main() {
+    foo(3, true, 4 + 5);
+}

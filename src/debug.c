@@ -30,6 +30,19 @@ static void print_ty(struct TyNode *ty) {
     case TY_BOOL: printf("Bool"); break;
     case TY_ANY:  printf("Any"); break;
     case TY_VOID: printf("Void"); break;
+    case TY_FN: {
+        printf("(");
+        struct FnTyNode *ty_cast = (struct FnTyNode*)ty;
+        for (i32 i = 0; i < ty_cast->arity; i++) {
+            struct Span span = ty_cast->param_spans[i];
+            printf("%.*s: ", span.length, span.start);
+            print_ty(ty_cast->param_tys[i]);
+            if (i < ty_cast->arity-1)
+                printf(", ");
+        }
+        printf(") ");
+        print_ty(ty_cast->ret_ty);
+    }
     }
 }
 
@@ -84,7 +97,8 @@ static void print_expr_stmt(struct ExprStmtNode *node, u32 offset) {
 
 static void print_return(struct ReturnNode *node, u32 offset) {
     printf("Return");
-    print_node(node->expr, offset + 2);
+    if (node->expr)
+        print_node(node->expr, offset + 2);
 }
 
 static void print_var_decl(struct VarDeclNode *node, u32 offset) {
@@ -103,17 +117,7 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset) {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
     printf("%.*s", node->base.span.length, node->base.span.start);
-    printf("(");
-    struct FnTyNode *ty = node->ty;
-    for (i32 i = 0; i < ty->arity; i++) {
-        struct Span span = ty->param_spans[i];
-        printf("%.*s: ", span.length, span.start);
-        print_ty(ty->param_tys[i]);
-        if (i < ty->arity-1)
-            printf(", ");
-    }
-    printf(") ");
-    print_ty(ty->ret_ty);
+    print_ty(node->ty);
     print_node(node->body, offset + 2);
 }
 

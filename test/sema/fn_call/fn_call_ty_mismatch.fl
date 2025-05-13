@@ -1,0 +1,7 @@
+fn foo() Num {
+    return 3;
+}
+
+fn main() {
+    foo() and true;
+}

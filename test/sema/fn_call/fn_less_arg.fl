@@ -1,0 +1,7 @@
+fn foo(x: Num, y: Num) {
+    
+}
+
+fn main() {
+    foo(3);
+}

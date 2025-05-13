@@ -80,6 +80,7 @@ struct FnDeclNode {
     struct Node base;
     struct BlockNode *body;
     struct FnTyNode *ty;
+    i32 id;
 };
 
 // TEMP remove when we add functions
