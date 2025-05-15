@@ -192,7 +192,8 @@ static struct FnDeclNode *mk_fn_decl(struct Arena *arena, struct Span span, stru
     struct FnDeclNode *node = push_arena(arena, sizeof(struct FnDeclNode));
     node->base.tag = NODE_FN_DECL;
     node->base.span = span;
-    node->id = -1;
+    node->param_spans = param_spans;
+    node->arity = arity;
     node->body = body;
     return node;
 }

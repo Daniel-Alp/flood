@@ -73,7 +73,6 @@ struct FnDeclNode {
     struct BlockNode *body;
     struct Span *param_spans;
     u32 arity;
-    i32 id;
 };
 
 // TEMP remove when we add functions

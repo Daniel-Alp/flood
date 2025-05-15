@@ -1,12 +1,6 @@
-fn fact() {
-
-}
-
-fn bar() {
-
-}
-
-fn main(x) {
-    var y = bar;
-    y = fact;
+fn fib() {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n-1) + fib(n-2);
 }

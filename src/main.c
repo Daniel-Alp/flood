@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include "common.h"
 #include "memory.h"
+#include "debug.h"
 #include "parse.h"
+#include "sema.h"
 #include "error.h"
 
 int main(int argc, const char **argv) {
@@ -40,6 +42,17 @@ int main(int argc, const char **argv) {
         goto err_release_parser;
     }
 
+    struct SemaState sema;
+    init_sema_state(&sema);
+    analyze(&sema, mod);
+
+    if (sema.errlist.count > 0) {
+        print_errlist(&sema.errlist);
+        goto err_release_sema_state;
+    }
+
+err_release_sema_state:
+    release_sema_state(&sema);
 err_release_parser:
     release_parser(&parser);
     release(buf);
