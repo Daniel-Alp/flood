@@ -1,4 +1,0 @@
-fn main() {
-    var x: Num;
-    x + 4;
-}

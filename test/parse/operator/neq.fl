@@ -1,4 +1,0 @@
-fn main() {
-    print true != false;
-    print 3 != 4;
-}

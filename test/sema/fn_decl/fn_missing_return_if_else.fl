@@ -1,7 +1,0 @@
-fn foo() Num {
-    if (true) {
-        return 3;
-    } else {
-        
-    }
-}

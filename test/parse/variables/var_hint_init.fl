@@ -1,4 +1,0 @@
-fn main() {
-    var x: Num = 3;
-    var y: Bool = false;
-}
