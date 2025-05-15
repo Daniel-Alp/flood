@@ -1,0 +1,13 @@
+fn main() {
+    var x = 3;
+    true or (x = 4) < 5;
+    print x;
+
+    var y = 3;
+    false or (y = 4) < 5;
+    print y;
+
+    false or !true or 1 >= 2 or 3 + 4 < 5 or (y += 5) < 8 or (x = 2) > 1;
+    print x;
+    print y;
+}

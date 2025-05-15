@@ -1,0 +1,12 @@
+fn fact() {
+
+}
+
+fn bar() {
+
+}
+
+fn main(x) {
+    var y = bar;
+    y = fact;
+}
