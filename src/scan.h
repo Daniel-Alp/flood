@@ -11,7 +11,7 @@ enum TokenTag {
     TOKEN_LEQ,
     TOKEN_GT,
     TOKEN_GEQ,
-    TOKEN_EQ_EQ,
+    TOKEN_EQEQ,
     TOKEN_NEQ,
 
     TOKEN_EQ,

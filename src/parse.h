@@ -71,7 +71,7 @@ struct FnDeclNode {
     // span is identifier
     struct Node base;
     struct BlockNode *body;
-    struct Span *param_spans;
+    struct IdentNode *params;
     u32 arity;
 };
 
@@ -92,7 +92,7 @@ struct BlockNode {
     // span is `{`
     struct Node base;
     struct Node **stmts;
-    u32 count;
+    u32 cnt;
 };
 
 struct IfNode {
@@ -112,7 +112,7 @@ struct ReturnNode {
 struct ModuleNode {
     struct Node base;
     struct Node **stmts;
-    u32 count;
+    u32 cnt;
 };
 
 struct Parser {

@@ -1,6 +1,4 @@
 #pragma once
-
-#pragma once
 #include "scan.h"
 
 struct ErrMsg {
@@ -9,7 +7,7 @@ struct ErrMsg {
 };
 
 struct ErrList {
-    u32 count;
+    u32 cnt;
     u32 cap;
     struct ErrMsg *errs;
 };

@@ -1,32 +1,38 @@
 #include <string.h>
 #include "scan.h"
 
-void init_scanner(struct Scanner *scanner, const char *source) {
+void init_scanner(struct Scanner *scanner, const char *source) 
+{
     scanner->source = source;
     scanner->start = source;
     scanner->current = source;
 }
 
-static char at(struct Scanner *scanner) {
+static char at(struct Scanner *scanner) 
+{
     return scanner->current[0];
 }
 
-static bool is_at_end(struct Scanner *scanner) {
+static bool is_at_end(struct Scanner *scanner) 
+{
     return at(scanner) == '\0';
 }
 
-static char next(struct Scanner *scanner) {
+static char next(struct Scanner *scanner) 
+{
     if (is_at_end(scanner))
         return '\0';
     return scanner->current[1];
 }
 
-static char bump(struct Scanner *scanner) {
+static char bump(struct Scanner *scanner) 
+{
     scanner->current++;
     return scanner->current[-1];
 }
 
-static void skip_whitespace(struct Scanner *scanner) {
+static void skip_whitespace(struct Scanner *scanner) 
+{
     while (true) {
         switch (at(scanner)) {
         case '\n':
@@ -40,25 +46,30 @@ static void skip_whitespace(struct Scanner *scanner) {
     }
 }
 
-static void skip_comment(struct Scanner *scanner) {
+static void skip_comment(struct Scanner *scanner) 
+{
     while (at(scanner) != '\n')
         bump(scanner);
     bump(scanner);
 }
 
-static bool is_digit(char c) {
+static bool is_digit(char c) 
+{
     return '0' <= c && c <= '9'; 
 }
 
-static bool is_alpha(char c) {
+static bool is_alpha(char c) 
+{
     return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_';
 }
 
-static bool is_alpha_digit(char c) {
+static bool is_alpha_digit(char c) 
+{
     return is_digit(c) || is_alpha(c);
 }
 
-struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) {
+struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) 
+{
     struct Token token = {
         .span = {.start = scanner->start, .length = (scanner->current - scanner->start)},
         .tag = tag
@@ -66,7 +77,8 @@ struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) {
     return token;
 }
 
-struct Token number(struct Scanner *scanner) {
+struct Token number(struct Scanner *scanner) 
+{
     while(is_digit(at(scanner)))
         bump(scanner);
 
@@ -77,12 +89,14 @@ struct Token number(struct Scanner *scanner) {
     } 
 }
 
-static void identifier(struct Scanner *scanner) {
+static void identifier(struct Scanner *scanner) 
+{
     while(is_alpha_digit(at(scanner)))
         bump(scanner);
 }
 
-static struct Token check_at(struct Scanner *scanner, char c, enum TokenTag tag1, enum TokenTag tag2) {
+static struct Token check_at(struct Scanner *scanner, char c, enum TokenTag tag1, enum TokenTag tag2) 
+{
     if (at(scanner) == c) {
         bump(scanner);
         return mk_token(scanner, tag1);
@@ -90,14 +104,16 @@ static struct Token check_at(struct Scanner *scanner, char c, enum TokenTag tag1
     return mk_token(scanner, tag2);
 }
 
-static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenTag tag) {
+static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenTag tag) 
+{
     u32 token_length = scanner->current - scanner->start;
     if (token_length != length || memcmp(scanner->start+1, rest, length-1) != 0)
         return mk_token(scanner, TOKEN_IDENTIFIER);
     return mk_token(scanner, tag);
 }
 
-struct Token next_token(struct Scanner *scanner) {
+struct Token next_token(struct Scanner *scanner) 
+{
     skip_whitespace(scanner);
     while (at(scanner) == '/' && next(scanner) == '/') {
         skip_comment(scanner);
@@ -116,7 +132,7 @@ struct Token next_token(struct Scanner *scanner) {
     case '/': return check_at(scanner, '=', TOKEN_SLASH_EQ, TOKEN_SLASH);
     case '<': return check_at(scanner, '=', TOKEN_LEQ, TOKEN_LT);
     case '>': return check_at(scanner, '=', TOKEN_GEQ, TOKEN_GT);
-    case '=': return check_at(scanner, '=', TOKEN_EQ_EQ, TOKEN_EQ);
+    case '=': return check_at(scanner, '=', TOKEN_EQEQ, TOKEN_EQ);
     case '!': return check_at(scanner, '=', TOKEN_NEQ, TOKEN_NOT);
     case '(': return mk_token(scanner, TOKEN_L_PAREN);
     case ')': return mk_token(scanner, TOKEN_R_PAREN);

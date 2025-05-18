@@ -4,18 +4,21 @@
 
 #define ARENA_SIZE (1 << 20)
 
-void init_arena(struct Arena *arena) {
+void init_arena(struct Arena *arena) 
+{
     arena->stack_mem = allocate(ARENA_SIZE);
     arena->stack_pos = 0;
 }
 
-void release_arena(struct Arena *arena) {
+void release_arena(struct Arena *arena) 
+{
     release(arena->stack_mem);
     arena->stack_mem = NULL;
     arena->stack_pos = 0;
 }
 
-void *push_arena(struct Arena *arena, u64 size) {
+void *push_arena(struct Arena *arena, u64 size) 
+{
     if (arena->stack_pos + size > ARENA_SIZE)
         exit(1);
     void *ptr = arena->stack_mem + arena->stack_pos;
