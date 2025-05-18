@@ -1,0 +1,8 @@
+fn main() {
+    foo();
+}
+
+fn foo() {
+    print 1;
+    foo();
+}

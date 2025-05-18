@@ -143,9 +143,11 @@ static void analyze_fn_decl(struct SemaState *sema, struct FnDeclNode *node)
     // TODO error if more than 256 globals
     struct Symbol sym = {
         .span = node->base.span,
-        .flags = FLAG_GLOBAL
+        .flags = FLAG_GLOBAL,
+        .idx = sema->global_cnt
     };
     u32 id = push_symbol_arr(sema->sym_arr, sym);
+
     sema->globals[sema->global_cnt].id = id;
     sema->globals[sema->global_cnt].span = sym.span;
     sema->globals[sema->global_cnt].depth = 0;

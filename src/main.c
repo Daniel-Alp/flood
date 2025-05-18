@@ -72,7 +72,7 @@ int main(int argc, const char **argv)
     // TODO handle main function not existing
     // TODO error if declaration of main function takes arguments
     emit_byte(&fn->chunk, OP_GET_GLOBAL);
-    emit_byte(&fn->chunk, 1); // HACK assume main function is at this index
+    emit_byte(&fn->chunk, 0); // HACK assume main function is at this index (first global) makes it easier to set up testing.
     emit_byte(&fn->chunk, OP_CALL);
     emit_byte(&fn->chunk, 0);
     emit_byte(&fn->chunk, OP_NIL);

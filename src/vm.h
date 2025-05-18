@@ -22,7 +22,7 @@ struct VM {
     u16 call_count;
 
     Value val_stack[MAX_STACK];
-    Value *sp;
+    // stack pointer is stored in the run_vm function
 
     struct ValArray globals;
     // NOT IN USE CURRENTLY

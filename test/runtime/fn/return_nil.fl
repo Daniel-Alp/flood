@@ -1,0 +1,14 @@
+fn main() {
+    var x = foo();
+    print x;
+    var y = bar();
+    print y;
+}
+
+fn foo() {
+    return;
+}
+
+fn bar() {
+
+}

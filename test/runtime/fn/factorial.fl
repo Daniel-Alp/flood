@@ -1,0 +1,10 @@
+fn main() {
+    print factorial(30);
+}
+
+fn factorial(n) {
+    if (n == 0) {
+        return 1;
+    }
+    return n * factorial(n-1);
+}

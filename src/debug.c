@@ -6,25 +6,21 @@
 //      x += 3;
 // is desugared into
 //      x = x + 3;
-const char *bin_op_to_str(enum TokenTag op_tag) 
-{
-    switch(op_tag) {
-    case TOKEN_PLUS:  return "+";
-    case TOKEN_MINUS: return "-";
-    case TOKEN_STAR:  return "*";
-    case TOKEN_SLASH: return "/";
-    case TOKEN_LT:    return "<";
-    case TOKEN_LEQ:   return "<=";
-    case TOKEN_GT:    return ">";
-    case TOKEN_GEQ:   return ">=";
-    case TOKEN_EQEQ: return "==";
-    case TOKEN_NEQ:   return "!=";
-    case TOKEN_AND:   return "and";
-    case TOKEN_OR:    return "or";
-    case TOKEN_EQ:    return "=";
-    default:          return ""; //unreachable
-    }
-}
+const char *binop_str[] = {
+    [TOKEN_PLUS]    = "+",
+    [TOKEN_MINUS]   = "-",
+    [TOKEN_STAR]    = "*",
+    [TOKEN_SLASH]   = "/",
+    [TOKEN_LT]      = "<",
+    [TOKEN_LEQ]     = "<=",
+    [TOKEN_GT]      = ">",
+    [TOKEN_GEQ]     = ">=",
+    [TOKEN_EQEQ]    = "==",
+    [TOKEN_NEQ]     = "!=",
+    [TOKEN_AND]     = "and",
+    [TOKEN_OR]      = "or",
+    [TOKEN_EQ]      = "="
+};
 
 static void print_literal(struct LiteralNode *node, u32 offset) 
 {
@@ -48,7 +44,7 @@ static void print_binary(struct BinaryNode *node, u32 offset)
 {
     printf("Binary\n");
     printf("%*s", offset + 2, "");
-    printf("%s", bin_op_to_str(node->op_tag));
+    printf("%s", binop_str[node->op_tag]);
     print_node(node->lhs, offset + 2);
     print_node(node->rhs, offset + 2);
 }
@@ -139,55 +135,80 @@ void print_node(struct Node *node, u32 offset)
         printf("\n");
 }
 
-void disassemble_chunk(struct Chunk *chunk, struct Span span) {
-    printf("<function %.*s>\n", span.length, span.start);
+const char *opcode_str[] = {
+    [OP_NIL]           = "OP_NIL",
+    [OP_TRUE]          = "OP_TRUE",
+    [OP_FALSE]         = "OP_FALSE",
+    [OP_ADD]           = "OP_ADD",
+    [OP_SUB]           = "OP_SUB", 
+    [OP_MUL]           = "OP_MUL",
+    [OP_DIV]           = "OP_DIV",
+    [OP_LT]            = "OP_LT",
+    [OP_LEQ]           = "OP_LEQ",
+    [OP_GT]            = "OP_GT",
+    [OP_GEQ]           = "OP_GEQ",
+    [OP_EQEQ]          = "OP_EQEQ",
+    [OP_NEQ]           = "OP_NEQ",
+    [OP_NEGATE]        = "OP_NEGATE",
+    [OP_NOT]           = "OP_NOT",
+    [OP_GET_CONST]     = "OP_GET_CONST",
+    [OP_GET_LOCAL]     = "OP_GET_LOCAL",
+    [OP_SET_LOCAL]     = "OP_SET_LOCAL",
+    [OP_GET_GLOBAL]    = "OP_GET_GLOBAL",
+    [OP_SET_GLOBAL]    = "OP_SET_LOCAL",
+    [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
+    [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
+    [OP_JUMP]          = "OP_JUMP",
+    [OP_CALL]          = "OP_CALL",
+    [OP_RETURN]        = "OP_RETURN",
+    [OP_POP]           = "OP_POP",
+    [OP_POP_N]         = "OP_POP_N",
+    [OP_PRINT]         = "OP_PRINT"
+};
+
+void disassemble_chunk(struct Chunk *chunk, struct Span span)
+{
+    printf("     [disassembly for %.*s]\n", span.length, span.start);
     for (i32 i = 0; i < chunk->cnt; i++) {
         printf("%4d | ", i);
-        switch (chunk->code[i]) {
-        case OP_NIL:           printf("OP_NIL\n"); break;
-        case OP_TRUE:          printf("OP_TRUE\n"); break;
-        case OP_FALSE:         printf("OP_FALSE\n"); break;
-        case OP_ADD:           printf("OP_ADD\n"); break;
-        case OP_SUB:           printf("OP_SUB\n"); break;
-        case OP_MUL:           printf("OP_MUL\n"); break;        
-        case OP_DIV:           printf("OP_DIV\n"); break;  
-        case OP_LT:            printf("OP_LT\n"); break;  
-        case OP_LEQ:           printf("OP_LEQ\n"); break;  
-        case OP_GT:            printf("OP_GT\n"); break;  
-        case OP_GEQ:           printf("OP_GEQ\n"); break;  
-        case OP_EQEQ:          printf("OP_EQ_EQ\n"); break;
-        case OP_NEQ:           printf("OP_NEQ\n"); break;
-        case OP_NEGATE:        printf("OP_NEGATE\n"); break;
-        case OP_NOT:           printf("OP_NOT\n"); break;    
-        case OP_GET_CONST: {
-            Value val = chunk->constants.values[chunk->code[++i]];
-            printf("OP_GET_CONST     ");
-            switch (val.tag) {
-                case VAL_NUM:  printf("%.4f\n", AS_NUM(val)); break;
-                case VAL_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
-                case VAL_NIL:  printf("null\n"); break; 
-                case VAL_OBJ: 
-                    if (IS_FN(val)) {
-                        struct Span span = AS_FN(val)->span;
-                        printf("<function %.*s>\n", span.length, span.start);
-                    }
-                break;
-            }
+        u8 op = chunk->code[i];
+        printf("%-20s", opcode_str[op]);
+        switch (op) {
+        case OP_GET_LOCAL:     
+        case OP_SET_LOCAL:    
+        case OP_GET_GLOBAL:   
+        case OP_SET_GLOBAL:    
+        case OP_CALL:          
+        case OP_POP_N:         
+            printf("%d\n", chunk->code[++i]); 
             break;
-        }   
-        case OP_GET_LOCAL:     printf("OP_GET_LOCAL     %d\n", chunk->code[++i]); break;
-        case OP_SET_LOCAL:     printf("OP_SET_LOCAL     %d\n", chunk->code[++i]); break;
-        case OP_GET_GLOBAL:    printf("OP_GET_GLOBAL    %d\n", chunk->code[++i]); break;
-        case OP_SET_GLOBAL:    printf("OP_SET_GLOBAL    %d\n", chunk->code[++i]); break;
-        case OP_JUMP_IF_FALSE: printf("OP_JUMP_IF_FALSE %d\n", (chunk->code[++i] << 8) + chunk->code[++i]); break;
-        case OP_JUMP_IF_TRUE:  printf("OP_JUMP_IF_TRUE  %d\n", (chunk->code[++i] << 8) + chunk->code[++i]); break;
-        case OP_JUMP:          printf("OP_JUMP          %d\n", (chunk->code[++i] << 8) + chunk->code[++i]); break;       
-        case OP_CALL:          printf("OP_CALL          %d\n", chunk->code[++i]); break;
-        case OP_RETURN:        printf("OP_RETURN\n"); break;
-        case OP_POP:           printf("OP_POP\n"); break;
-        case OP_POP_N:         printf("OP_POP_N         %d\n", chunk->code[++i]); break;
-        case OP_PRINT:         printf("OP_PRINT\n"); break;
+        case OP_JUMP_IF_FALSE: 
+        case OP_JUMP_IF_TRUE:
+        case OP_JUMP:          
+            printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
+            break;
+        case OP_GET_CONST: {
+            print_val(chunk->constants.values[chunk->code[++i]]);
+            break;
+        }
+        default:
+            printf("\n");
         }
     }    
     printf("\n");
+}
+
+void print_stack(struct VM *vm, Value *sp, Value *bp) 
+{
+    printf("    [value stack]\n");
+    i32 i = 0;
+    while (vm->val_stack + i != sp) {
+        if (vm->val_stack + i == bp)
+            printf("bp > ");
+        else    
+            printf("     ");
+        print_val(vm->val_stack[i]);
+        i++;
+    }
+    printf("sp >\n\n");
 }

@@ -32,7 +32,7 @@ static struct Symbol *symbols(struct Compiler *compiler)
 static u32 emit_jump(struct Compiler *compiler, enum OpCode op) {
     u32 offset = cur_chunk(compiler)->cnt;
     emit_byte(cur_chunk(compiler), op);
-    // Skip two bytes for jump
+    // skip two bytes for jump
     //      OP_JUMP
     //      hi
     //      lo
@@ -238,6 +238,8 @@ struct FnObj *compile_module(struct Compiler *compiler, struct ModuleNode *node)
         struct FnObj *fn = allocate(sizeof(struct FnObj));
         init_fn_obj(fn, fn_decl->base.span, fn_decl->arity);
 
+        // TODO clean up
+        u32 stack_pos = compiler->stack_pos;
         for (i32 i = 0; i < fn_decl->arity; i++) {
             symbols(compiler)[fn_decl->params[i].id].idx = compiler->stack_pos;
             compiler->stack_pos++;
@@ -246,6 +248,7 @@ struct FnObj *compile_module(struct Compiler *compiler, struct ModuleNode *node)
         compile_node(compiler, (struct Node*)fn_decl->body);
         emit_byte(cur_chunk(compiler), OP_NIL);
         emit_byte(cur_chunk(compiler), OP_RETURN);
+        compiler->stack_pos = stack_pos;
 
         compiler->fn = script;
         emit_byte(cur_chunk(compiler), OP_GET_CONST);

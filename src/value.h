@@ -47,3 +47,5 @@ void release_val_array(struct ValArray *arr);
 u32 push_val_array(struct ValArray *arr, Value val);
 
 bool val_eq(Value val1, Value val2);
+
+void print_val(Value val);

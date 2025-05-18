@@ -1,4 +1,7 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include "scan.h"
+#include "object.h"
 #include "value.h"
 #include "memory.h"
 
@@ -38,5 +41,20 @@ bool val_eq(Value val1, Value val2)
         case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
         case VAL_NUM: return AS_NUM(val1) == AS_NUM(val2);
         case VAL_NIL: return true;
+    }
+}
+
+void print_val(Value val) 
+{
+    switch (val.tag) {
+    case VAL_NUM:  printf("%.4f\n", AS_NUM(val)); break;
+    case VAL_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
+    case VAL_NIL:  printf("null\n"); break; 
+    case VAL_OBJ: 
+        if (IS_FN(val)) {
+            struct Span span = AS_FN(val)->span;
+            printf("<function %.*s>\n", span.length, span.start);
+        }
+    break;
     }
 }
