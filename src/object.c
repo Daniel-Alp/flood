@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include "object.h"
 
-void init_fn_obj(struct FnObj *fn, struct Span span, u32 arity) 
+void init_fn_obj(struct FnObj *fn, const char *name, u32 arity) 
 {
     fn->base.tag = OBJ_FN;
     init_chunk(&fn->chunk);
-    fn->span = span;
+    fn->name = name;
     fn->arity = arity;
 }
 

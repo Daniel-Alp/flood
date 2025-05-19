@@ -12,7 +12,7 @@
 int main(int argc, const char **argv) 
 {
     if (argc != 2) {
-        printf("Usage: ./flood [script]");
+        printf("Usage: ./flood [script]\n");
         exit(1);
     }
     const char *path = argv[1];
@@ -36,6 +36,7 @@ int main(int argc, const char **argv)
     fread(source, 1, length, fp);
 
     printf("%s\n", argv[1]);
+    printf("%s\n", source);
     struct Parser parser;
     init_parser(&parser);
     struct ModuleNode *mod = parse(&parser, source);
@@ -60,32 +61,37 @@ int main(int argc, const char **argv)
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);
 
-    struct FnObj *fn = compile_module(&compiler, mod);
-
     struct VM vm;
     init_vm(&vm);
-    init_val_array(&vm.globals);
+
+    struct FnObj *fn = compile_module(&vm, &compiler, mod);
+    release_symbol_arr(&sym_arr);
+    release_compiler(&compiler);
+
     for (i32 i = 0; i < compiler.global_cnt; i++)
         push_val_array(&vm.globals, NIL_VAL);
+
     // HACK
     // invoke main function after function declarations
     // TODO handle main function not existing
     // TODO error if declaration of main function takes arguments
-    emit_byte(&fn->chunk, OP_GET_GLOBAL);
-    emit_byte(&fn->chunk, 0); // HACK assume main function is at this index (first global) makes it easier to set up testing.
-    emit_byte(&fn->chunk, OP_CALL);
-    emit_byte(&fn->chunk, 0);
-    emit_byte(&fn->chunk, OP_NIL);
-    emit_byte(&fn->chunk, OP_RETURN);
+    emit_byte(&fn->chunk, OP_GET_GLOBAL, 1);
+    emit_byte(&fn->chunk, 0, 1); // HACK assume main function is at this index (first global) makes it easier to set up testing.
+    emit_byte(&fn->chunk, OP_CALL, 1);
+    emit_byte(&fn->chunk, 0, 1);
+    emit_byte(&fn->chunk, OP_NIL, 1);
+    emit_byte(&fn->chunk, OP_RETURN, 1);
 
-    disassemble_chunk(&fn->chunk, fn->span);
-    for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
-        Value val = fn->chunk.constants.values[i];
-        if (IS_FN(val))
-            disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->span);
-    }
+    // disassemble_chunk(&fn->chunk, fn->name);
+    // for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
+    //     Value val = fn->chunk.constants.values[i];
+    //     if (IS_FN(val))
+    //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
+    // }
 
-    run_vm(&vm, fn);    
+    run_vm(&vm, fn);
+    // TODO 
+    release_vm(&vm);
 
 err_release_sema_state:
     release_sema_state(&sema);

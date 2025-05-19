@@ -37,11 +37,55 @@ static void push_mod_array(struct ModArray *modules, struct Span name, struct Sy
     modules->cnt++;
 }
 
-// TODO STACK TRACE
+static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
+{
+    // see chunk.h
+    u32 opcode_idx = 0;
+    i32 i = 1;
+    while (true) {
+        opcode_idx += lines[i];
+        if (opcode_idx >= tgt_opcode_idx)
+            return lines[i-1];
+        i += 2;
+    }
+}
+
 static void runtime_err(struct VM *vm, const char *msg) 
 {
     printf("%s\n", msg);
+    for (i32 i = vm->call_count; i >= 1; i--) {
+        struct CallFrame frame = vm->call_stack[i];
+        u32 line = get_opcode_line(frame.fn->chunk.lines, frame.ip-1 - frame.fn->chunk.code);
+        printf("[line %d] in %s\n", line, frame.fn->name);
+    }
     exit(1);
+}
+
+// TODO bench and rework
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
+{
+    struct Obj *obj = allocate(size);
+    obj->next = vm->obj_list;
+    vm->obj_list = obj;
+    return obj;
+}
+
+void release_vm_obj(struct VM *vm)
+{
+    while (vm->obj_list) {
+        struct Obj *obj = vm->obj_list;
+        switch(obj->tag) {
+        case OBJ_FN: {
+            struct FnObj *fn = (struct FnObj*)obj;
+            release_chunk(&fn->chunk);
+            release(fn->name);
+            fn->name = NULL;
+            break;
+        }
+        }
+        vm->obj_list = vm->obj_list->next;
+        release(obj);
+    }
 }
 
 void init_vm(struct VM *vm)
@@ -49,12 +93,14 @@ void init_vm(struct VM *vm)
     init_val_array(&vm->globals);
     init_mod_array(&vm->modules);
     vm->call_count = 0;
+    vm->obj_list = NULL;
 }
 
 void release_vm(struct VM *vm) 
 {
     release_val_array(&vm->globals);
     release_mod_array(&vm->modules);
+    release_vm_obj(vm);
 }
 
 // TODO check if exceeding max stack size
@@ -94,6 +140,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = NUM_VAL(AS_NUM(lhs)+AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -105,6 +152,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = NUM_VAL(AS_NUM(lhs)-AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -116,6 +164,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = NUM_VAL(AS_NUM(lhs)*AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -127,6 +176,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = NUM_VAL(AS_NUM(lhs)/AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -138,6 +188,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = BOOL_VAL(AS_NUM(lhs)<AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -149,6 +200,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = BOOL_VAL(AS_NUM(lhs)<=AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -160,6 +212,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = BOOL_VAL(AS_NUM(lhs)>AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -171,6 +224,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 sp[-2] = BOOL_VAL(AS_NUM(lhs)>=AS_NUM(rhs));
                 sp--;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
             }
             break;
@@ -194,6 +248,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             if (IS_NUM(val)) {
                 sp[-1] = NUM_VAL(-AS_NUM(val));
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operand must be number");
             }
             break;
@@ -203,6 +258,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             if (IS_BOOL(val)) {
                 sp[-1] = BOOL_VAL(!AS_BOOL(val));
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
             }
             break;
@@ -246,6 +302,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 if (!AS_BOOL(val))
                     ip += offset;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
             }
             break;
@@ -257,6 +314,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 if (AS_BOOL(val))
                     ip += offset;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
             }
             break;
@@ -267,11 +325,13 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             if (IS_FN(val)) {
                 struct FnObj *fn = AS_FN(val);
                 if (fn->arity != arg_count) {
-                    printf("ARITY %d ARG COUNT %d\n", fn->arity, arg_count); // TODO REMOVE ME
+                    frame->ip = ip;
                     runtime_err(vm, "incorrect number of arguments provided");
                 }
-                if (vm->call_count >= MAX_CALL_FRAMES)
+                if (vm->call_count+1 >= MAX_CALL_FRAMES) {
+                    frame->ip = ip;
                     runtime_err(vm, "stack overflow");
+                }
                 frame->ip = ip; 
                 
                 vm->call_count++;
@@ -280,6 +340,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 frame->fn = fn;
                 ip = fn->chunk.code;
             } else {
+                frame->ip = ip;
                 runtime_err(vm, "attempt to call non-function");
             }
             break;

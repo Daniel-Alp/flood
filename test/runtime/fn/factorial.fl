@@ -1,5 +1,5 @@
 fn main() {
-    print factorial(30);
+    print factorial(20);
 }
 
 fn factorial(n) {

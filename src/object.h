@@ -8,11 +8,12 @@ enum ObjTag {
 
 struct Obj {
     enum ObjTag tag;
+    struct Obj *next;
 };
 
 struct FnObj {
     struct Obj base;
-    struct Span span;
+    char *name;
     struct Chunk chunk; 
     u32 arity;
 };
@@ -26,6 +27,6 @@ static inline bool is_obj_tag(Value val, enum ObjTag tag)
 
 #define AS_FN(val) ((struct FnObj*)AS_OBJ(val))
 
-void init_fn_obj(struct FnObj *fn, struct Span span, u32 arity);
+void init_fn_obj(struct FnObj *fn, const char *name, u32 arity);
 
 void release_fn_obj(struct FnObj *fn);

@@ -225,12 +225,11 @@ static struct FnDeclNode *mk_fn_decl(
     return node;
 }
 
-static struct ExprStmtNode *mk_expr_stmt(struct Arena *arena, struct Node *expr)
+static struct ExprStmtNode *mk_expr_stmt(struct Arena *arena, struct Span span, struct Node *expr)
 {
     struct ExprStmtNode *node = push_arena(arena, sizeof(struct ExprStmtNode));
     node->base.tag = NODE_EXPR_STMT;
-    node->base.span.length = 0;
-    node->base.span.start = NULL;
+    node->base.span = span;
     node->expr = expr;
     return node;
 }
@@ -526,7 +525,7 @@ static struct BlockNode *parse_block(struct Parser *parser)
         } else {
             node = parse_expr(parser, 1);
             expect(parser, TOKEN_SEMI, "expected `;`"); 
-            node = (struct Node*)mk_expr_stmt(&parser->arena, node); 
+            node = (struct Node*)mk_expr_stmt(&parser->arena, prev(parser).span, node); 
         }
         push_ptr_array(&tmp, node);
         if (parser->panic)

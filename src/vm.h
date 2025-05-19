@@ -27,6 +27,8 @@ struct VM {
     struct ValArray globals;
     // NOT IN USE CURRENTLY
     struct ModArray modules; // array associating module name with its globals
+
+    struct Obj *obj_list;
 };
 
 void init_vm(struct VM *vm);
@@ -34,3 +36,5 @@ void init_vm(struct VM *vm);
 void release_vm(struct VM *vm);
 
 void run_vm(struct VM *vm, struct FnObj *fn);
+
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size);

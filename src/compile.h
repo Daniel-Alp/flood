@@ -1,6 +1,7 @@
 #pragma once
 #include "sema.h"
 #include "object.h"
+#include "vm.h"
 
 struct Compiler {
     u32 stack_pos;
@@ -14,4 +15,4 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr);
 
 void release_compiler(struct Compiler *compiler);
 
-struct FnObj *compile_module(struct Compiler *compiler, struct ModuleNode *node);
+struct FnObj *compile_module(struct VM *vm, struct Compiler *compiler, struct ModuleNode *node);

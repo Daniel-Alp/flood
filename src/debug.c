@@ -166,9 +166,9 @@ const char *opcode_str[] = {
     [OP_PRINT]         = "OP_PRINT"
 };
 
-void disassemble_chunk(struct Chunk *chunk, struct Span span)
+void disassemble_chunk(struct Chunk *chunk, const char *name)
 {
-    printf("     [disassembly for %.*s]\n", span.length, span.start);
+    printf("     [disassembly for %s]\n", name);
     for (i32 i = 0; i < chunk->cnt; i++) {
         printf("%4d | ", i);
         u8 op = chunk->code[i];

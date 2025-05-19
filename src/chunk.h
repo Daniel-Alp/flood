@@ -6,6 +6,28 @@ struct Chunk {
     u32 cnt;
     u32 cap;
     u8 *code;
+    // representing line info
+    //      var x;
+    //      x = 1 + 2;
+    // the bytecode would be
+    //      OP_NIL
+    //      OP_CONST
+    //      <const table idx for 1>
+    //      OP_CONST
+    //      <const table idx for 2>
+    //      OP_ADD
+    //      OP_SET_LOCAL
+    //      <val stack idx for x>
+    //      OP_POP
+    // the line info would be
+    //      1       line no
+    //      1       opcode cnt
+    //      2       line no
+    //      8       opcode_cnt
+    // this is wasteful, but good enough for now
+    u32 lines_cnt; 
+    u32 lines_cap;                 
+    u32 *lines;
     struct ValArray constants;
 };
 
@@ -49,6 +71,6 @@ void init_chunk(struct Chunk *chunk);
 
 void release_chunk(struct Chunk *chunk);
 
-void emit_byte(struct Chunk *chunk, u8 byte);
+void emit_byte(struct Chunk *chunk, u8 byte, u32 line);
 
 u32 add_constant(struct Chunk *chunk, Value val);

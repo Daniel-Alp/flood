@@ -6,6 +6,7 @@ void init_scanner(struct Scanner *scanner, const char *source)
     scanner->source = source;
     scanner->start = source;
     scanner->current = source;
+    scanner->line = 1;
 }
 
 static char at(struct Scanner *scanner) 
@@ -36,6 +37,7 @@ static void skip_whitespace(struct Scanner *scanner)
     while (true) {
         switch (at(scanner)) {
         case '\n':
+            scanner->line++;
         case ' ':
         case '\t':
             bump(scanner);
@@ -51,6 +53,7 @@ static void skip_comment(struct Scanner *scanner)
     while (at(scanner) != '\n')
         bump(scanner);
     bump(scanner);
+    scanner->line++;
 }
 
 static bool is_digit(char c) 
@@ -71,8 +74,12 @@ static bool is_alpha_digit(char c)
 struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) 
 {
     struct Token token = {
-        .span = {.start = scanner->start, .length = (scanner->current - scanner->start)},
-        .tag = tag
+        .span = {
+            .start = scanner->start, 
+            .length = (scanner->current - scanner->start),
+            .line = scanner->line
+        },
+        .tag = tag,
     };
     return token;
 }

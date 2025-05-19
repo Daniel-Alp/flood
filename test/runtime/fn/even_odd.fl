@@ -10,7 +10,7 @@ fn is_even(n) {
     return is_odd(n-1);
 }
 
-fn factorial(n) {
+fn is_odd(n) {
     if (n == 0) {
         return false;
     }

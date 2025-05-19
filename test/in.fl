@@ -1,10 +1,10 @@
 fn main() {
-    print fib(10, 1, 0);
+    print sum(50);
 }
 
-fn fib(n, a, b) {
+fn sum(n) {
     if (n == 0) {
-        return b;
+        return 0;
     }
-    return fib(n-1, a + b, a);
+    return n + sum(n-1);
 }

@@ -1,3 +1,7 @@
-fn main(x, y) {
+fn main() {
     
+}
+
+fn foo(x, y) {
+
 }

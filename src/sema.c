@@ -140,6 +140,11 @@ static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node)
 // function declarations are top-level
 static void analyze_fn_decl(struct SemaState *sema, struct FnDeclNode *node) 
 {
+    struct Ident *ident = resolve_ident(sema, node->base.span);
+    if (ident && ident->depth == sema->depth) {
+        push_errlist(&sema->errlist, node->base.span, "redeclared variable");
+        return;
+    }
     // TODO error if more than 256 globals
     struct Symbol sym = {
         .span = node->base.span,

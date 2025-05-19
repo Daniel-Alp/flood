@@ -83,7 +83,7 @@ struct PrintNode {
 };
 
 struct ExprStmtNode {
-    // span is unused
+    // span is `;`
     struct Node base;
     struct Node *expr;
 };

@@ -52,8 +52,8 @@ void print_val(Value val)
     case VAL_NIL:  printf("null\n"); break; 
     case VAL_OBJ: 
         if (IS_FN(val)) {
-            struct Span span = AS_FN(val)->span;
-            printf("<function %.*s>\n", span.length, span.start);
+            const char *name = AS_FN(val)->name;
+            printf("<function %s>\n", name);
         }
     break;
     }

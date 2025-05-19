@@ -5,7 +5,7 @@
 
 void print_node(struct Node *node, u32 offset);
 
-void disassemble_chunk(struct Chunk *chunk, struct Span span);
+void disassemble_chunk(struct Chunk *chunk, const char *name);
 
 void print_stack(struct VM *vm, Value *sp, Value *bp);
 
