@@ -114,25 +114,23 @@ static void analyze_return(struct SemaState *sema, struct ReturnNode *node)
 
 static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node) 
 {
-    struct Ident *ident = resolve_ident(sema, node->base.span);
+    struct Span span = node->base.span;
+    struct Ident *ident = resolve_ident(sema, span);
     if (ident && ident->depth == sema->depth) {
-        push_errlist(&sema->errlist, node->base.span, "redeclared variable");
+        push_errlist(&sema->errlist, span, "redeclared variable");
         return;
     }
-    struct Symbol sym;
-    sym.span = node->base.span;
-    if (sema->depth == 0)
-        sym.flags = FLAG_GLOBAL;
-    else
-        sym.flags = FLAG_LOCAL;
-
+    struct Symbol sym = {
+        .span = span,
+        .flags = sema->depth == 0 ? FLAG_GLOBAL : FLAG_LOCAL
+    };
     u32 id = push_symbol_arr(sema->sym_arr, sym);
     node->id = id;
     if (node->init)
         analyze_node(sema, node->init);
     // TODO error if more than 256 locals
     sema->locals[sema->local_cnt].id = id;
-    sema->locals[sema->local_cnt].span = sym.span;
+    sema->locals[sema->local_cnt].span = span;
     sema->locals[sema->local_cnt].depth = sema->depth;
     sema->local_cnt++;
 }
@@ -140,21 +138,23 @@ static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node)
 // function declarations are top-level
 static void analyze_fn_decl(struct SemaState *sema, struct FnDeclNode *node) 
 {
-    struct Ident *ident = resolve_ident(sema, node->base.span);
+    struct Span span = node->base.span;
+    struct Ident *ident = resolve_ident(sema, span);
     if (ident && ident->depth == sema->depth) {
-        push_errlist(&sema->errlist, node->base.span, "redeclared variable");
+        push_errlist(&sema->errlist, span, "redeclared variable");
         return;
     }
     // TODO error if more than 256 globals
     struct Symbol sym = {
-        .span = node->base.span,
+        .span = span,
         .flags = FLAG_GLOBAL,
         .idx = sema->global_cnt
     };
     u32 id = push_symbol_arr(sema->sym_arr, sym);
-
+    node->id = id;
+    
     sema->globals[sema->global_cnt].id = id;
-    sema->globals[sema->global_cnt].span = sym.span;
+    sema->globals[sema->global_cnt].span = span;
     sema->globals[sema->global_cnt].depth = 0;
     sema->global_cnt++;
 }
@@ -177,14 +177,14 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     }
 }
 
-void analyze(struct SemaState *sema, struct ModuleNode *mod)
+void analyze(struct SemaState *sema, struct FileNode *file)
 {
-    for (i32 i = 0; i < mod->cnt; i++) 
-        analyze_fn_decl(sema, (struct FnDeclNode*)mod->stmts[i]);
+    for (i32 i = 0; i < file->cnt; i++) 
+        analyze_fn_decl(sema, (struct FnDeclNode*)file->stmts[i]);
 
-    for (i32 i = 0; i < mod->cnt; i++) {
+    for (i32 i = 0; i < file->cnt; i++) {
         // TODO global variable declarations
-        struct FnDeclNode *fn = (struct FnDeclNode*)mod->stmts[i];
+        struct FnDeclNode *fn = (struct FnDeclNode*)file->stmts[i];
 
         // sema->local_count = 0 because function declarations are all top-level
         for (i32 i = 0; i < fn->arity; i++) {
@@ -197,7 +197,7 @@ void analyze(struct SemaState *sema, struct ModuleNode *mod)
                 }
             }
             struct Symbol param = {
-                .span = fn->params[i].base.span,
+                .span = span,
                 .flags = FLAG_LOCAL
             };
             u32 id = push_symbol_arr(sema->sym_arr, param);

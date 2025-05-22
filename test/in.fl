@@ -1,10 +1,19 @@
 fn main() {
-    print sum(50);
+    print fib(20);
+    print foo();
 }
 
-fn sum(n) {
-    if (n == 0) {
-        return 0;
+fn foo() {
+    bar();
+}
+
+fn bar() {
+    print 1 + true;
+}
+
+fn fib(n) {
+    if (n < 2) {
+        return n;
     }
-    return n + sum(n-1);
+    return fib(n-1) + fib(n-2);
 }

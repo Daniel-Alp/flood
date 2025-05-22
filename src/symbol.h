@@ -7,8 +7,9 @@
 struct Symbol {
     struct Span span; // identifier
     u32 hash;         // hash of identifier
-    u32 idx;          // index into value stack if local, index into globals array if global
-    // CURRENTLY UNUSED
+    // index into value stack if local (determined during compilation)
+    // index into globals array if global (determined during semantic phase)
+    u32 idx;         
     u32 flags;
 };
 

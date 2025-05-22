@@ -8,8 +8,10 @@ void init_symbol_map(struct SymMap *map)
     map->cnt = 0;
     map->cap = 8;
     map->symbols = allocate(map->cap * sizeof(struct Symbol));
-    for (i32 i = 0; i < map->cap; i++)
+    for (i32 i = 0; i < map->cap; i++) {
         map->symbols[i].span.length = 0;
+        map->symbols[i].span.start = NULL;
+    }
 }
 
 void release_symbol_map(struct SymMap *map) 
@@ -40,7 +42,7 @@ struct Symbol *get_symbol_map_slot(struct Symbol *symbols, u32 cap, struct Span 
         if (sym->span.length == 0 
             || (hash == sym->hash 
                 && key.length == sym->span.length 
-                && memcmp(key.start, sym->span.start, key.length)))
+                && memcmp(key.start, sym->span.start, key.length)) == 0)
             return sym;
         i = (i+1) & (cap-1);
     }
@@ -51,8 +53,10 @@ void put_symbol_map(struct SymMap *map, struct Span key, u32 idx, u32 flags)
     if (map->cnt * MAP_LOAD_FACTOR >= map->cap) {
         map->cap *= 2;
         struct Symbol *symbols = allocate(map->cap * sizeof(struct Symbol));
-        for (i32 i = 0; i < map->cap; i++)
+        for (i32 i = 0; i < map->cap; i++) {
             map->symbols[i].span.length = 0;
+            map->symbols[i].span.start = NULL;
+        }
         for (i32 i = 0; i < map->cnt; i++) {
             u32 hash = hash_string(key);
             struct Symbol *sym = get_symbol_map_slot(symbols, map->cap, map->symbols[i].span, hash);

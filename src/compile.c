@@ -11,6 +11,7 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr)
 {
     compiler->stack_pos = 0;
     compiler->global_cnt = 0;
+    compiler->main_fn_idx = -1;
     compiler->sym_arr = arr;
 }
 
@@ -18,6 +19,7 @@ void release_compiler(struct Compiler *compiler)
 {
     compiler->stack_pos = 0;
     compiler->global_cnt = 0;
+    compiler->main_fn_idx = -1;
     // compiler does not own sym_arr
     compiler->sym_arr = NULL;
 }
@@ -235,7 +237,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     }
 }
 
-struct FnObj *compile_module(struct VM *vm, struct Compiler *compiler, struct ModuleNode *node) 
+struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node) 
 {
     struct FnObj *script = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
     char *name = allocate((6+1)*sizeof(char));
@@ -248,6 +250,9 @@ struct FnObj *compile_module(struct VM *vm, struct Compiler *compiler, struct Mo
         // Compile function body, wrap in OBJ_FN, add to constant table of script
         struct FnDeclNode* fn_decl = (struct FnDeclNode*)node->stmts[i];
         struct Span fn_span = fn_decl->base.span;
+
+        if (fn_span.length == 4 && strncmp(fn_span.start, "main", 4) == 0)
+            compiler->main_fn_idx = symbols(compiler)[fn_decl->id].idx;
 
         struct FnObj *fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
         char *name = allocate((fn_decl->base.span.length+1)*sizeof(char));

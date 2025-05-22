@@ -222,6 +222,7 @@ static struct FnDeclNode *mk_fn_decl(
     node->params = params;
     node->arity = arity;
     node->body = body;
+    node->id = -1;
     return node;
 }
 
@@ -260,10 +261,10 @@ static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct 
     return node;
 }
 
-static struct ModuleNode *mk_module(struct Arena *arena, struct Node **stmts, u32 cnt) 
+static struct FileNode *mk_file_node(struct Arena *arena, struct Node **stmts, u32 cnt) 
 {
-    struct ModuleNode *node = push_arena(arena, sizeof(struct ModuleNode));
-    node->base.tag = NODE_MODULE;
+    struct FileNode *node = push_arena(arena, sizeof(struct FileNode));
+    node->base.tag = NODE_FILE;
     node->base.span.length = 0;
     node->base.span.start = NULL;
     node->stmts = stmts;
@@ -537,7 +538,7 @@ static struct BlockNode *parse_block(struct Parser *parser)
     return mk_block(&parser->arena, span, stmts, cnt);
 }
 
-static struct ModuleNode *parse_module(struct Parser *parser) 
+static struct FileNode *parse_file(struct Parser *parser) 
 {
     struct PtrArray tmp;
     init_ptr_array(&tmp);
@@ -549,14 +550,14 @@ static struct ModuleNode *parse_module(struct Parser *parser)
     }
     u32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);
-    return mk_module(&parser->arena, stmts, cnt);
+    return mk_file_node(&parser->arena, stmts, cnt);
 }
 
 // TODO disallow trailing comma in function declarations and calls
-struct ModuleNode *parse(struct Parser *parser, const char *source) 
+struct FileNode *parse(struct Parser *parser, const char *source) 
 {
     init_scanner(&parser->scanner, source);
     parser->at = next_token(&parser->scanner);
     parser->panic = false;
-    return parse_module(parser);
+    return parse_file(parser);
 }

@@ -15,7 +15,7 @@ enum NodeTag {
     NODE_BLOCK,
     NODE_IF,
     NODE_RETURN,
-    NODE_MODULE,
+    NODE_FILE,
     // TEMP remove when we add functions
     NODE_PRINT
 };
@@ -73,6 +73,7 @@ struct FnDeclNode {
     struct BlockNode *body;
     struct IdentNode *params;
     u32 arity;
+    i32 id;
 };
 
 // TEMP remove when we add functions
@@ -109,7 +110,7 @@ struct ReturnNode {
     struct Node *expr;
 };
 
-struct ModuleNode {
+struct FileNode {
     struct Node base;
     struct Node **stmts;
     u32 cnt;
@@ -128,4 +129,4 @@ void init_parser(struct Parser *parser);
 
 void release_parser(struct Parser *parser);
 
-struct ModuleNode *parse(struct Parser *parser, const char *source);
+struct FileNode *parse(struct Parser *parser, const char *source);

@@ -26,4 +26,4 @@ void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr);
 
 void release_sema_state(struct SemaState *sema);
 
-void analyze(struct SemaState *sema, struct ModuleNode *mod);
+void analyze(struct SemaState *sema, struct FileNode *file);

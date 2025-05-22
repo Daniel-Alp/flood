@@ -1,40 +1,44 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "vm.h"
 #include "memory.h"
 #include "object.h"
 #include "debug.h"
 
-// TODO fix memory leaks
-
-static void init_mod_array(struct ModArray *modules) 
+static void init_file_array(struct FileArray *files) 
 {
-    modules->cnt = 0;
-    modules->cap = 8;
-    modules->names = allocate(modules->cap * sizeof(struct Span));
-    modules->sym_maps = allocate(modules->cap * sizeof(struct SymMap));
+    files->cnt = 0;
+    files->cap = 8;
+    files->paths = allocate(files->cap * sizeof(char*));
+    files->sym_maps = allocate(files->cap * sizeof(struct SymMap));
 }
 
-static void release_mod_array(struct ModArray *modules) 
+static void release_file_array(struct FileArray *files) 
 {
-    modules->cnt = 0;
-    modules->cap = 0;
-    release(modules->names);
-    release(modules->sym_maps);
-    modules->names = NULL;
-    modules->sym_maps = NULL;  
-}
-
-static void push_mod_array(struct ModArray *modules, struct Span name, struct SymMap map) 
-{
-    if (modules->cnt == modules->cap) {
-        modules->cap *= 2;
-        reallocate(modules->names, modules->cap * sizeof(struct Span));
-        reallocate(modules->sym_maps, modules->cap * sizeof(struct SymMap));
+    for (i32 i = 0; i < files->cnt; i++) {
+        // paths were malloc'd by realpath, so we call free instead of release
+        // because we want every call to allocate to pair with a call to release
+        free(files->paths[i]);
+        release_symbol_map(&files->sym_maps[i]);
     }
-    modules->names[modules->cnt] = name;
-    modules->sym_maps[modules->cnt] = map;
-    modules->cnt++;
+    files->cnt = 0;
+    files->cap = 0;
+    release(files->paths);
+    release(files->sym_maps);
+    files->paths = NULL;
+    files->sym_maps = NULL;  
+}
+
+void push_file_array(struct FileArray *files, const char *name, struct SymMap map) 
+{
+    if (files->cnt == files->cap) {
+        files->cap *= 2;
+        reallocate(files->paths, files->cap * sizeof(char*));
+        reallocate(files->sym_maps, files->cap * sizeof(struct SymMap));
+    }
+    files->paths[files->cnt] = name;
+    files->sym_maps[files->cnt] = map;
+    files->cnt++;
 }
 
 static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
@@ -50,15 +54,15 @@ static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
     }
 }
 
+// TODO don't exit instead return err
 static void runtime_err(struct VM *vm, const char *msg) 
 {
     printf("%s\n", msg);
-    for (i32 i = vm->call_count; i >= 1; i--) {
+    for (i32 i = vm->call_count-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
         u32 line = get_opcode_line(frame.fn->chunk.lines, frame.ip-1 - frame.fn->chunk.code);
         printf("[line %d] in %s\n", line, frame.fn->name);
     }
-    exit(1);
 }
 
 // TODO bench and rework
@@ -88,31 +92,33 @@ void release_vm_obj(struct VM *vm)
     }
 }
 
-void init_vm(struct VM *vm)
+void init_vm(struct VM *vm, const char *source_dir)
 {
     init_val_array(&vm->globals);
-    init_mod_array(&vm->modules);
-    vm->call_count = 0;
+    init_file_array(&vm->files);
+    init_arena(&vm->arena);
     vm->obj_list = NULL;
+    vm->source_dir = source_dir;
 }
 
 void release_vm(struct VM *vm) 
 {
     release_val_array(&vm->globals);
-    release_mod_array(&vm->modules);
+    release_file_array(&vm->files);
+    release_arena(&vm->arena);
     release_vm_obj(vm);
 }
 
 // TODO check if exceeding max stack size
-void run_vm(struct VM *vm, struct FnObj *fn) 
+enum InterpResult run_vm(struct VM *vm, struct FnObj *fn) 
 {
     Value *sp = vm->val_stack;
 
     struct CallFrame *frame = vm->call_stack;
     frame->fn = fn;
     frame->bp = sp;
+    vm->call_count = 1;
     register u8 *ip = frame->fn->chunk.code;
-
     while(true) {
         u8 op = *ip;
         ip++;
@@ -142,6 +148,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -154,6 +161,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -166,6 +174,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -178,6 +187,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -190,6 +200,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -202,6 +213,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -214,6 +226,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -226,6 +239,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -250,6 +264,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be number");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -260,6 +275,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -304,6 +320,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -316,6 +333,7 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
@@ -327,10 +345,12 @@ void run_vm(struct VM *vm, struct FnObj *fn)
                 if (fn->arity != arg_count) {
                     frame->ip = ip;
                     runtime_err(vm, "incorrect number of arguments provided");
+                    return INTERP_RUNTIME_ERR;
                 }
                 if (vm->call_count+1 >= MAX_CALL_FRAMES) {
                     frame->ip = ip;
                     runtime_err(vm, "stack overflow");
+                    return INTERP_RUNTIME_ERR;
                 }
                 frame->ip = ip; 
                 
@@ -342,17 +362,18 @@ void run_vm(struct VM *vm, struct FnObj *fn)
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "attempt to call non-function");
+                return INTERP_RUNTIME_ERR;
             }
             break;
         }
         case OP_RETURN: {
+            vm->call_count--;
+            if (vm->call_count == 0)
+                return INTERP_OK;
             // copy return value
             frame->bp[-1] = sp[-1];
             frame--; 
-            vm->call_count--;
             ip = frame->ip;
-            if (vm->call_count == 0)
-                return;
             break;
         }
         case OP_POP: {
