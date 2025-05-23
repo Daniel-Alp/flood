@@ -1,7 +1,0 @@
-fn foo() {
-    print 4;
-}
-
-fn blin() {
-    
-}

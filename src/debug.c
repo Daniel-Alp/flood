@@ -103,6 +103,11 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset)
     print_node((struct Node*)node->body, offset + 2);
 }
 
+static void print_import(struct ImportNode *node, u32 offset)
+{
+    printf("ImportNode %.*s %.*s", node->path.length, node->path.start, node->base.span.length, node->base.span.start);
+}
+
 // TEMP remove when we add functions
 static void print_print(struct PrintNode *node, u32 offset) 
 {
@@ -126,6 +131,7 @@ void print_node(struct Node *node, u32 offset)
     case NODE_EXPR_STMT: print_expr_stmt((struct ExprStmtNode*)node, offset); break;
     case NODE_VAR_DECL:  print_var_decl((struct VarDeclNode*)node, offset); break;
     case NODE_FN_DECL:   print_fn_decl((struct FnDeclNode*)node, offset); break;
+    case NODE_IMPORT:    print_import((struct ImportNode*)node, offset); break;
     case NODE_RETURN:    print_return((struct ReturnNode*)node, offset); break;
     // TEMP remove when we add functions
     case NODE_PRINT:     print_print((struct PrintNode*)node, offset); break; 

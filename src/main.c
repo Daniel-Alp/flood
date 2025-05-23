@@ -1,23 +1,41 @@
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "object.h"
-#include "vm.h"
-#include "api.h"
+#include "memory.h"
+#include "parse.h"
 #include "debug.h"
 
 int main(int argc, const char **argv) 
 {
-    if (argc != 2) {
-        printf("Usage: ./flood [script]\n");
-        return 1;
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        printf("File `%s` does not exist\n", argv[1]);
+        goto err_close_fp;
     }
-    struct VM vm;
-    init_vm(&vm, "/home/alp/Projects/flood/test/api/get_global/");
-    do_file(&vm, argv[1]);
-    i32 i = get_global(&vm, "./main.fl", "foo");
-    struct FnObj *fn = AS_FN(vm.globals.values[i]);
-    if (i != -1)
-        run_vm(&vm, fn);
-    release_vm(&vm);
+    fseek(fp, 0, SEEK_END);
+    u64 length = ftell(fp); 
+    fseek(fp, 0, SEEK_SET);
+    char *buf = allocate(length+2);
+    buf[0] = '\0';
+    buf[length+1] = '\0';
+    char *source = buf+1;
+    // TODO check for null bytes
+    fread(source, 1, length, fp);
+
+    printf("%s\n", argv[1]);
+    struct Parser parser;
+    init_parser(&parser);
+    struct FileNode *ast = parse(&parser, source);
+    if (parser.errlist.cnt > 0) {
+        print_errlist(&parser.errlist);
+        goto err_release_parser;
+    }
+    for (i32 i = 0; i < ast->cnt; i++)
+        print_node(ast->stmts[i], 0);
+    printf("\n");
+
+err_release_parser:
+    release_parser(&parser);
+    release(buf);
+err_close_fp:
+    fclose(fp);
 }

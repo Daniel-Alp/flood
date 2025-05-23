@@ -1,0 +1,2 @@
+import "./foo.fl" as foo
+import "./bar.fl" as bar

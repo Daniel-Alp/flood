@@ -9,43 +9,37 @@ struct PrecLvl {
     u32 new;
 };
 
-struct PrecLvl infix_prec[] = {
-    [TOKEN_EQ]         = {1, 2},
-    [TOKEN_PLUS_EQ]    = {1, 2},
-    [TOKEN_MINUS_EQ]   = {1, 2},
-    [TOKEN_STAR_EQ]    = {1, 2},
-    [TOKEN_SLASH_EQ]   = {1, 2},
-    [TOKEN_OR]         = {3, 3},
-    [TOKEN_AND]        = {5, 5},
-    [TOKEN_EQEQ]       = {7, 8},
-    [TOKEN_NEQ]        = {7, 8},
-    [TOKEN_LT]         = {9, 10},
-    [TOKEN_LEQ]        = {9, 10},
-    [TOKEN_GT]         = {9, 10},
-    [TOKEN_GEQ]        = {9, 10},
-    [TOKEN_PLUS]       = {11, 12},
-    [TOKEN_MINUS]      = {11, 12},
-    [TOKEN_STAR]       = {13, 14},
-    [TOKEN_SLASH]      = {13, 14},
-    [TOKEN_NOT]        = {0, 0},
-    [TOKEN_L_PAREN]    = {0, 0},
-    [TOKEN_L_PAREN]    = {0, 0},
-    [TOKEN_R_PAREN]    = {0, 0},
-    [TOKEN_L_BRACE]    = {0, 0},
-    [TOKEN_R_BRACE]    = {0, 0},
-    [TOKEN_NUMBER]     = {0, 0},
-    [TOKEN_TRUE]       = {0, 0},
-    [TOKEN_FALSE]      = {0, 0},
-    [TOKEN_IDENTIFIER] = {0, 0},
-    [TOKEN_FN]         = {0, 0},
-    [TOKEN_RETURN]     = {0, 0},
-    [TOKEN_VAR]        = {0, 0},
-    [TOKEN_IF]         = {0, 0},
-    [TOKEN_ELSE]       = {0, 0},
-    [TOKEN_SEMI]       = {0, 0},
-    [TOKEN_EOF]        = {0, 0},
-    [TOKEN_ERR]        = {0, 0},
-};
+static struct PrecLvl infix_prec(enum TokenTag tag) 
+{
+    switch (tag) {
+    case TOKEN_EQ:
+    case TOKEN_PLUS_EQ:
+    case TOKEN_MINUS_EQ:
+    case TOKEN_STAR_EQ:
+    case TOKEN_SLASH_EQ:
+        return (struct PrecLvl){.old = 1, .new = 2};
+    case TOKEN_OR:
+        return (struct PrecLvl){.old = 3, .new = 3};
+    case TOKEN_AND:
+        return (struct PrecLvl){.old = 5, .new = 5};
+    case TOKEN_EQEQ:
+    case TOKEN_NEQ:
+        return (struct PrecLvl){.old = 7, .new = 8};
+    case TOKEN_LT:
+    case TOKEN_LEQ:
+    case TOKEN_GT:
+    case TOKEN_GEQ:
+        return (struct PrecLvl){.old = 9, .new = 10};
+    case TOKEN_PLUS:
+    case TOKEN_MINUS:
+        return (struct PrecLvl){.old = 11, .new = 12};
+    case TOKEN_STAR:
+    case TOKEN_SLASH:
+        return (struct PrecLvl){.old = 13, .new = 14};
+    default:
+        return (struct PrecLvl){.old = 0, .new = 0};
+    }
+}
 
 void init_parser(struct Parser *parser) 
 {
@@ -388,8 +382,9 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
     }
     while(true) {
         token = at(parser);
-        u32 old_lvl = infix_prec[token.tag].old;
-        u32 new_lvl = infix_prec[token.tag].new;
+        struct PrecLvl prec = infix_prec(token.tag);
+        u32 old_lvl = prec.old;
+        u32 new_lvl = prec.new;
         if (old_lvl < prec_lvl) {
             break;
         }
@@ -466,6 +461,11 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
                 expect(parser, TOKEN_COMMA, "expected `,`");
         } else {
             advance_with_err(parser, "expected identifier");
+            if (at(parser).tag == TOKEN_FN || at(parser).tag == TOKEN_IMPORT) {
+                parser->panic = false;
+                release_ident_array(&tmp_params);
+                return NULL;
+            }
         }
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
@@ -538,15 +538,36 @@ static struct BlockNode *parse_block(struct Parser *parser)
     return mk_block(&parser->arena, span, stmts, cnt);
 }
 
+// precondition: `import` token consumed
+static struct ImportNode *parse_import(struct Parser *parser)
+{
+    struct Span path = at(parser).span;
+    expect(parser, TOKEN_STRING, "expected string");
+    expect(parser, TOKEN_AS, "expected `as`");
+    struct Span span = at(parser).span;
+    expect(parser, TOKEN_IDENTIFIER, "expected identifier");
+    struct ImportNode *node = push_arena(&parser->arena, sizeof(struct ImportNode));
+    node->base.span = span;
+    node->base.tag = NODE_IMPORT;
+    node->path = path;
+    return node;
+}
+
 static struct FileNode *parse_file(struct Parser *parser) 
 {
     struct PtrArray tmp;
     init_ptr_array(&tmp);
     while (at(parser).tag != TOKEN_EOF) {
         // TODO allow global variables
-        expect(parser, TOKEN_FN, "expected function declaration");
-        struct FnDeclNode *node = parse_fn_decl(parser);
-        push_ptr_array(&tmp, (struct Node*)node);
+        struct Node *node = NULL;
+        if (eat(parser, TOKEN_FN)) {
+            node = (struct Node*)parse_fn_decl(parser);
+        } else if (eat(parser, TOKEN_IMPORT)) {
+            node = (struct Node*)parse_import(parser);
+        } else {
+            advance_with_err(parser, "expected declaration");
+        }
+        push_ptr_array(&tmp, node);
     }
     u32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);

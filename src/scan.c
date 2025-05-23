@@ -50,7 +50,7 @@ static void skip_whitespace(struct Scanner *scanner)
 
 static void skip_comment(struct Scanner *scanner) 
 {
-    while (at(scanner) != '\n')
+    while (at(scanner) != '\n' && !is_at_end(scanner))
         bump(scanner);
     bump(scanner);
     scanner->line++;
@@ -71,7 +71,7 @@ static bool is_alpha_digit(char c)
     return is_digit(c) || is_alpha(c);
 }
 
-struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) 
+static struct Token mk_token(struct Scanner *scanner, enum TokenTag tag) 
 {
     struct Token token = {
         .span = {
@@ -84,7 +84,7 @@ struct Token mk_token(struct Scanner *scanner, enum TokenTag tag)
     return token;
 }
 
-struct Token number(struct Scanner *scanner) 
+static struct Token number(struct Scanner *scanner) 
 {
     while(is_digit(at(scanner)))
         bump(scanner);
@@ -94,6 +94,17 @@ struct Token number(struct Scanner *scanner)
         while (is_digit(at(scanner)))
             bump(scanner);
     } 
+}
+
+static struct Token string(struct Scanner *scanner)
+{
+    while(at(scanner) != '"') {
+        bump(scanner);
+        if (is_at_end(scanner))
+            return mk_token(scanner, TOKEN_ERR);
+    }
+    bump(scanner);
+    return mk_token(scanner, TOKEN_STRING);
 }
 
 static void identifier(struct Scanner *scanner) 
@@ -147,6 +158,8 @@ struct Token next_token(struct Scanner *scanner)
     case '}': return mk_token(scanner, TOKEN_R_BRACE);
     case ';': return mk_token(scanner, TOKEN_SEMI);
     case ',': return mk_token(scanner, TOKEN_COMMA);
+    case '.': return mk_token(scanner, TOKEN_DOT);
+    case '"': return string(scanner);
     default:
         if (is_digit(c)) {
             number(scanner);
@@ -154,14 +167,22 @@ struct Token next_token(struct Scanner *scanner)
         } else if (is_alpha(c)) {
             identifier(scanner);
             switch (c) {
-            case 'a': return check_keyword(scanner, "nd", 3, TOKEN_AND);
+            case 'a': 
+                if (scanner->start[1] == 's')
+                    return check_keyword(scanner, "s", 2, TOKEN_AS);
+                else
+                    return check_keyword(scanner, "nd", 3, TOKEN_AND);
             case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
             case 'f':
                 if (scanner->start[1] == 'n')
                     return check_keyword(scanner, "n", 2, TOKEN_FN);
                 else
                     return check_keyword(scanner, "alse", 5, TOKEN_FALSE);
-            case 'i': return check_keyword(scanner, "f", 2, TOKEN_IF);
+            case 'i': 
+                if (scanner->start[1] == 'f')
+                    return check_keyword(scanner, "f", 2, TOKEN_IF);
+                else
+                    return check_keyword(scanner, "mport", 6, TOKEN_IMPORT);
             case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
             // TEMP remove when we add functions
             case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);

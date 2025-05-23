@@ -11,6 +11,7 @@ enum NodeTag {
     NODE_FN_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
+    NODE_IMPORT,
     NODE_EXPR_STMT,
     NODE_BLOCK,
     NODE_IF,
@@ -108,6 +109,13 @@ struct ReturnNode {
     // span is `return`
     struct Node base;
     struct Node *expr;
+};
+
+struct ImportNode {
+    // span is identifier
+    struct Node base;
+    struct Span path;
+    i32 id;
 };
 
 struct FileNode {

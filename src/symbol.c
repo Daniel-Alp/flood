@@ -37,12 +37,12 @@ u32 hash_string(struct Span key)
 struct Symbol *get_symbol_map_slot(struct Symbol *symbols, u32 cap, struct Span key, u32 hash) 
 {
     u32 i = hash & (cap-1);
-    while (true) {
+    while (true) {        
         struct Symbol *sym = &symbols[i];
         if (sym->span.length == 0 
             || (hash == sym->hash 
                 && key.length == sym->span.length 
-                && memcmp(key.start, sym->span.start, key.length)) == 0)
+                && memcmp(key.start, sym->span.start, key.length) == 0))
             return sym;
         i = (i+1) & (cap-1);
     }

@@ -34,7 +34,10 @@ enum TokenTag {
     TOKEN_TRUE,
     TOKEN_FALSE,
     TOKEN_IDENTIFIER,
+    TOKEN_STRING,
 
+    TOKEN_IMPORT,
+    TOKEN_AS,
     TOKEN_FN,
     TOKEN_VAR,
     TOKEN_IF,
@@ -42,6 +45,7 @@ enum TokenTag {
     TOKEN_RETURN,
     TOKEN_SEMI,
     TOKEN_COMMA,
+    TOKEN_DOT,
 
     TOKEN_EOF,
     TOKEN_ERR,
