@@ -1,5 +1,4 @@
 fn main() {
-    [foo(1, 2, , bar, baz 
-
-    var x = +
+    var x = false or false;
+    print x;
 }
