@@ -4,10 +4,14 @@
 #include "scan.h"
 
 enum NodeTag {
-    NODE_LITERAL,
+    NODE_ATOM,      // nil, true, false, TODO strings
+    NODE_LIST,      // [foo, bar, baz]
     NODE_IDENT,
     NODE_UNARY,
-    NODE_BINARY,
+    // +, -, *, /, and, or, [
+    // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
+    NODE_BINARY,    
+    NODE_GET_PROP,  // foo.bar
     NODE_FN_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
@@ -26,9 +30,16 @@ struct Node {
     enum NodeTag tag;
 };
 
-struct LiteralNode {
+struct AtomNode {
     struct Node base;
-    enum TokenTag lit_tag;
+    enum TokenTag atom_tag;
+};
+
+struct ListNode {
+    // span is `[`
+    struct Node base;
+    struct Node **items;
+    u32 cnt;
 };
 
 struct IdentNode {
@@ -51,6 +62,15 @@ struct BinaryNode {
     struct Node *rhs;
     enum TokenTag op_tag;
 }; 
+
+struct GetPropNode {
+    // span is `.`
+    struct Node base;
+    struct Node *lhs;
+    //      foo.bar
+    //          ^~~ prop
+    struct Span prop;
+};
 
 struct FnCallNode {
     // span is `(`

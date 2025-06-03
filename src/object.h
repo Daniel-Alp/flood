@@ -13,7 +13,7 @@ struct Obj {
 
 struct FnObj {
     struct Obj base;
-    char *name;
+    const char *name;
     struct Chunk chunk; 
     u32 arity;
 };

@@ -162,7 +162,7 @@ static void analyze_fn_decl(struct SemaState *sema, struct FnDeclNode *node)
 static void analyze_node(struct SemaState *sema, struct Node *node)
 {
     switch (node->tag) {
-    case NODE_LITERAL:   return;
+    case NODE_ATOM:      return;
     case NODE_IDENT:     return analyze_ident(sema, (struct IdentNode*)node);
     case NODE_UNARY:     return analyze_unary(sema, (struct UnaryNode*)node);
     case NODE_BINARY:    return analyze_binary(sema, (struct BinaryNode*)node);

@@ -22,6 +22,7 @@ int main(int argc, const char **argv)
     fread(source, 1, length, fp);
 
     printf("%s\n", argv[1]);
+    printf("%s\n", source);
     struct Parser parser;
     init_parser(&parser);
     struct FileNode *ast = parse(&parser, source);

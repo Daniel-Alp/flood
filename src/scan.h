@@ -29,6 +29,8 @@ enum TokenTag {
     TOKEN_R_PAREN,
     TOKEN_L_BRACE,
     TOKEN_R_BRACE,
+    TOKEN_L_SQUARE,
+    TOKEN_R_SQUARE,
 
     TOKEN_NUMBER,
     TOKEN_TRUE,
@@ -36,8 +38,10 @@ enum TokenTag {
     TOKEN_IDENTIFIER,
     TOKEN_STRING,
 
+    // TODO handle these keywords
     TOKEN_IMPORT,
     TOKEN_AS,
+
     TOKEN_FN,
     TOKEN_VAR,
     TOKEN_IF,

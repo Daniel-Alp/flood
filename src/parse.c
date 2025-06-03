@@ -36,9 +36,25 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
     case TOKEN_STAR:
     case TOKEN_SLASH:
         return (struct PrecLvl){.old = 13, .new = 14};
+    case TOKEN_L_SQUARE:
+        return (struct PrecLvl){.old = 15, .new = 16};
     default:
         return (struct PrecLvl){.old = 0, .new = 0};
     }
+}
+
+// returns whether this token can start an expression
+static bool expr_first(enum TokenTag tag)
+{
+    // TODO add strings
+    return tag == TOKEN_TRUE 
+        || tag == TOKEN_FALSE
+        || tag == TOKEN_NUMBER
+        || tag == TOKEN_IDENTIFIER
+        || tag == TOKEN_L_SQUARE
+        || tag == TOKEN_L_PAREN
+        || tag == TOKEN_MINUS
+        || tag == TOKEN_NOT;
 }
 
 void init_parser(struct Parser *parser) 
@@ -138,12 +154,22 @@ static void **mv_ptr_array_to_arena(struct Arena *arena, struct PtrArray *arr)
     return nodes;
 }
 
-static struct LiteralNode *mk_literal(struct Arena *arena, struct Token token) 
+static struct AtomNode *mk_atom(struct Arena *arena, struct Token token) 
 {
-    struct LiteralNode *node = push_arena(arena, sizeof(struct LiteralNode));
-    node->base.tag = NODE_LITERAL;
+    struct AtomNode *node = push_arena(arena, sizeof(struct AtomNode));
+    node->base.tag = NODE_ATOM;
     node->base.span = token.span;
-    node->lit_tag = token.tag;
+    node->atom_tag = token.tag;
+    return node;
+}
+
+static struct ListNode *mk_list(struct Arena *arena, struct Span span, struct Node **items, u32 cnt)
+{
+    struct ListNode *node = push_arena(arena, sizeof(struct ListNode));
+    node->base.span = span;
+    node->base.tag = NODE_LIST;
+    node->items = items;
+    node->cnt = cnt;
     return node;
 }
 
@@ -179,6 +205,16 @@ static struct BinaryNode *mk_binary(
     node->op_tag = tag;
     node->lhs = lhs;
     node->rhs = rhs;
+    return node;
+}
+
+static struct GetPropNode *mk_access(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
+{
+    struct GetPropNode *node = push_arena(arena, sizeof(struct GetPropNode));
+    node->base.span = span;
+    node->base.tag = NODE_GET_PROP;
+    node->lhs = lhs;
+    node->prop = prop;
     return node;
 }
 
@@ -338,16 +374,35 @@ static struct BlockNode *parse_block(struct Parser *parser);
 static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) 
 {
     struct Token token = at(parser);
-    bump(parser);
+    if (expr_first(token.tag)) // we could bump in each arm of the switch but this is simpler
+        bump(parser);
     struct Node *lhs = NULL;
+    // TODO add strings
     switch (token.tag) {
     case TOKEN_TRUE:
     case TOKEN_FALSE:
     case TOKEN_NUMBER:
-        lhs = (struct Node*)mk_literal(&parser->arena, token);
+        lhs = (struct Node*)mk_atom(&parser->arena, token);
         break;
     case TOKEN_IDENTIFIER:
         lhs = (struct Node*)mk_ident(&parser->arena, token.span);
+        break;
+    case TOKEN_L_SQUARE:
+        struct PtrArray items_tmp;
+        init_ptr_array(&items_tmp);
+        while(at(parser).tag != TOKEN_R_SQUARE && at(parser).tag != TOKEN_EOF) {
+            // breaking early helps when the closing `]` is missing
+            if (!expr_first(at(parser).tag))
+                break;
+            struct Node *item = parse_expr(parser, 1);
+            push_ptr_array(&items_tmp, item);
+            if (at(parser).tag != TOKEN_R_SQUARE)
+                expect(parser, TOKEN_COMMA, "expected `,`");
+        }
+        expect(parser, TOKEN_R_SQUARE, "expected `]`");
+        u32 cnt = items_tmp.cnt;
+        struct Node **items = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &items_tmp);
+        lhs = mk_list(&parser->arena, token.span, items, cnt);
         break;
     case TOKEN_L_PAREN:
         lhs = (struct Node*)parse_expr(parser, 1);
@@ -370,6 +425,9 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         struct PtrArray args_tmp;
         init_ptr_array(&args_tmp);
         while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
+            // breaking early helps when the closing `)` is missing
+            if (!expr_first(at(parser).tag))
+                break;
             struct Node *arg = parse_expr(parser, 1);
             push_ptr_array(&args_tmp, arg);
             if (at(parser).tag != TOKEN_R_PAREN)
@@ -382,6 +440,12 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
     }
     while(true) {
         token = at(parser);
+        if (token.tag == TOKEN_DOT) {
+            bump(parser);
+            expect(parser, TOKEN_IDENTIFIER, "expected identifier");
+            lhs = (struct Node*)mk_access(&parser->arena, token.span, lhs, prev(parser).span);
+            continue;
+        }
         struct PrecLvl prec = infix_prec(token.tag);
         u32 old_lvl = prec.old;
         u32 new_lvl = prec.new;
@@ -390,6 +454,9 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         }
         bump(parser);
         struct Node *rhs = parse_expr(parser, new_lvl);
+        // since we view `[` as a binary operator we have to consume `]` after parsing idx expr
+        if (token.tag == TOKEN_L_SQUARE)
+            expect(parser, TOKEN_R_SQUARE, "expected `]`");
         
         enum TokenTag tag = token.tag;
         // desugar +=, -=, *=, /=
@@ -523,10 +590,12 @@ static struct BlockNode *parse_block(struct Parser *parser)
             node = (struct Node*)parse_return(parser);  
         } else if (eat(parser, TOKEN_PRINT)) {
             node = (struct Node*)parse_print(parser);
-        } else {
+        } else if (expr_first(at(parser).tag)) {
             node = parse_expr(parser, 1);
             expect(parser, TOKEN_SEMI, "expected `;`"); 
             node = (struct Node*)mk_expr_stmt(&parser->arena, prev(parser).span, node); 
+        } else {
+            advance_with_err(parser, "expected statement");
         }
         push_ptr_array(&tmp, node);
         if (parser->panic)

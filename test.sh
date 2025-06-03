@@ -1,3 +1,3 @@
 #!/bin/bash
 
-find ./test -type f -exec ./build/flood {} \;
+find ./test/parse -type f -exec ./build/flood {} \;

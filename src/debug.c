@@ -7,24 +7,32 @@
 // is desugared into
 //      x = x + 3;
 const char *binop_str[] = {
-    [TOKEN_PLUS]    = "+",
-    [TOKEN_MINUS]   = "-",
-    [TOKEN_STAR]    = "*",
-    [TOKEN_SLASH]   = "/",
-    [TOKEN_LT]      = "<",
-    [TOKEN_LEQ]     = "<=",
-    [TOKEN_GT]      = ">",
-    [TOKEN_GEQ]     = ">=",
-    [TOKEN_EQEQ]    = "==",
-    [TOKEN_NEQ]     = "!=",
-    [TOKEN_AND]     = "and",
-    [TOKEN_OR]      = "or",
-    [TOKEN_EQ]      = "="
+    [TOKEN_PLUS]     = "+",
+    [TOKEN_MINUS]    = "-",
+    [TOKEN_STAR]     = "*",
+    [TOKEN_SLASH]    = "/",
+    [TOKEN_LT]       = "<",
+    [TOKEN_LEQ]      = "<=",
+    [TOKEN_GT]       = ">",
+    [TOKEN_GEQ]      = ">=",
+    [TOKEN_EQEQ]     = "==",
+    [TOKEN_NEQ]      = "!=",
+    [TOKEN_AND]      = "and",
+    [TOKEN_OR]       = "or",
+    [TOKEN_EQ]       = "=",
+    [TOKEN_L_SQUARE] = "[]"
 };
 
-static void print_literal(struct LiteralNode *node, u32 offset) 
+static void print_atom(struct AtomNode *node, u32 offset) 
 {
-    printf("Literal %.*s", node->base.span.length, node->base.span.start);
+    printf("Atom %.*s", node->base.span.length, node->base.span.start);
+}
+
+static void print_list(struct ListNode *node, u32 offset)
+{
+    printf("List");
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->items[i], offset + 2);
 }
 
 static void print_ident(struct IdentNode *node, u32 offset) 
@@ -47,6 +55,14 @@ static void print_binary(struct BinaryNode *node, u32 offset)
     printf("%s", binop_str[node->op_tag]);
     print_node(node->lhs, offset + 2);
     print_node(node->rhs, offset + 2);
+}
+
+static void print_get_prop(struct GetPropNode *node, u32 offset)
+{
+    printf("GetProp");
+    print_node(node->lhs, offset + 2);
+    printf("\n%*s", offset + 2, "");
+    printf("%.*s", node->prop.length, node->prop.start);
 }
 
 static void print_fn_call(struct FnCallNode *node, u32 offset) 
@@ -121,10 +137,12 @@ void print_node(struct Node *node, u32 offset)
         printf("\n");
     printf("%*s(", offset, "");
     switch (node->tag) {
-    case NODE_LITERAL:   print_literal((struct LiteralNode*)node, offset); break;
+    case NODE_ATOM:      print_atom((struct AtomNode*)node, offset); break;
+    case NODE_LIST:      print_list((struct ListNode*)node, offset); break;
     case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
     case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
+    case NODE_GET_PROP:  print_get_prop((struct GetPropNode*)node, offset); break;
     case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
     case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:        print_if((struct IfNode*)node, offset); break;

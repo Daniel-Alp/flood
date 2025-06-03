@@ -59,10 +59,10 @@ static void patch_jump(struct Compiler *compiler, u32 offset)
 
 static void compile_node(struct Compiler *compiler, struct Node *node);
 
-static void compile_literal(struct Compiler *compiler, struct LiteralNode *node) 
+static void compile_atom(struct Compiler *compiler, struct AtomNode *node) 
 {
     u32 line = node->base.span.line;
-    switch(node->lit_tag) {
+    switch(node->atom_tag) {
     case TOKEN_TRUE:
         emit_byte(cur_chunk(compiler), OP_TRUE, line);
         break;
@@ -222,7 +222,7 @@ static void compile_print(struct Compiler *compiler, struct PrintNode *node)
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {
     switch (node->tag) {
-    case NODE_LITERAL:   compile_literal(compiler, (struct LiteralNode*)node); break;
+    case NODE_ATOM:      compile_atom(compiler, (struct AtomNode*)node); break;
     case NODE_IDENT:     compile_ident(compiler, (struct IdentNode*)node); break;
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;

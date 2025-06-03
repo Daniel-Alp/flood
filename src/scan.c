@@ -156,6 +156,8 @@ struct Token next_token(struct Scanner *scanner)
     case ')': return mk_token(scanner, TOKEN_R_PAREN);
     case '{': return mk_token(scanner, TOKEN_L_BRACE);
     case '}': return mk_token(scanner, TOKEN_R_BRACE);
+    case '[': return mk_token(scanner, TOKEN_L_SQUARE);
+    case ']': return mk_token(scanner, TOKEN_R_SQUARE);
     case ';': return mk_token(scanner, TOKEN_SEMI);
     case ',': return mk_token(scanner, TOKEN_COMMA);
     case '.': return mk_token(scanner, TOKEN_DOT);
