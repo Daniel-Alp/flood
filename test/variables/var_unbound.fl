@@ -8,4 +8,8 @@ fn main() {
         var t = y;
     }
     t + 4;
+
+    foo(1, 2, a);
+    bar[a];
+    [1, 2, a];
 }

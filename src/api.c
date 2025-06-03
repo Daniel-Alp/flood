@@ -7,7 +7,7 @@
 #include "sema.h"
 #include "compile.h"
 
-// parse and compile the file and its imports, update the files array of the VM
+// TODO parse and compile the file and its imports, update the files array of the VM
 // invoke main method of the file (if it is defined)
 enum InterpResult do_file(struct VM *vm, const char *path)
 {

@@ -48,6 +48,12 @@ static void analyze_ident(struct SemaState *sema, struct IdentNode *node)
     node->id = ident->id;
 }
 
+static void analyze_list(struct SemaState *sema, struct ListNode *node)
+{
+    for (i32 i = 0; i < node->cnt; i++)
+        analyze_node(sema, node->items[i]);
+}
+
 static void analyze_unary(struct SemaState *sema, struct UnaryNode *node)
 {
     analyze_node(sema, node->rhs);
@@ -69,6 +75,11 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
     }
     analyze_node(sema, node->lhs);
     analyze_node(sema, node->rhs);
+}
+
+static void analyze_get_prop(struct SemaState *sema, struct GetPropNode *node)
+{
+    analyze_node(sema, node->lhs);
 }
 
 static void analyze_fn_call(struct SemaState *sema, struct FnCallNode *node) 
@@ -163,17 +174,19 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
 {
     switch (node->tag) {
     case NODE_ATOM:      return;
-    case NODE_IDENT:     return analyze_ident(sema, (struct IdentNode*)node);
-    case NODE_UNARY:     return analyze_unary(sema, (struct UnaryNode*)node);
-    case NODE_BINARY:    return analyze_binary(sema, (struct BinaryNode*)node);
-    case NODE_FN_CALL:   return analyze_fn_call(sema, (struct FnCallNode*)node);
-    case NODE_BLOCK:     return analyze_block(sema, (struct BlockNode*)node);
-    case NODE_IF:        return analyze_if(sema, (struct IfNode*)node);
-    case NODE_EXPR_STMT: return analyze_expr_stmt(sema, (struct ExprStmtNode*)node);
-    case NODE_RETURN:    return analyze_return(sema, (struct ReturnNode*)node);
+    case NODE_LIST:      analyze_list(sema, (struct ListNode*)node); break;
+    case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
+    case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
+    case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
+    case NODE_GET_PROP:  analyze_get_prop(sema, (struct GetPropNode*)node); break;
+    case NODE_FN_CALL:   analyze_fn_call(sema, (struct FnCallNode*)node); break;
+    case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
+    case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;
+    case NODE_EXPR_STMT: analyze_expr_stmt(sema, (struct ExprStmtNode*)node); break;
+    case NODE_RETURN:    analyze_return(sema, (struct ReturnNode*)node); break;
     // TEMP remove when we add functions
-    case NODE_PRINT:     return analyze_print(sema, (struct PrintNode*)node);
-    case NODE_VAR_DECL:  return analyze_var_decl(sema, (struct VarDeclNode*)node);
+    case NODE_PRINT:     analyze_print(sema, (struct PrintNode*)node); break;
+    case NODE_VAR_DECL:  analyze_var_decl(sema, (struct VarDeclNode*)node); break;
     }
 }
 

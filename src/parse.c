@@ -208,7 +208,7 @@ static struct BinaryNode *mk_binary(
     return node;
 }
 
-static struct GetPropNode *mk_access(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
+static struct GetPropNode *mk_get_prop(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
 {
     struct GetPropNode *node = push_arena(arena, sizeof(struct GetPropNode));
     node->base.span = span;
@@ -443,7 +443,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         if (token.tag == TOKEN_DOT) {
             bump(parser);
             expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-            lhs = (struct Node*)mk_access(&parser->arena, token.span, lhs, prev(parser).span);
+            lhs = (struct Node*)mk_get_prop(&parser->arena, token.span, lhs, prev(parser).span);
             continue;
         }
         struct PrecLvl prec = infix_prec(token.tag);

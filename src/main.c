@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "memory.h"
 #include "parse.h"
+#include "sema.h"
 #include "debug.h"
 
 int main(int argc, const char **argv) 
@@ -34,6 +35,20 @@ int main(int argc, const char **argv)
         print_node(ast->stmts[i], 0);
     printf("\n");
 
+    struct SymArr sym_arr;
+    init_symbol_arr(&sym_arr);
+
+    struct SemaState sema;
+    init_sema_state(&sema, &sym_arr);
+    analyze(&sema, ast);
+    if (sema.errlist.cnt > 0) {
+        print_errlist(&sema.errlist);
+        release_symbol_arr(&sym_arr);
+        goto err_release_sema_state;
+    } 
+
+err_release_sema_state:
+    release_sema_state(&sema);
 err_release_parser:
     release_parser(&parser);
     release(buf);
