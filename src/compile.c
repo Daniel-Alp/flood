@@ -73,7 +73,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
         break;
     case TOKEN_NUMBER:
         emit_byte(cur_chunk(compiler), OP_GET_CONST, line);
-        Value val = NUM_VAL(strtod(node->base.span.start, NULL));
+        Value val = MK_NUM(strtod(node->base.span.start, NULL));
         emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), val), line);
         break;
     case TOKEN_STRING:
@@ -304,7 +304,7 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
 
         compiler->fn = script;
         emit_byte(cur_chunk(compiler), OP_GET_CONST, fn_span.line);
-        emit_byte(cur_chunk(compiler), add_constant(&script->chunk, OBJ_VAL((struct Obj*)fn)), fn_span.line);
+        emit_byte(cur_chunk(compiler), add_constant(&script->chunk, MK_OBJ((struct Obj*)fn)), fn_span.line);
         emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, fn_span.line);
         // TODO handle > 256 globals
         emit_byte(cur_chunk(compiler), compiler->global_cnt, fn_span.line);

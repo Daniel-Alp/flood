@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "vm.h"
 #include "memory.h"
+#include "gc.h"
 #include "object.h"
 #include "debug.h"
 
@@ -18,22 +19,22 @@ static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
     }
 }
 
-// TODO don't exit instead return err
 static void runtime_err(struct VM *vm, const char *msg) 
 {
     printf("%s\n", msg);
-    for (i32 i = vm->call_count-1; i >= 1; i--) {
+    for (i32 i = vm->call_cnt-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
         u32 line = get_opcode_line(frame.fn->chunk.lines, frame.ip-1 - frame.fn->chunk.code);
         printf("[line %d] in %s\n", line, frame.fn->name);
     }
 }
 
-// TODO bench and rework
 struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
 {
     struct Obj *obj = allocate(size);
     obj->next = vm->obj_list;
+    obj->color = GC_WHITE;
+    obj->printed = 0;
     vm->obj_list = obj;
     return obj;
 }
@@ -53,14 +54,25 @@ void release_vm_obj(struct VM *vm)
 
 void init_vm(struct VM *vm)
 {
+    vm->sp = vm->val_stack;
     init_val_array(&vm->globals);
     vm->obj_list = NULL;
+
+    vm->gray_cnt = 0;
+    vm->gray_cap = 8;
+    vm->gray = allocate(vm->gray_cap * sizeof(struct Obj*));
 }
 
 void release_vm(struct VM *vm) 
 {
+    vm->sp = NULL;
     release_val_array(&vm->globals);
     release_vm_obj(vm);
+
+    vm->gray_cnt = 0;
+    vm->gray_cap = 0;
+    release(vm->gray);
+    vm->gray = NULL;
 }
 
 // TODO check if exceeding max stack size
@@ -71,25 +83,24 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
     struct CallFrame *frame = vm->call_stack;
     frame->fn = fn;
     frame->bp = sp;
-    vm->call_count = 1;
+    vm->call_cnt = 1;
     register u8 *ip = frame->fn->chunk.code;
     while(true) {
         u8 op = *ip;
         ip++;
-        // printf("%s\n", opcode_str[op]);
         switch (op) {
         case OP_NIL: {
-            sp[0] = NIL_VAL;
+            sp[0] = MK_NIL;
             sp++;
             break;
         }
         case OP_TRUE: {
-            sp[0] = BOOL_VAL(true);
+            sp[0] = MK_BOOL(true);
             sp++;
             break;
         }
         case OP_FALSE: {
-            sp[0] = BOOL_VAL(false);
+            sp[0] = MK_BOOL(false);
             sp++;
             break;
         }
@@ -97,7 +108,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = NUM_VAL(AS_NUM(lhs)+AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs)+AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -110,7 +121,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = NUM_VAL(AS_NUM(lhs)-AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs)-AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -123,7 +134,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = NUM_VAL(AS_NUM(lhs)*AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs)*AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -136,7 +147,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = NUM_VAL(AS_NUM(lhs)/AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs)/AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -149,7 +160,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = BOOL_VAL(AS_NUM(lhs)<AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs)<AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -162,7 +173,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = BOOL_VAL(AS_NUM(lhs)<=AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs)<=AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -175,7 +186,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = BOOL_VAL(AS_NUM(lhs)>AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs)>AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -188,7 +199,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value lhs = sp[-2];
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = BOOL_VAL(AS_NUM(lhs)>=AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs)>=AS_NUM(rhs));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -200,21 +211,21 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         case OP_EQEQ: {
             Value lhs = sp[-2];
             Value rhs = sp[-1];
-            sp[-2] = BOOL_VAL(val_eq(lhs, rhs));
+            sp[-2] = MK_BOOL(val_eq(lhs, rhs));
             sp--;
             break;
         }
         case OP_NEQ: {
             Value lhs = sp[-2];
             Value rhs = sp[-1];
-            sp[-2] = BOOL_VAL(!val_eq(lhs, rhs));
+            sp[-2] = MK_BOOL(!val_eq(lhs, rhs));
             sp--;
             break;
         }
         case OP_NEGATE: {
             Value val = sp[-1];
             if (IS_NUM(val)) {
-                sp[-1] = NUM_VAL(-AS_NUM(val));
+                sp[-1] = MK_NUM(-AS_NUM(val));
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be number");
@@ -225,7 +236,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         case OP_NOT: {
             Value val = sp[-1];
             if (IS_BOOL(val)) {
-                sp[-1] = BOOL_VAL(!AS_BOOL(val));
+                sp[-1] = MK_BOOL(!AS_BOOL(val));
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "operand must be boolean");
@@ -238,14 +249,15 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             sp -= cnt;
             Value *vals = sp;
             struct Obj *list = alloc_vm_obj(vm, sizeof(struct ListObj));
+            // TODO benchmark, maybe inline
             init_list_obj((struct ListObj*)list, vals, cnt);
-            sp[0] = OBJ_VAL(list);
+            sp[0] = MK_OBJ(list);
             sp++;
             break;
         }
         case OP_GET_CONST: {
             u16 idx = *ip++;
-            sp[0] = frame->fn->chunk.constants.values[idx];
+            sp[0] = frame->fn->chunk.constants.vals[idx];
             sp++;
             break;
         }
@@ -317,13 +329,13 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         }
         case OP_GET_GLOBAL: {
             u8 idx = *ip++;
-            sp[0] = vm->globals.values[idx];
+            sp[0] = vm->globals.vals[idx];
             sp++;
             break;
         }
         case OP_SET_GLOBAL: {
             u8 idx = *ip++;
-            vm->globals.values[idx] = sp[-1];
+            vm->globals.vals[idx] = sp[-1];
             break;
         }
         case OP_JUMP: {
@@ -366,14 +378,14 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
                     runtime_err(vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
                 }
-                if (vm->call_count+1 >= MAX_CALL_FRAMES) {
+                if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
                     frame->ip = ip;
                     runtime_err(vm, "stack overflow");
                     return INTERP_RUNTIME_ERR;
                 }
                 frame->ip = ip; 
                 
-                vm->call_count++;
+                vm->call_cnt++;
                 frame++;
                 frame->bp = sp-arg_count;
                 frame->fn = fn;
@@ -386,8 +398,8 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             break;
         }
         case OP_RETURN: {
-            vm->call_count--;
-            if (vm->call_count == 0)
+            vm->call_cnt--;
+            if (vm->call_cnt == 0)
                 return INTERP_OK;
             // move return value 
             frame->bp[-1] = sp[-1];
@@ -414,6 +426,9 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             break;
         }
         }
-        // print_stack(vm, sp, frame->bp);
+        vm->sp = sp;
+        // TODO run garbage collector only if it exceeds threshold
+        // run it each iteration only if we define smth
+        collect_garbage(vm);
     }
 }

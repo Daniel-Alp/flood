@@ -216,7 +216,7 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
             break;
         case OP_GET_CONST: {
-            print_val(chunk->constants.values[chunk->code[++i]]);
+            print_val(chunk->constants.vals[chunk->code[++i]]);
             printf("\n");
             break;
         }

@@ -19,15 +19,19 @@ enum InterpResult {
 
 struct VM {
     struct CallFrame call_stack[MAX_CALL_FRAMES];
-    u16 call_count;
+    u16 call_cnt;
 
+    Value *sp;
     Value val_stack[MAX_STACK];
     // stack pointer is stored in the run_vm function
 
     struct ValArray globals;
     
-    // linked list of objects
+    // linked list of all objects
     struct Obj *obj_list;
+    u32 gray_cnt;
+    u32 gray_cap;
+    struct Obj **gray;
 };
 
 void init_vm(struct VM *vm);

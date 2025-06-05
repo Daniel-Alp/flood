@@ -9,6 +9,8 @@ enum ObjTag {
 
 struct Obj {
     enum ObjTag tag;
+    u8 color;         // TODO set this field
+    u8 printed;       
     struct Obj *next;
 };
 

@@ -9,15 +9,15 @@ void init_val_array(struct ValArray *arr)
 {
     arr->cnt = 0;
     arr->cap = 8;
-    arr->values = allocate(arr->cap * sizeof(Value));
+    arr->vals = allocate(arr->cap * sizeof(Value));
 }
 
 void release_val_array(struct ValArray *arr) 
 {
     arr->cnt = 0;
     arr->cap = 0;
-    release(arr->values);
-    arr->values = NULL;
+    release(arr->vals);
+    arr->vals = NULL;
 }
 
 u32 push_val_array(struct ValArray *arr, Value val) 
@@ -26,9 +26,9 @@ u32 push_val_array(struct ValArray *arr, Value val)
     // TODO add LOAD_CONST_LONG opcode
     if (arr->cnt == arr->cap) {
         arr->cap *= 2;
-        arr->values = reallocate(arr->values, arr->cap * sizeof(Value));
+        arr->vals = reallocate(arr->vals, arr->cap * sizeof(Value));
     }
-    arr->values[arr->cnt] = val;
+    arr->vals[arr->cnt] = val;
     arr->cnt++;
     return arr->cnt-1;
 }
@@ -51,6 +51,12 @@ void print_val(Value val)
     case VAL_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
     case VAL_NIL:  printf("null"); break; 
     case VAL_OBJ: 
+        if (AS_OBJ(val)->printed) {
+            printf("...");
+            return;
+        } 
+
+        AS_OBJ(val)->printed = 1;
         if (IS_FN(val)) {
             const char *name = AS_FN(val)->name;
             printf("<function %s>", name);
@@ -66,10 +72,9 @@ void print_val(Value val)
                 }
                 print_val(vals[cnt-1]);
             }
-            if (AS_LIST(val)->cnt)
-            if (AS_LIST(val))
             printf("]");
         }
+        AS_OBJ(val)->printed = 0;
     break;
     }
 }

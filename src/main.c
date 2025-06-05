@@ -6,6 +6,7 @@
 #include "compile.h" 
 #include "debug.h"
 
+// TODO implement snapshot testing framework
 int main(int argc, const char **argv) 
 {
     FILE *fp = fopen(argv[1], "rb");
@@ -67,7 +68,7 @@ int main(int argc, const char **argv)
     emit_byte(&fn->chunk, OP_RETURN, 1);
     // push globals
     for (i32 i = 0; i < compiler.global_cnt; i++)
-        push_val_array(&vm.globals, NIL_VAL);
+        push_val_array(&vm.globals, MK_NIL);
 
     release_symbol_arr(&sym_arr);
     run_vm(&vm, fn);

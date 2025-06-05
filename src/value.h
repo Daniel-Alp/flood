@@ -23,13 +23,13 @@ typedef struct {
 struct ValArray {
     u32 cnt;
     u32 cap;
-    Value *values;
+    Value *vals;
 };
 
-#define NIL_VAL           ((Value){VAL_NIL, {.number = 0}})
-#define BOOL_VAL(val)     ((Value){VAL_BOOL, {.boolean = val}})
-#define NUM_VAL(val)      ((Value){VAL_NUM, {.number = val}})
-#define OBJ_VAL(val)      ((Value){VAL_OBJ, {.obj = val}})
+#define MK_NIL            ((Value){VAL_NIL, {.number = 0}})
+#define MK_BOOL(val)      ((Value){VAL_BOOL, {.boolean = val}})
+#define MK_NUM(val)       ((Value){VAL_NUM, {.number = val}})
+#define MK_OBJ(val)       ((Value){VAL_OBJ, {.obj = val}})
 
 #define AS_BOOL(val)      ((val).as.boolean)
 #define AS_NUM(val)       ((val).as.number)

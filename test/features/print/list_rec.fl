@@ -1,0 +1,7 @@
+fn main() {
+    var a = [0];
+    var b = [a];
+    var c = [b];
+    a[0] = c;
+    print a;
+}
