@@ -47,13 +47,28 @@ bool val_eq(Value val1, Value val2)
 void print_val(Value val) 
 {
     switch (val.tag) {
-    case VAL_NUM:  printf("%.4f\n", AS_NUM(val)); break;
-    case VAL_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
-    case VAL_NIL:  printf("null\n"); break; 
+    case VAL_NUM:  printf("%.14g", AS_NUM(val)); break;
+    case VAL_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
+    case VAL_NIL:  printf("null"); break; 
     case VAL_OBJ: 
         if (IS_FN(val)) {
             const char *name = AS_FN(val)->name;
-            printf("<function %s>\n", name);
+            printf("<function %s>", name);
+        } else if (IS_LIST(val)) {
+            printf("[");
+            struct ListObj *list = AS_LIST(val);
+            Value *vals = list->vals;
+            u32 cnt = list->cnt;
+            if (cnt > 0) {
+                for (i32 i = 0; i < cnt-1; i++) {
+                    print_val(vals[i]);
+                    printf(", ");
+                }
+                print_val(vals[cnt-1]);
+            }
+            if (AS_LIST(val)->cnt)
+            if (AS_LIST(val))
+            printf("]");
         }
     break;
     }

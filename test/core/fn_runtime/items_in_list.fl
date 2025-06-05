@@ -1,0 +1,11 @@
+fn print_items_in_list(list, i, n) {
+    if (i != n) {
+        print list[i];
+        print_items_in_list(list, i+1, n);
+    }
+}
+
+fn main() {
+    print_items_in_list([1, 2, 3, 4], 0, 4);
+    print_items_in_list([1, 2, 3, 4], 0, 4);
+}

@@ -9,6 +9,7 @@
 
 void init_compiler(struct Compiler *compiler, struct SymArr *arr) 
 {
+    init_errlist(&compiler->errlist);
     compiler->stack_pos = 0;
     compiler->global_cnt = 0;
     compiler->main_fn_idx = -1;
@@ -17,6 +18,7 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr)
 
 void release_compiler(struct Compiler *compiler)
 {
+    release_errlist(&compiler->errlist);
     compiler->stack_pos = 0;
     compiler->global_cnt = 0;
     compiler->main_fn_idx = -1;
@@ -74,6 +76,9 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
         Value val = NUM_VAL(strtod(node->base.span.start, NULL));
         emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), val), line);
         break;
+    case TOKEN_STRING:
+        push_errlist(&compiler->errlist, node->base.span, "TODO");
+        break;
     }
 }
 
@@ -86,6 +91,17 @@ static void compile_ident(struct Compiler *compiler, struct IdentNode *node)
     else // TODO OP_GET_GLOBAL_LONG
         emit_byte(cur_chunk(compiler), OP_GET_GLOBAL, line);
     emit_byte(cur_chunk(compiler), sym.idx, line);
+}
+
+static void compile_list(struct Compiler *compiler, struct ListNode *node) 
+{
+    // TODO allow lists to be initialized with more than 256 elements
+    // TODO handle lists being initialized with too many elements
+    u32 line = node->base.span.line;
+    for (i32 i = 0; i < node->cnt; i++)
+        compile_node(compiler, node->items[i]);    
+    emit_byte(cur_chunk(compiler), OP_LIST, line);
+    emit_byte(cur_chunk(compiler), node->cnt, line);
 }
 
 static void compile_unary(struct Compiler *compiler, struct UnaryNode *node) 
@@ -103,10 +119,15 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
     u32 line = node->base.span.line;
     enum TokenTag op_tag = node->op_tag;
     if (op_tag == TOKEN_EQ) {
-        compile_node(compiler, node->rhs);
         if (node->lhs->tag == NODE_IDENT) {
+            compile_node(compiler, node->rhs);
             emit_byte(cur_chunk(compiler), OP_SET_LOCAL, line);
             emit_byte(cur_chunk(compiler), symbols(compiler)[((struct IdentNode*)node->lhs)->id].idx, line);
+        } else if (node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE) {
+            compile_node(compiler, ((struct BinaryNode*)node->lhs)->lhs);
+            compile_node(compiler, ((struct BinaryNode*)node->lhs)->rhs);
+            compile_node(compiler, node->rhs);
+            emit_byte(cur_chunk(compiler), OP_SET_SUBSCR, line);
         }
     } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
         compile_node(compiler, node->lhs);
@@ -118,18 +139,24 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         compile_node(compiler, node->lhs);
         compile_node(compiler, node->rhs);
         switch (op_tag) {
-        case TOKEN_PLUS:  emit_byte(cur_chunk(compiler), OP_ADD, line); break;
-        case TOKEN_MINUS: emit_byte(cur_chunk(compiler), OP_SUB, line); break;
-        case TOKEN_STAR:  emit_byte(cur_chunk(compiler), OP_MUL, line); break;
-        case TOKEN_SLASH: emit_byte(cur_chunk(compiler), OP_DIV, line); break;
-        case TOKEN_LT:    emit_byte(cur_chunk(compiler), OP_LT, line); break; 
-        case TOKEN_LEQ:   emit_byte(cur_chunk(compiler), OP_LEQ, line); break;
-        case TOKEN_GT:    emit_byte(cur_chunk(compiler), OP_GT, line); break;
-        case TOKEN_GEQ:   emit_byte(cur_chunk(compiler), OP_GEQ, line); break;
-        case TOKEN_EQEQ:  emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
-        case TOKEN_NEQ:   emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
+        case TOKEN_PLUS:     emit_byte(cur_chunk(compiler), OP_ADD, line); break;
+        case TOKEN_MINUS:    emit_byte(cur_chunk(compiler), OP_SUB, line); break;
+        case TOKEN_STAR:     emit_byte(cur_chunk(compiler), OP_MUL, line); break;
+        case TOKEN_SLASH:    emit_byte(cur_chunk(compiler), OP_DIV, line); break;
+        case TOKEN_LT:       emit_byte(cur_chunk(compiler), OP_LT, line); break; 
+        case TOKEN_LEQ:      emit_byte(cur_chunk(compiler), OP_LEQ, line); break;
+        case TOKEN_GT:       emit_byte(cur_chunk(compiler), OP_GT, line); break;
+        case TOKEN_GEQ:      emit_byte(cur_chunk(compiler), OP_GEQ, line); break;
+        case TOKEN_EQEQ:     emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
+        case TOKEN_NEQ:      emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
+        case TOKEN_L_SQUARE: emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
         }
     }
+}
+
+static void compile_get_prop(struct Compiler *compiler, struct GetPropNode *node)
+{
+    push_errlist(&compiler->errlist, node->base.span, "TODO");
 }
 
 static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node) 
@@ -140,13 +167,13 @@ static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node)
         compile_node(compiler, node->args[i]);
     emit_byte(cur_chunk(compiler), OP_CALL, line);
     emit_byte(cur_chunk(compiler), node->arity, line);
+    // pop args but don't pop func ptr (op return replaces func ptr with return val)
     if (node->arity == 1) {
         emit_byte(cur_chunk(compiler), OP_POP, line);
     } else if (node->arity > 1) {
         emit_byte(cur_chunk(compiler), OP_POP_N, line);
         emit_byte(cur_chunk(compiler), node->arity, line);
     }
-    emit_byte(cur_chunk(compiler), OP_POP, line);
 }
 
 static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node) 
@@ -223,9 +250,11 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
 {
     switch (node->tag) {
     case NODE_ATOM:      compile_atom(compiler, (struct AtomNode*)node); break;
+    case NODE_LIST:      compile_list(compiler, (struct ListNode*)node); break;
     case NODE_IDENT:     compile_ident(compiler, (struct IdentNode*)node); break;
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;
+    case NODE_GET_PROP:  compile_get_prop(compiler, (struct GetPropNode*)node); break;
     case NODE_FN_CALL:   compile_fn_call(compiler, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:        compile_if(compiler, (struct IfNode*)node); break;
@@ -277,7 +306,7 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
         emit_byte(cur_chunk(compiler), OP_GET_CONST, fn_span.line);
         emit_byte(cur_chunk(compiler), add_constant(&script->chunk, OBJ_VAL((struct Obj*)fn)), fn_span.line);
         emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, fn_span.line);
-        // TOOD handle > 256 globals
+        // TODO handle > 256 globals
         emit_byte(cur_chunk(compiler), compiler->global_cnt, fn_span.line);
         emit_byte(cur_chunk(compiler), OP_POP, fn_span.line);
         compiler->global_cnt++;

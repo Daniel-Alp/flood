@@ -175,11 +175,14 @@ const char *opcode_str[] = {
     [OP_NEQ]           = "OP_NEQ",
     [OP_NEGATE]        = "OP_NEGATE",
     [OP_NOT]           = "OP_NOT",
+    [OP_LIST]          = "OP_LIST",
     [OP_GET_CONST]     = "OP_GET_CONST",
     [OP_GET_LOCAL]     = "OP_GET_LOCAL",
     [OP_SET_LOCAL]     = "OP_SET_LOCAL",
     [OP_GET_GLOBAL]    = "OP_GET_GLOBAL",
     [OP_SET_GLOBAL]    = "OP_SET_LOCAL",
+    [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
+    [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
     [OP_JUMP]          = "OP_JUMP",
@@ -203,7 +206,8 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         case OP_GET_GLOBAL:   
         case OP_SET_GLOBAL:    
         case OP_CALL:          
-        case OP_POP_N:         
+        case OP_POP_N:
+        case OP_LIST:         
             printf("%d\n", chunk->code[++i]); 
             break;
         case OP_JUMP_IF_FALSE: 
@@ -213,6 +217,7 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             break;
         case OP_GET_CONST: {
             print_val(chunk->constants.values[chunk->code[++i]]);
+            printf("\n");
             break;
         }
         default:
@@ -232,6 +237,7 @@ void print_stack(struct VM *vm, Value *sp, Value *bp)
         else    
             printf("     ");
         print_val(vm->val_stack[i]);
+        printf("\n");
         i++;
     }
     printf("sp >\n\n");

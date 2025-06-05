@@ -1,63 +1,84 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "vm.h"
-#include "api.h"
-// #include "memory.h"
-// #include "parse.h"
-// #include "sema.h"
-// #include "debug.h"
+#include "memory.h"
+#include "parse.h"
+#include "sema.h"
+#include "compile.h" 
+#include "debug.h"
 
 int main(int argc, const char **argv) 
 {
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        printf("File `%s` does not exist\n", argv[1]);
+        return 1;
+    }
+    fseek(fp, 0, SEEK_END);
+    u64 length = ftell(fp); 
+    fseek(fp, 0, SEEK_SET);
+    char *buf = allocate(length+2);
+    buf[0] = '\0';
+    buf[length+1] = '\0';
+    char *source = buf+1;
+    // TODO check for null bytes
+    fread(source, 1, length, fp);
+
+    struct Parser parser;
+    init_parser(&parser);
+    struct FileNode *ast = parse(&parser, source);
+    if (parser.errlist.cnt > 0) {
+        print_errlist(&parser.errlist);
+        goto err_release_parser;
+    }
+
+    // sym_arr is shared by the sema and compiler
+    struct SymArr sym_arr;
+    init_symbol_arr(&sym_arr);
+
+    struct SemaState sema;
+    init_sema_state(&sema, &sym_arr);
+    analyze(&sema, ast);
+    if (sema.errlist.cnt > 0) {
+        print_errlist(&sema.errlist);
+        release_symbol_arr(&sym_arr);
+        goto err_release_sema_state;
+    }
+
+    struct Compiler compiler;
+    init_compiler(&compiler, &sym_arr);
     struct VM vm;
-    init_vm(&vm, "/home/alp/Projects/flood/test");
-    do_file(&vm, "/home/alp/Projects/flood/test/in.fl");
+    init_vm(&vm);
+
+    struct FnObj *fn = compile_file(&vm, &compiler, ast);
+    if (compiler.errlist.cnt > 0) {
+        print_errlist(&compiler.errlist);
+        release_symbol_arr(&sym_arr);
+        goto err_release_compiler;
+    }
+
+    // invoke main function if defined
+    if (compiler.main_fn_idx != -1) {
+        emit_byte(&fn->chunk, OP_GET_GLOBAL, 1);
+        emit_byte(&fn->chunk, compiler.main_fn_idx, 1);
+        emit_byte(&fn->chunk, OP_CALL, 1);
+        emit_byte(&fn->chunk, 0, 1);
+    }
+    emit_byte(&fn->chunk, OP_NIL, 1);
+    emit_byte(&fn->chunk, OP_RETURN, 1);
+    // push globals
+    for (i32 i = 0; i < compiler.global_cnt; i++)
+        push_val_array(&vm.globals, NIL_VAL);
+
+    release_symbol_arr(&sym_arr);
+    run_vm(&vm, fn);
+
+err_release_compiler:
+    release_compiler(&compiler);
     release_vm(&vm);
-//     FILE *fp = fopen(argv[1], "rb");
-//     if (!fp) {
-//         printf("File `%s` does not exist\n", argv[1]);
-//         goto err_close_fp;
-//     }
-//     fseek(fp, 0, SEEK_END);
-//     u64 length = ftell(fp); 
-//     fseek(fp, 0, SEEK_SET);
-//     char *buf = allocate(length+2);
-//     buf[0] = '\0';
-//     buf[length+1] = '\0';
-//     char *source = buf+1;
-//     // TODO check for null bytes
-//     fread(source, 1, length, fp);
-
-//     printf("%s\n", argv[1]);
-//     printf("%s\n", source);
-//     struct Parser parser;
-//     init_parser(&parser);
-//     struct FileNode *ast = parse(&parser, source);
-//     if (parser.errlist.cnt > 0) {
-//         print_errlist(&parser.errlist);
-//         goto err_release_parser;
-//     }
-//     for (i32 i = 0; i < ast->cnt; i++)
-//         print_node(ast->stmts[i], 0);
-//     printf("\n");
-
-//     struct SymArr sym_arr;
-//     init_symbol_arr(&sym_arr);
-
-//     struct SemaState sema;
-//     init_sema_state(&sema, &sym_arr);
-//     analyze(&sema, ast);
-//     if (sema.errlist.cnt > 0) {
-//         print_errlist(&sema.errlist);
-//         release_symbol_arr(&sym_arr);
-//         goto err_release_sema_state;
-//     } 
-
-// err_release_sema_state:
-//     release_sema_state(&sema);
-// err_release_parser:
-//     release_parser(&parser);
-//     release(buf);
-// err_close_fp:
-//     fclose(fp);
+err_release_sema_state:
+    release_sema_state(&sema);
+err_release_parser:
+    release_parser(&parser);
+    release(buf);
+    fclose(fp);
 }

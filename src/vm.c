@@ -5,42 +5,6 @@
 #include "object.h"
 #include "debug.h"
 
-static void init_file_array(struct FileArray *files) 
-{
-    files->cnt = 0;
-    files->cap = 8;
-    files->paths = allocate(files->cap * sizeof(char*));
-    files->sym_maps = allocate(files->cap * sizeof(struct SymMap));
-}
-
-static void release_file_array(struct FileArray *files) 
-{
-    for (i32 i = 0; i < files->cnt; i++) {
-        // paths were malloc'd by realpath, so we call free instead of release
-        // because we want every call to allocate to pair with a call to release
-        free(files->paths[i]);
-        release_symbol_map(&files->sym_maps[i]);
-    }
-    files->cnt = 0;
-    files->cap = 0;
-    release(files->paths);
-    release(files->sym_maps);
-    files->paths = NULL;
-    files->sym_maps = NULL;  
-}
-
-void push_file_array(struct FileArray *files, const char *name, struct SymMap map) 
-{
-    if (files->cnt == files->cap) {
-        files->cap *= 2;
-        reallocate(files->paths, files->cap * sizeof(char*));
-        reallocate(files->sym_maps, files->cap * sizeof(struct SymMap));
-    }
-    files->paths[files->cnt] = name;
-    files->sym_maps[files->cnt] = map;
-    files->cnt++;
-}
-
 static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 {
     // see chunk.h
@@ -79,33 +43,23 @@ void release_vm_obj(struct VM *vm)
     while (vm->obj_list) {
         struct Obj *obj = vm->obj_list;
         switch(obj->tag) {
-        case OBJ_FN: {
-            struct FnObj *fn = (struct FnObj*)obj;
-            release_chunk(&fn->chunk);
-            release(fn->name);
-            fn->name = NULL;
-            break;
-        }
+        case OBJ_FN:   release_fn_obj((struct FnObj*)obj); break;
+        case OBJ_LIST: release_list_obj((struct ListObj*)obj); break;
         }
         vm->obj_list = vm->obj_list->next;
         release(obj);
     }
 }
 
-void init_vm(struct VM *vm, const char *source_dir)
+void init_vm(struct VM *vm)
 {
     init_val_array(&vm->globals);
-    init_file_array(&vm->files);
-    init_arena(&vm->arena);
     vm->obj_list = NULL;
-    vm->source_dir = source_dir;
 }
 
 void release_vm(struct VM *vm) 
 {
     release_val_array(&vm->globals);
-    release_file_array(&vm->files);
-    release_arena(&vm->arena);
     release_vm_obj(vm);
 }
 
@@ -279,6 +233,16 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             }
             break;
         }
+        case OP_LIST: {
+            u8 cnt = *ip++;
+            sp -= cnt;
+            Value *vals = sp;
+            struct Obj *list = alloc_vm_obj(vm, sizeof(struct ListObj));
+            init_list_obj((struct ListObj*)list, vals, cnt);
+            sp[0] = OBJ_VAL(list);
+            sp++;
+            break;
+        }
         case OP_GET_CONST: {
             u16 idx = *ip++;
             sp[0] = frame->fn->chunk.constants.values[idx];
@@ -289,6 +253,61 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             u8 idx = *ip++;
             sp[0] = frame->bp[idx];
             sp++;
+            break;
+        }
+        case OP_GET_SUBSCR: {
+            Value container = sp[-2];
+            Value idx = sp[-1];
+            if (IS_LIST(container)) {
+                if (IS_NUM(idx)) {
+                    if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->cnt) {
+                        sp[-2] = AS_LIST(container)->vals[(u32)AS_NUM(idx)];
+                        sp--;
+                    } else {
+                        frame->ip = ip;
+                        // TODO let runtime_err take var args
+                        runtime_err(vm, "list index out of bounds");
+                        return INTERP_RUNTIME_ERR;
+                    }
+                } else {
+                    frame->ip = ip;
+                    runtime_err(vm, "list index must be number");
+                    return INTERP_RUNTIME_ERR;
+                }
+            } else {
+                frame->ip = ip;
+                runtime_err(vm, "object is not subscriptable");
+                return INTERP_RUNTIME_ERR;
+            }
+            break;
+        }
+        case OP_SET_SUBSCR: {
+            Value container = sp[-3];
+            Value idx = sp[-2];
+            Value val = sp[-1];
+            if (IS_LIST(container)) {
+                if (IS_NUM(idx)) {
+                    if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->cnt) {
+                        AS_LIST(container)->vals[(u32)AS_NUM(idx)] = val;
+                        // TODO consider making assignment a statement rather than an expression
+                        sp[-3] = sp[-1];
+                        sp -= 2;
+                    } else {
+                        frame->ip = ip;
+                        // TODO let runtime_err take var args
+                        runtime_err(vm, "list index out of bounds");
+                        return INTERP_RUNTIME_ERR;
+                    }
+                } else {
+                    frame->ip = ip;
+                    runtime_err(vm, "list index must be number");
+                    return INTERP_RUNTIME_ERR;
+                }
+            } else {
+                frame->ip = ip;
+                runtime_err(vm, "object is not subscriptable");
+                return INTERP_RUNTIME_ERR;
+            }
             break;
         }
         case OP_SET_LOCAL: {
@@ -370,8 +389,11 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             vm->call_count--;
             if (vm->call_count == 0)
                 return INTERP_OK;
-            // copy return value
+            // move return value 
             frame->bp[-1] = sp[-1];
+            // caller pops locals, callee pops return value
+            sp--;
+
             frame--; 
             ip = frame->ip;
             break;
@@ -387,6 +409,8 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         }
         case OP_PRINT: {
             print_val(sp[-1]);
+            printf("\n");
+            sp--;
             break;
         }
         }

@@ -73,10 +73,16 @@ static void print_line(const char *ptr)
     printf("%.*s\n", length, start);
 }
 
+#define ANSI_COLOR_BLUE  "\x1b[34m"
+#define ANSI_COLOR_RED   "\x1b[31m"
+#define ANSI_COLOR_RESET "\x1b[0m"
+#define ANSI_BOLD        "\e[1m"
+#define ANSI_BOLD_RESET  "\e[m"
+
 // precondition: at least one error
-// TODO handle multi-line span
 void print_errlist(struct ErrList *errlist) 
 {
+
     u32 last_line = line_num(errlist->errs[errlist->cnt-1].span.start);
     u32 max_pad = num_digits(last_line);
 
@@ -86,15 +92,16 @@ void print_errlist(struct ErrList *errlist)
         u32 line = line_num(err.span.start);
         u32 pad = num_digits(line);
         
-        printf("%d", line);
-        printf("%*s | ", max_pad - pad, "");
+        printf(ANSI_COLOR_BLUE ANSI_BOLD "%d%*s | " ANSI_COLOR_RESET ANSI_BOLD_RESET, 
+            line, max_pad - pad, "");
         print_line(err.span.start);
 
-        printf("%*s | ", max_pad, "");
-        printf("%*s", line_indent(err.span.start), "");
-        printf("^");
+        printf(ANSI_COLOR_BLUE ANSI_BOLD "%*s | %*s" ANSI_COLOR_RESET ANSI_BOLD_RESET, 
+            max_pad, "", line_indent(err.span.start), "");
+        // TODO handle multi-line spans properly
+        printf(ANSI_COLOR_RED ANSI_BOLD "^");
         for (i32 i = 0; i < err.span.length - 1; i++)
             printf("~");
-        printf(" %s\n\n", err.msg);
+        printf(" %s\n\n" ANSI_BOLD_RESET ANSI_COLOR_RESET, err.msg);
     }
 }

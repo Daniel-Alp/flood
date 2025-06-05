@@ -1,5 +1,7 @@
 fn main() {
     print is_even(30);
+    print is_even(30);
+    print is_even(41);
     print is_even(41);
 }
 

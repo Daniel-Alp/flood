@@ -4,6 +4,7 @@
 #include "vm.h"
 
 struct Compiler {
+    struct ErrList errlist;
     u32 stack_pos;
     u32 global_cnt;
     // global idx of the file's main fn (-1 if no main fn)

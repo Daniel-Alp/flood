@@ -49,11 +49,15 @@ enum OpCode {
     OP_NEGATE,
     OP_NOT,
 
-    OP_GET_CONST,
-    OP_GET_LOCAL,
-    OP_SET_LOCAL,
-    OP_GET_GLOBAL,
-    OP_SET_GLOBAL,
+    OP_LIST,          // args: index 0..=255
+
+    OP_GET_CONST,     // args: index 0..=255
+    OP_GET_LOCAL,     // args: index 0..=255 
+    OP_SET_LOCAL,     // args: index 0..=255
+    OP_GET_GLOBAL,    // args: index 0..=255
+    OP_SET_GLOBAL,    // args: index 0..=255
+    OP_GET_SUBSCR,    
+    OP_SET_SUBSCR,     
 
     OP_JUMP,
     OP_JUMP_IF_FALSE,
@@ -62,7 +66,7 @@ enum OpCode {
     OP_RETURN,
 
     OP_POP,
-    OP_POP_N,
+    OP_POP_N,         // args: index 0..=255
     // TEMP remove when we add functions
     OP_PRINT,
 };

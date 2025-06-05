@@ -50,6 +50,7 @@ static bool expr_first(enum TokenTag tag)
     return tag == TOKEN_TRUE 
         || tag == TOKEN_FALSE
         || tag == TOKEN_NUMBER
+        || tag == TOKEN_STRING
         || tag == TOKEN_IDENTIFIER
         || tag == TOKEN_L_SQUARE
         || tag == TOKEN_L_PAREN
@@ -327,22 +328,25 @@ static bool eat(struct Parser *parser, enum TokenTag tag)
     return false;
 }
 
+static void emit_err(struct Parser *parser, struct Span span, const char *msg)
+{
+    if (!parser->panic)
+        push_errlist(&parser->errlist, at(parser).span, msg);
+    parser->panic = true;
+}
+
 static bool expect(struct Parser *parser, enum TokenTag tag, const char *msg) 
 {
     if (eat(parser, tag))
         return true;
-    if (!parser->panic)
-        push_errlist(&parser->errlist, at(parser).span, msg);
-    parser->panic = true;
+    emit_err(parser, at(parser).span, msg);
     return false;
 }
 
 static void advance_with_err(struct Parser *parser, const char *msg) 
 {
-    if (!parser->panic)
-        push_errlist(&parser->errlist, at(parser).span, msg);
+    emit_err(parser, at(parser).span, msg);
     bump(parser);
-    parser->panic = true;
 }
 
 // discard tokens until reach a starting token (e.g. var, if) or exit scope
@@ -382,6 +386,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
     case TOKEN_TRUE:
     case TOKEN_FALSE:
     case TOKEN_NUMBER:
+    case TOKEN_STRING:
         lhs = (struct Node*)mk_atom(&parser->arena, token);
         break;
     case TOKEN_IDENTIFIER:
@@ -392,8 +397,10 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         init_ptr_array(&items_tmp);
         while(at(parser).tag != TOKEN_R_SQUARE && at(parser).tag != TOKEN_EOF) {
             // breaking early helps when the closing `]` is missing
-            if (!expr_first(at(parser).tag))
+            if (!expr_first(at(parser).tag)) {
+                emit_err(parser, at(parser).span, "expected expression");
                 break;
+            }
             struct Node *item = parse_expr(parser, 1);
             push_ptr_array(&items_tmp, item);
             if (at(parser).tag != TOKEN_R_SQUARE)
@@ -414,38 +421,39 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
         break;
     default:
-        if (!parser->panic)
-            push_errlist(&parser->errlist, token.span, "expected expression");
-        parser->panic = true;
+        emit_err(parser, token.span, "expected expression");
         return NULL;
     }
-    // parse fn calls
-    while(eat(parser, TOKEN_L_PAREN)) {
-        struct Span fn_call_span = prev(parser).span;
-        struct PtrArray args_tmp;
-        init_ptr_array(&args_tmp);
-        while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
-            // breaking early helps when the closing `)` is missing
-            if (!expr_first(at(parser).tag))
-                break;
-            struct Node *arg = parse_expr(parser, 1);
-            push_ptr_array(&args_tmp, arg);
-            if (at(parser).tag != TOKEN_R_PAREN)
-                expect(parser, TOKEN_COMMA, "expected `,`");            
-        }
-        expect(parser, TOKEN_R_PAREN, "expected `)`");
-        u32 cnt = args_tmp.cnt;
-        struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &args_tmp);
-        lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, cnt);
-    }
     while(true) {
-        token = at(parser);
-        if (token.tag == TOKEN_DOT) {
-            bump(parser);
+        if (eat(parser, TOKEN_DOT)) {
+            struct Span span = prev(parser).span;
             expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-            lhs = (struct Node*)mk_get_prop(&parser->arena, token.span, lhs, prev(parser).span);
+            lhs = (struct Node*)mk_get_prop(&parser->arena, span, lhs, prev(parser).span);
             continue;
         }
+        // parse fn_call
+        if (eat(parser, TOKEN_L_PAREN)) {
+            struct Span fn_call_span = prev(parser).span;
+            struct PtrArray args_tmp;
+            init_ptr_array(&args_tmp);
+            while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
+                // breaking early helps when the closing `)` is missing
+                if (!expr_first(at(parser).tag)) {
+                    emit_err(parser, at(parser).span, "expected expression");
+                    break;
+                }
+                struct Node *arg = parse_expr(parser, 1);
+                push_ptr_array(&args_tmp, arg);
+                if (at(parser).tag != TOKEN_R_PAREN)
+                    expect(parser, TOKEN_COMMA, "expected `,`");            
+            }
+            expect(parser, TOKEN_R_PAREN, "expected `)`");
+            u32 cnt = args_tmp.cnt;
+            struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &args_tmp);
+            lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, cnt);
+            continue;
+        }
+        token = at(parser);
         struct PrecLvl prec = infix_prec(token.tag);
         u32 old_lvl = prec.old;
         u32 new_lvl = prec.new;
@@ -500,11 +508,15 @@ static struct IfNode *parse_if(struct Parser *parser)
 // precondition: `var` token consumed
 static struct VarDeclNode *parse_var_decl(struct Parser *parser) 
 {
+    // in a case such as 
+    //      var x 4;
+    // we assume the user forgot to add an `=` after `x`
     struct Span span = at(parser).span;
     expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-    struct Node *init = NULL;
-    if (eat(parser, TOKEN_EQ))
-        init = parse_expr(parser, 1);
+    if (eat(parser, TOKEN_SEMI))
+        return mk_var_decl(&parser->arena, span, NULL);
+    expect(parser, TOKEN_EQ, "expected `=`");
+    struct Node *init = parse_expr(parser, 1);
     expect(parser, TOKEN_SEMI, "expected `;`");
     return mk_var_decl(&parser->arena, span, init);
 }

@@ -1,5 +1,6 @@
 fn main() {
     print fib(30);
+    print fib(30);
 }
 
 fn fib(n) {

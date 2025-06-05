@@ -100,8 +100,11 @@ static struct Token string(struct Scanner *scanner)
 {
     while(at(scanner) != '"') {
         bump(scanner);
-        if (is_at_end(scanner))
+        // TODO support multi-line strings zig style
+        // TODO meaningful error message during parsing, not just "expected expression"
+        if (is_at_end(scanner)) {
             return mk_token(scanner, TOKEN_ERR);
+        }
     }
     bump(scanner);
     return mk_token(scanner, TOKEN_STRING);

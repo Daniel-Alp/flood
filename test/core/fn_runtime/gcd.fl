@@ -1,5 +1,6 @@
 fn main() {
-    print gcd(10, 10);
+    print gcd(gcd(15, 35), gcd(5, 20));
+    print gcd(gcd(15, 35), gcd(5, 20));
 }
 
 fn gcd(a, b) {

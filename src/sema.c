@@ -61,17 +61,11 @@ static void analyze_unary(struct SemaState *sema, struct UnaryNode *node)
 
 static void analyze_binary(struct SemaState *sema, struct BinaryNode *node) 
 {
-    if (node->op_tag == TOKEN_EQ && node->lhs->tag != NODE_IDENT) {
-        push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
-    }
-    if (node->op_tag == TOKEN_EQ && node->lhs->tag == NODE_IDENT) {
-        struct Ident *ident = resolve_ident(sema, ((struct IdentNode*)node->lhs)->base.span);
-        if (!ident) {
-            push_errlist(&sema->errlist, ((struct IdentNode*)node->lhs)->base.span, "not found in this scope");
-            return;
-        }
-        u32 id = ident->id;
-        ((struct IdentNode*)node->lhs)->id = id;
+    if (node->op_tag == TOKEN_EQ) {
+        bool ident = node->lhs->tag == NODE_IDENT;
+        bool list_item = node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE;
+        if (!ident && !list_item)
+            push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
     }
     analyze_node(sema, node->lhs);
     analyze_node(sema, node->rhs);

@@ -13,27 +13,11 @@ struct Symbol {
     u32 flags;
 };
 
-struct SymMap {
-    u32 cap;
-    u32 cnt;
-    struct Symbol *symbols;
-};
-
 struct SymArr {
     u32 cap;
     u32 cnt;
     struct Symbol *symbols;
 };
-
-void init_symbol_map(struct SymMap *sm);
-
-void release_symbol_map(struct SymMap *sm);
-
-u32 hash_string(struct Span key);
-
-struct Symbol *get_symbol_map_slot(struct Symbol *symbols, u32 cap, struct Span key, u32 hash);
-
-void put_symbol_map(struct SymMap *sm, struct Span key, u32 idx, u32 flags);
 
 void init_symbol_arr(struct SymArr *arr);
 
