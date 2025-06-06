@@ -40,6 +40,8 @@ enum OpCode {
     OP_SUB,
     OP_MUL,
     OP_DIV,
+    OP_FLOORDIV,
+    OP_MOD,
     OP_LT,
     OP_LEQ,
     OP_GT,  

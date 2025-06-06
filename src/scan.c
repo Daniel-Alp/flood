@@ -136,7 +136,7 @@ static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32
 struct Token next_token(struct Scanner *scanner) 
 {
     skip_whitespace(scanner);
-    while (at(scanner) == '/' && next(scanner) == '/') {
+    while (at(scanner) == '#') {
         skip_comment(scanner);
         skip_whitespace(scanner);
     }
@@ -150,7 +150,15 @@ struct Token next_token(struct Scanner *scanner)
     case '+': return check_at(scanner, '=', TOKEN_PLUS_EQ, TOKEN_PLUS);
     case '-': return check_at(scanner, '=', TOKEN_MINUS_EQ, TOKEN_MINUS);
     case '*': return check_at(scanner, '=', TOKEN_STAR_EQ, TOKEN_STAR);
-    case '/': return check_at(scanner, '=', TOKEN_SLASH_EQ, TOKEN_SLASH);
+    case '/': {
+        if (at(scanner) == '/') {
+            bump(scanner);
+            return check_at(scanner, '=', TOKEN_SLASH_SLASH_EQ, TOKEN_SLASH_SLASH);   
+        } else {
+            return check_at(scanner, '=', TOKEN_SLASH_EQ, TOKEN_SLASH);
+        }
+    }
+    case '%': return check_at(scanner, '=', TOKEN_PERCENT_EQ, TOKEN_PERCENT);
     case '<': return check_at(scanner, '=', TOKEN_LEQ, TOKEN_LT);
     case '>': return check_at(scanner, '=', TOKEN_GEQ, TOKEN_GT);
     case '=': return check_at(scanner, '=', TOKEN_EQEQ, TOKEN_EQ);

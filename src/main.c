@@ -9,6 +9,10 @@
 // TODO implement snapshot testing framework
 int main(int argc, const char **argv) 
 {
+    if (argc != 2) {
+        printf("Usage: ./build/flood [script]\n");
+        return 1;
+    }
     FILE *fp = fopen(argv[1], "rb");
     if (!fp) {
         printf("File `%s` does not exist\n", argv[1]);
@@ -23,6 +27,9 @@ int main(int argc, const char **argv)
     char *source = buf+1;
     // TODO check for null bytes
     fread(source, 1, length, fp);
+    // printf("================================\n");
+    // printf("%s\n", argv[1]);
+    // printf("%s\n", source);
 
     struct Parser parser;
     init_parser(&parser);
@@ -31,6 +38,9 @@ int main(int argc, const char **argv)
         print_errlist(&parser.errlist);
         goto err_release_parser;
     }
+
+    // for (i32 i = 0; i < ast->cnt; i++)
+    //     print_node(ast->stmts[i], 0);
 
     // sym_arr is shared by the sema and compiler
     struct SymArr sym_arr;
@@ -70,7 +80,13 @@ int main(int argc, const char **argv)
     for (i32 i = 0; i < compiler.global_cnt; i++)
         push_val_array(&vm.globals, MK_NIL);
 
-    release_symbol_arr(&sym_arr);
+    // release_symbol_arr(&sym_arr);
+    // disassemble_chunk(&fn->chunk, fn->name);
+    // for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
+    //     Value val = fn->chunk.constants.vals[i];
+    //     if (IS_FN(val))
+    //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
+    // }
     run_vm(&vm, fn);
 
 err_release_compiler:

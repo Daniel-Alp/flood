@@ -6,6 +6,8 @@ enum TokenTag {
     TOKEN_MINUS,
     TOKEN_STAR,
     TOKEN_SLASH,
+    TOKEN_PERCENT,
+    TOKEN_SLASH_SLASH,
 
     TOKEN_LT,
     TOKEN_LEQ,
@@ -19,6 +21,8 @@ enum TokenTag {
     TOKEN_MINUS_EQ,
     TOKEN_STAR_EQ,
     TOKEN_SLASH_EQ,
+    TOKEN_PERCENT_EQ,
+    TOKEN_SLASH_SLASH_EQ,
 
     TOKEN_AND,
     TOKEN_OR,

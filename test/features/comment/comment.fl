@@ -1,7 +1,7 @@
-// this is a commment
-// this is another commment
+# this is a commment
+# this is another commment
 fn main() {
-    4 + 5; //comment on same line
+    4 + 5; # comment on same line
 }
 
-// comment on the last line
+# comment on the last line

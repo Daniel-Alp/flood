@@ -49,6 +49,7 @@ static u32 emit_jump(struct Compiler *compiler, enum OpCode op, u32 line)
     return offset;
 }
 
+// make jump instr jump to the instr that will be emitted next
 static void patch_jump(struct Compiler *compiler, u32 offset) 
 {
     // offset points to the OP_JUMP instr
@@ -139,17 +140,19 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         compile_node(compiler, node->lhs);
         compile_node(compiler, node->rhs);
         switch (op_tag) {
-        case TOKEN_PLUS:     emit_byte(cur_chunk(compiler), OP_ADD, line); break;
-        case TOKEN_MINUS:    emit_byte(cur_chunk(compiler), OP_SUB, line); break;
-        case TOKEN_STAR:     emit_byte(cur_chunk(compiler), OP_MUL, line); break;
-        case TOKEN_SLASH:    emit_byte(cur_chunk(compiler), OP_DIV, line); break;
-        case TOKEN_LT:       emit_byte(cur_chunk(compiler), OP_LT, line); break; 
-        case TOKEN_LEQ:      emit_byte(cur_chunk(compiler), OP_LEQ, line); break;
-        case TOKEN_GT:       emit_byte(cur_chunk(compiler), OP_GT, line); break;
-        case TOKEN_GEQ:      emit_byte(cur_chunk(compiler), OP_GEQ, line); break;
-        case TOKEN_EQEQ:     emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
-        case TOKEN_NEQ:      emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
-        case TOKEN_L_SQUARE: emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
+        case TOKEN_PLUS:        emit_byte(cur_chunk(compiler), OP_ADD, line); break;
+        case TOKEN_MINUS:       emit_byte(cur_chunk(compiler), OP_SUB, line); break;
+        case TOKEN_STAR:        emit_byte(cur_chunk(compiler), OP_MUL, line); break;
+        case TOKEN_SLASH:       emit_byte(cur_chunk(compiler), OP_DIV, line); break;
+        case TOKEN_SLASH_SLASH: emit_byte(cur_chunk(compiler), OP_FLOORDIV, line); break;
+        case TOKEN_PERCENT:     emit_byte(cur_chunk(compiler), OP_MOD, line); break;
+        case TOKEN_LT:          emit_byte(cur_chunk(compiler), OP_LT, line); break; 
+        case TOKEN_LEQ:         emit_byte(cur_chunk(compiler), OP_LEQ, line); break;
+        case TOKEN_GT:          emit_byte(cur_chunk(compiler), OP_GT, line); break;
+        case TOKEN_GEQ:         emit_byte(cur_chunk(compiler), OP_GEQ, line); break;
+        case TOKEN_EQEQ:        emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
+        case TOKEN_NEQ:         emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
+        case TOKEN_L_SQUARE:    emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
         }
     }
 }
@@ -167,13 +170,8 @@ static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node)
         compile_node(compiler, node->args[i]);
     emit_byte(cur_chunk(compiler), OP_CALL, line);
     emit_byte(cur_chunk(compiler), node->arity, line);
-    // pop args but don't pop func ptr (op return replaces func ptr with return val)
-    if (node->arity == 1) {
-        emit_byte(cur_chunk(compiler), OP_POP, line);
-    } else if (node->arity > 1) {
-        emit_byte(cur_chunk(compiler), OP_POP_N, line);
-        emit_byte(cur_chunk(compiler), node->arity, line);
-    }
+    // since there may be any number of locals on the stack when the callee returns
+    // the callee is responsible for cleanup and moving the return value
 }
 
 static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node) 
@@ -207,21 +205,24 @@ static void compile_if(struct Compiler *compiler, struct IfNode *node)
 {
     u32 line = node->base.span.line;
     compile_node(compiler, node->cond);
-    // skip over thn block
+    //      OP_JUMP_IF_FALSE (jump 1)
+    //      OP_POP           
+    //      thn block              
+    //      OP_JUMP          (jump 2)
+    //      OP_POP           (destination of jump 1)
+    //      els block        
+    //      ...              (destination of jump 2)
     u32 offset1 = emit_jump(compiler, OP_JUMP_IF_FALSE, line);
     emit_byte(cur_chunk(compiler), OP_POP, line);
+
     compile_block(compiler, node->thn);
-    if (node->els) {
-        // skip over else block
-        u32 offset2 = emit_jump(compiler, OP_JUMP, line);
-        patch_jump(compiler, offset1);
-        emit_byte(cur_chunk(compiler), OP_POP, line);
+    u32 offset2 = emit_jump(compiler, OP_JUMP, line);
+    patch_jump(compiler, offset1);
+    
+    emit_byte(cur_chunk(compiler), OP_POP, line);
+    if (node->els)
         compile_block(compiler, node->els);
-        patch_jump(compiler, offset2);
-    } else {
-        patch_jump(compiler, offset1);
-        emit_byte(cur_chunk(compiler), OP_POP, line);
-    }
+    patch_jump(compiler, offset2);
 }
 
 static void compile_expr_stmt(struct Compiler *compiler, struct ExprStmtNode *node) 
@@ -244,7 +245,6 @@ static void compile_print(struct Compiler *compiler, struct PrintNode *node)
     compile_node(compiler, node->expr);
     emit_byte(cur_chunk(compiler), OP_PRINT, node->base.span.line);
 }
-
 
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {

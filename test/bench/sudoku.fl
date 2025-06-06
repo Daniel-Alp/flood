@@ -1,0 +1,81 @@
+# check row does not contain value
+fn validate_row(r, c, value, grid, i) {
+    if (i == 9) {
+        return true;
+    }
+    return grid[r*9+i] != value and validate_row(r, c, value, grid, i+1);
+}
+
+# check col does not contain value
+fn validate_col(r, c, value, grid, i) {
+    if (i == 9) {
+        return true;
+    }
+    return grid[i*9+c] != value and validate_col(r, c, value, grid, i+1);
+}
+
+fn validate_box(r_snap, c_snap, value, grid, i) {
+    if (i == 9) {
+        return true;
+    }
+    var r = r_snap + i // 3;
+    var c = c_snap + i % 3;
+    return grid[r*9 + c] != value and validate_box(r_snap, c_snap, value, grid, i+1);
+}
+
+fn validate(idx, value, grid) {
+    var r = idx // 9;
+    var c = idx % 9;
+    var r_snap = (r//3) * 3;
+    var c_snap = (c//3) * 3;
+    return validate_row(r, c, value, grid, 0) 
+        and validate_col(r, c, value, grid, 0)
+        and validate_box(r_snap, c_snap, value, grid, 0);
+}
+
+fn check_candidate(idx, candidate, grid) {
+    if (candidate == 10) {
+        return false;
+    }
+    if (validate(idx, candidate, grid)) {
+        grid[idx] = candidate;
+        var solved = solve(idx+1, grid);
+        if (solved) {
+            return true;
+        }
+        grid[idx] = 0;
+    }
+    return check_candidate(idx, candidate+1, grid);
+}
+
+fn solve(idx, grid) {
+    if (idx == 81) {
+        return true;
+    }
+    if (grid[idx] != 0) {
+        return solve(idx+1, grid);
+    }
+    return check_candidate(idx, 1, grid);
+}
+
+fn main() {
+    # 0 means unknown
+    # https://sandiway.arizona.edu/sudoku/examples.html
+    var grid = [
+        0,0,0,   2,6,0,   7,0,1,
+        6,8,0,   0,7,0,   0,9,0,
+        1,9,0,   0,0,4,   5,0,0,
+        
+        8,2,0,   1,0,0,   0,4,0,
+        0,0,4,   6,0,2,   9,0,0,
+        0,5,0,   0,0,3,   0,2,8,
+
+        0,0,9,   3,0,0,   0,7,4,
+        0,4,0,   0,5,0,   0,3,6,
+        7,0,3,   0,1,8,   0,0,0
+    ];
+    var solved = solve(0, grid);
+    if (solved) {
+        print grid;
+    }
+}

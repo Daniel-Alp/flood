@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "vm.h"
 #include "memory.h"
 #include "gc.h"
@@ -148,6 +149,32 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
                 sp[-2] = MK_NUM(AS_NUM(lhs)/AS_NUM(rhs));
+                sp--;
+            } else {
+                frame->ip = ip;
+                runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
+            }
+            break;
+        }
+        case OP_FLOORDIV: {
+            Value lhs = sp[-2];
+            Value rhs = sp[-1];
+            if (IS_NUM(lhs) && IS_NUM(rhs)) {
+                sp[-2] = MK_NUM(floor(AS_NUM(lhs)/AS_NUM(rhs)));
+                sp--;
+            } else {
+                frame->ip = ip;
+                runtime_err(vm, "operands must be numbers");
+                return INTERP_RUNTIME_ERR;
+            }
+            break;
+        }
+        case OP_MOD: {
+            Value lhs = sp[-2];
+            Value rhs = sp[-1];
+            if (IS_NUM(lhs) && IS_NUM(rhs)) {
+                sp[-2] = MK_NUM(fmod(AS_NUM(lhs),AS_NUM(rhs)));
                 sp--;
             } else {
                 frame->ip = ip;
@@ -401,11 +428,17 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             vm->call_cnt--;
             if (vm->call_cnt == 0)
                 return INTERP_OK;
-            // move return value 
-            frame->bp[-1] = sp[-1];
-            // caller pops locals, callee pops return value
-            sp--;
-
+            // when a function returns the stack looks like this
+            //      <function foo> 
+            // bp-> <arg>
+            //      ...
+            //      <arg>
+            //      <local>
+            //      ...
+            //      <local> <-return value
+            // sp-> 
+            frame->bp[-1] = sp[-1]; // move return value 
+            sp = frame->bp; // pop locals
             frame--; 
             ip = frame->ip;
             break;
@@ -427,6 +460,8 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         }
         }
         vm->sp = sp;
+        // printf("%s\n", opcode_str[op]);
+        // print_stack(vm, sp, frame->bp);
         // TODO run garbage collector only if it exceeds threshold
         // run it each iteration only if we define smth
         collect_garbage(vm);

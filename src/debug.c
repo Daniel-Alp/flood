@@ -7,20 +7,22 @@
 // is desugared into
 //      x = x + 3;
 const char *binop_str[] = {
-    [TOKEN_PLUS]     = "+",
-    [TOKEN_MINUS]    = "-",
-    [TOKEN_STAR]     = "*",
-    [TOKEN_SLASH]    = "/",
-    [TOKEN_LT]       = "<",
-    [TOKEN_LEQ]      = "<=",
-    [TOKEN_GT]       = ">",
-    [TOKEN_GEQ]      = ">=",
-    [TOKEN_EQEQ]     = "==",
-    [TOKEN_NEQ]      = "!=",
-    [TOKEN_AND]      = "and",
-    [TOKEN_OR]       = "or",
-    [TOKEN_EQ]       = "=",
-    [TOKEN_L_SQUARE] = "[]"
+    [TOKEN_PLUS]        = "+",
+    [TOKEN_MINUS]       = "-",
+    [TOKEN_STAR]        = "*",
+    [TOKEN_SLASH]       = "/",
+    [TOKEN_SLASH_SLASH] = "//", 
+    [TOKEN_PERCENT]     = "%",
+    [TOKEN_LT]          = "<",
+    [TOKEN_LEQ]         = "<=",
+    [TOKEN_GT]          = ">",
+    [TOKEN_GEQ]         = ">=",
+    [TOKEN_EQEQ]        = "==",
+    [TOKEN_NEQ]         = "!=",
+    [TOKEN_AND]         = "and",
+    [TOKEN_OR]          = "or",
+    [TOKEN_EQ]          = "=",
+    [TOKEN_L_SQUARE]    = "[]"
 };
 
 static void print_atom(struct AtomNode *node, u32 offset) 
@@ -167,6 +169,8 @@ const char *opcode_str[] = {
     [OP_SUB]           = "OP_SUB", 
     [OP_MUL]           = "OP_MUL",
     [OP_DIV]           = "OP_DIV",
+    [OP_FLOORDIV]      = "OP_FLOORDIV",
+    [OP_MOD]           = "OP_MOD",
     [OP_LT]            = "OP_LT",
     [OP_LEQ]           = "OP_LEQ",
     [OP_GT]            = "OP_GT",

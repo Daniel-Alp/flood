@@ -17,6 +17,8 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
     case TOKEN_MINUS_EQ:
     case TOKEN_STAR_EQ:
     case TOKEN_SLASH_EQ:
+    case TOKEN_SLASH_SLASH_EQ:
+    case TOKEN_PERCENT_EQ:
         return (struct PrecLvl){.old = 1, .new = 2};
     case TOKEN_OR:
         return (struct PrecLvl){.old = 3, .new = 3};
@@ -35,9 +37,16 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
         return (struct PrecLvl){.old = 11, .new = 12};
     case TOKEN_STAR:
     case TOKEN_SLASH:
+    case TOKEN_SLASH_SLASH:
+    case TOKEN_PERCENT:
         return (struct PrecLvl){.old = 13, .new = 14};
+    // we view `[` as binary operator lhs[rhs]
+    // the old precedence is high because the operator binds tightly
+    //      e.g. x * y[0] is parsed as x * (y[0])
+    // but the expression within the [ ] should be parsed from the starting 
+    // precedence level, similar to show ( ) resets the precedence level
     case TOKEN_L_SQUARE:
-        return (struct PrecLvl){.old = 15, .new = 16};
+        return (struct PrecLvl){.old = 15, .new = 1};
     default:
         return (struct PrecLvl){.old = 0, .new = 0};
     }
@@ -375,6 +384,19 @@ static void recover_block(struct Parser *parser)
 
 static struct BlockNode *parse_block(struct Parser *parser);
 
+// e.g. given += return + and return -1 if cannot be desugared
+static i32 desugar(enum TokenTag tag) {
+    switch(tag) {
+    case TOKEN_PLUS_EQ:        return TOKEN_PLUS;    
+    case TOKEN_MINUS_EQ:       return TOKEN_MINUS;
+    case TOKEN_STAR_EQ:        return TOKEN_STAR;
+    case TOKEN_SLASH_EQ:       return TOKEN_SLASH;
+    case TOKEN_SLASH_SLASH_EQ: return TOKEN_SLASH_SLASH;
+    case TOKEN_PERCENT_EQ:     return TOKEN_PERCENT;
+    default:                   return -1;
+    }
+}
+
 static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) 
 {
     struct Token token = at(parser);
@@ -467,24 +489,11 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
             expect(parser, TOKEN_R_SQUARE, "expected `]`");
         
         enum TokenTag tag = token.tag;
-        // desugar +=, -=, *=, /=
-        switch(tag) {
-        case TOKEN_PLUS_EQ:
-            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_PLUS, lhs, rhs);
+        // desugar +=, -=, *=, /=, //=, and %=
+        enum TokenTag desugared = desugar(tag);
+        if (desugared != -1) {
+            rhs = (struct Node*) mk_binary(&parser->arena, token.span, desugared, lhs, rhs);
             tag = TOKEN_EQ;
-            break;
-        case TOKEN_MINUS_EQ:
-            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_MINUS, lhs, rhs);
-            tag = TOKEN_EQ;
-            break;
-        case TOKEN_STAR_EQ:
-            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_STAR, lhs, rhs);
-            tag = TOKEN_EQ;
-            break;
-        case TOKEN_SLASH_EQ:
-            rhs = (struct Node*) mk_binary(&parser->arena, token.span, TOKEN_SLASH, lhs, rhs);
-            tag = TOKEN_EQ;
-            break;
         }
         lhs = (struct Node*) mk_binary(&parser->arena, token.span, tag, lhs, rhs);
     }

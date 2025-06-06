@@ -2,7 +2,7 @@
 #include "arena.h"
 #include "chunk.h"
 #include "symbol.h"
-#define MAX_CALL_FRAMES (64)
+#define MAX_CALL_FRAMES (1024)   // TODO implement tail call optimization
 #define MAX_STACK       (MAX_CALL_FRAMES * 256)
 
 struct CallFrame {

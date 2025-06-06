@@ -10,4 +10,12 @@ fn main() {
     } else {
         print 4;
     }
+
+    if (true) {
+        print 4;
+    }
+    
+    if (false) {
+        print 5;
+    }
 }
