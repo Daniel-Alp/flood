@@ -20,7 +20,7 @@ fn validate_box(r_snap, c_snap, value, grid, i) {
     }
     var r = r_snap + i // 3;
     var c = c_snap + i % 3;
-    return grid[r*9 + c] != value and validate_box(r_snap, c_snap, value, grid, i+1);
+    return grid[r*9+c] != value and validate_box(r_snap, c_snap, value, grid, i+1);
 }
 
 fn validate(idx, value, grid) {

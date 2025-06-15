@@ -1,3 +1,4 @@
+#include <unistd.h> // for isatty()
 #include <stdio.h>
 #include <stdlib.h>
 #include "memory.h"
@@ -27,20 +28,15 @@ int main(int argc, const char **argv)
     char *source = buf+1;
     // TODO check for null bytes
     fread(source, 1, length, fp);
-    // printf("================================\n");
-    // printf("%s\n", argv[1]);
-    // printf("%s\n", source);
+    bool color = isatty(1);
 
     struct Parser parser;
     init_parser(&parser);
     struct FileNode *ast = parse(&parser, source);
     if (parser.errlist.cnt > 0) {
-        print_errlist(&parser.errlist);
+        print_errlist(&parser.errlist, color);
         goto err_release_parser;
     }
-
-    // for (i32 i = 0; i < ast->cnt; i++)
-    //     print_node(ast->stmts[i], 0);
 
     // sym_arr is shared by the sema and compiler
     struct SymArr sym_arr;
@@ -50,7 +46,7 @@ int main(int argc, const char **argv)
     init_sema_state(&sema, &sym_arr);
     analyze(&sema, ast);
     if (sema.errlist.cnt > 0) {
-        print_errlist(&sema.errlist);
+        print_errlist(&sema.errlist, color);
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
@@ -62,7 +58,7 @@ int main(int argc, const char **argv)
 
     struct FnObj *fn = compile_file(&vm, &compiler, ast);
     if (compiler.errlist.cnt > 0) {
-        print_errlist(&compiler.errlist);
+        print_errlist(&compiler.errlist, color);
         release_symbol_arr(&sym_arr);
         goto err_release_compiler;
     }
@@ -80,13 +76,7 @@ int main(int argc, const char **argv)
     for (i32 i = 0; i < compiler.global_cnt; i++)
         push_val_array(&vm.globals, MK_NIL);
 
-    // release_symbol_arr(&sym_arr);
-    // disassemble_chunk(&fn->chunk, fn->name);
-    // for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
-    //     Value val = fn->chunk.constants.vals[i];
-    //     if (IS_FN(val))
-    //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
-    // }
+    release_symbol_arr(&sym_arr);
     run_vm(&vm, fn);
 
 err_release_compiler:

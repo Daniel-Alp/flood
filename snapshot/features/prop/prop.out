@@ -1,0 +1,6 @@
+2 |     foo.bar.baz;
+  |     ^~~ not found in this scope
+
+3 |     foo.bling()[0].blong.blang[3];
+  |     ^~~ not found in this scope
+

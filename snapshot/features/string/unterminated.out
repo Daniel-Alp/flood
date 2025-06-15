@@ -1,0 +1,6 @@
+2 |     var x = "hello, world!;
+  |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ expected expression
+
+4 | }
+  |  ^ expected `}`
+

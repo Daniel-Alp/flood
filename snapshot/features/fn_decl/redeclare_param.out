@@ -1,0 +1,6 @@
+1 | fn foo(x, x, y, z, y) {
+  |           ^ used as parameter more than once
+
+1 | fn foo(x, x, y, z, y) {
+  |                    ^ used as parameter more than once
+

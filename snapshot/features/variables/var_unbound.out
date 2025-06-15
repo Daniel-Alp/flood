@@ -1,0 +1,30 @@
+2  |     x = 3;
+   |     ^ not found in this scope
+
+3  |     x + 4;
+   |     ^ not found in this scope
+
+4  |     4 + x;
+   |         ^ not found in this scope
+
+6  |         var y = z;
+   |                 ^ not found in this scope
+
+10 |     t + 4;
+   |     ^ not found in this scope
+
+12 |     foo(1, 2, a);
+   |     ^~~ not found in this scope
+
+12 |     foo(1, 2, a);
+   |               ^ not found in this scope
+
+13 |     bar[a];
+   |     ^~~ not found in this scope
+
+13 |     bar[a];
+   |         ^ not found in this scope
+
+14 |     [1, 2, a];
+   |            ^ not found in this scope
+
