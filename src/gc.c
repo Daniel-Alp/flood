@@ -49,6 +49,11 @@ void collect_garbage(struct VM *vm)
         vm->gray_cnt--;
 
         switch (obj->tag) {
+        case OBJ_FOREIGN_METHOD: {
+            struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)obj;
+            push_gray_stack(vm, f_method->self);
+            break;
+        }
         case OBJ_FN: {
             struct FnObj *fn = (struct FnObj*)obj;
             Value *val_lo = fn->chunk.constants.vals;
@@ -71,6 +76,13 @@ void collect_garbage(struct VM *vm)
                 if (IS_OBJ(val))
                     push_gray_stack(vm, AS_OBJ(val));
             }
+            for (i32 i = 0; i < list->methods.cap; i++) {
+                if (list->methods.entries[i].chars)
+                    push_gray_stack(vm, AS_OBJ(list->methods.entries[i].val));
+            }
+            break;
+        }
+        case OBJ_STRING: {
             break;
         }
         }
@@ -84,8 +96,10 @@ void collect_garbage(struct VM *vm)
             *indirect = obj->next;
             // TODO move releases into a separate method
             switch(obj->tag) {
-            case OBJ_FN:   release_fn_obj((struct FnObj*)obj); break;
-            case OBJ_LIST: release_list_obj((struct ListObj*)obj); break;
+            case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
+            case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
+            case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
+            case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
             }
             release(obj);      
         } else {

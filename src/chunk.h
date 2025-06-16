@@ -56,10 +56,13 @@ enum OpCode {
     OP_GET_CONST,     // args: index 0..=255
     OP_GET_LOCAL,     // args: index 0..=255 
     OP_SET_LOCAL,     // args: index 0..=255
+    // TODO remove globals once files are made implicitly into classes
     OP_GET_GLOBAL,    // args: index 0..=255
     OP_SET_GLOBAL,    // args: index 0..=255
     OP_GET_SUBSCR,    
     OP_SET_SUBSCR,     
+    OP_GET_PROP,  // args: index 0..=255
+    OP_SET_PROPERTY,  // args: index 0..=255
 
     OP_JUMP,
     OP_JUMP_IF_FALSE,

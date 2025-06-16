@@ -76,7 +76,7 @@ static struct Token mk_token(struct Scanner *scanner, enum TokenTag tag)
     struct Token token = {
         .span = {
             .start = scanner->start, 
-            .length = (scanner->current - scanner->start),
+            .len = (scanner->current - scanner->start),
             .line = scanner->line
         },
         .tag = tag,

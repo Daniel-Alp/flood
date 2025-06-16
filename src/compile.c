@@ -14,6 +14,7 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr)
     compiler->global_cnt = 0;
     compiler->main_fn_idx = -1;
     compiler->sym_arr = arr;
+    compiler->vm = NULL;
 }
 
 void release_compiler(struct Compiler *compiler)
@@ -129,6 +130,8 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->rhs);
             compile_node(compiler, node->rhs);
             emit_byte(cur_chunk(compiler), OP_SET_SUBSCR, line);
+        } else if (node->lhs->tag == NODE_PROP) {
+            push_errlist(&compiler->errlist, node->lhs->span, "TODO");
         }
     } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
         compile_node(compiler, node->lhs);
@@ -159,7 +162,19 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
 
 static void compile_get_prop(struct Compiler *compiler, struct GetPropNode *node)
 {
-    push_errlist(&compiler->errlist, node->base.span, "TODO");
+    u32 line = node->base.span.line;
+    compile_node(compiler, node->lhs);
+
+    u32 len = node->prop.len;
+    char *chars = allocate((len+1)*sizeof(char));
+    memcpy(chars, node->prop.start, len);
+    chars[len] = '\0';
+    
+    struct StringObj *str = (struct StringObj*)alloc_vm_obj(compiler->vm, sizeof(struct StringObj));
+    init_string_obj(str, hash_string(chars, len), len, chars);
+
+    emit_byte(cur_chunk(compiler), OP_GET_PROP, line);    
+    emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
 }
 
 static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node) 
@@ -254,7 +269,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_IDENT:     compile_ident(compiler, (struct IdentNode*)node); break;
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;
-    case NODE_GET_PROP:  compile_get_prop(compiler, (struct GetPropNode*)node); break;
+    case NODE_PROP:  compile_get_prop(compiler, (struct GetPropNode*)node); break;
     case NODE_FN_CALL:   compile_fn_call(compiler, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:        compile_if(compiler, (struct IfNode*)node); break;
@@ -268,6 +283,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
 
 struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node) 
 {
+    compiler->vm = vm;
     struct FnObj *script = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
     char *name = allocate((6+1)*sizeof(char));
     strcpy(name, "script");
@@ -280,13 +296,13 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
         struct FnDeclNode* fn_decl = (struct FnDeclNode*)node->stmts[i];
         struct Span fn_span = fn_decl->base.span;
 
-        if (fn_span.length == 4 && strncmp(fn_span.start, "main", 4) == 0)
+        if (fn_span.len == 4 && strncmp(fn_span.start, "main", 4) == 0)
             compiler->main_fn_idx = symbols(compiler)[fn_decl->id].idx;
 
         struct FnObj *fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
-        char *name = allocate((fn_decl->base.span.length+1)*sizeof(char));
-        strncpy(name, fn_span.start, fn_span.length);
-        name[fn_span.length] = '\0';
+        char *name = allocate((fn_decl->base.span.len+1)*sizeof(char));
+        strncpy(name, fn_span.start, fn_span.len);
+        name[fn_span.len] = '\0';
 
         init_fn_obj(fn, name, fn_decl->arity);
 
@@ -311,5 +327,6 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
         emit_byte(cur_chunk(compiler), OP_POP, fn_span.line);
         compiler->global_cnt++;
     }
+    compiler->vm = NULL;
     return script;
 }

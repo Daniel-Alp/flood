@@ -18,6 +18,9 @@ enum InterpResult {
 };
 
 struct VM {
+    // TODO add other class objects
+    struct ClassObj *list_class;
+    
     struct CallFrame call_stack[MAX_CALL_FRAMES];
     u16 call_cnt;
 
@@ -37,6 +40,8 @@ struct VM {
 void init_vm(struct VM *vm);
 
 void release_vm(struct VM *vm);
+
+void runtime_err(struct VM *vm, const char *msg);
 
 enum InterpResult run_vm(struct VM *vm, struct FnObj *fn);
 

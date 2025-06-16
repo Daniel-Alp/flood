@@ -12,6 +12,8 @@ struct Compiler {
     struct SymArr *sym_arr;
     // function body (or script) currently being compiled 
     struct FnObj *fn;
+    // the VM we are compiling for
+    struct VM *vm;
 };
 
 void init_compiler(struct Compiler *compiler, struct SymArr *arr);

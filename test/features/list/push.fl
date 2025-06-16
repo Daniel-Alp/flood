@@ -1,0 +1,13 @@
+fn push10(list, idx) {
+    if (idx == 10) {
+        return;
+    }
+    list.push(idx);
+    push10(list, idx + 1);
+}
+
+fn main() {
+    var list = [];
+    push10(list, 0);
+    print list;
+}

@@ -25,12 +25,12 @@ static struct Ident *resolve_ident(struct SemaState *sema, struct Span span)
 {
     for (i32 i = sema->local_cnt-1; i >= 0; i--) {
         struct Ident *ident = &sema->locals[i];
-        if (ident->span.length == span.length && memcmp(ident->span.start, span.start, span.length) == 0) 
+        if (ident->span.len == span.len && memcmp(ident->span.start, span.start, span.len) == 0) 
             return ident;
     }
     for (i32 i = sema->global_cnt-1; i >= 0; i--) {
         struct Ident *ident = &sema->globals[i];
-        if (ident->span.length == span.length && memcmp(ident->span.start, span.start, span.length) == 0) 
+        if (ident->span.len == span.len && memcmp(ident->span.start, span.start, span.len) == 0) 
             return ident;
     }
     return NULL;
@@ -172,7 +172,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
-    case NODE_GET_PROP:  analyze_get_prop(sema, (struct GetPropNode*)node); break;
+    case NODE_PROP:  analyze_get_prop(sema, (struct GetPropNode*)node); break;
     case NODE_FN_CALL:   analyze_fn_call(sema, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
     case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;
@@ -198,7 +198,7 @@ void analyze(struct SemaState *sema, struct FileNode *file)
             struct Span span = fn->params[i].base.span;
             for (i32 j = 0; j < i; j++) {
                 struct Span other_span = fn->params[j].base.span;
-                if (other_span.length == span.length && memcmp(other_span.start, span.start, span.length) == 0) {
+                if (other_span.len == span.len && memcmp(other_span.start, span.start, span.len) == 0) {
                     push_errlist(&sema->errlist, span, "used as parameter more than once");
                     break;
                 }

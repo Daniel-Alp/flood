@@ -222,7 +222,7 @@ static struct GetPropNode *mk_get_prop(struct Arena *arena, struct Span span, st
 {
     struct GetPropNode *node = push_arena(arena, sizeof(struct GetPropNode));
     node->base.span = span;
-    node->base.tag = NODE_GET_PROP;
+    node->base.tag = NODE_PROP;
     node->lhs = lhs;
     node->prop = prop;
     return node;
@@ -305,7 +305,7 @@ static struct FileNode *mk_file_node(struct Arena *arena, struct Node **stmts, u
 {
     struct FileNode *node = push_arena(arena, sizeof(struct FileNode));
     node->base.tag = NODE_FILE;
-    node->base.span.length = 0;
+    node->base.span.len = 0;
     node->base.span.start = NULL;
     node->stmts = stmts;
     node->cnt = cnt;

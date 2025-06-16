@@ -107,7 +107,7 @@ void print_errlist(struct ErrList *errlist, bool color)
         if (color)
             printf(ANSI_COLOR_RED ANSI_BOLD);
         printf("%*s^", line_indent(err.span.start), "");
-        for (i32 i = 0; i < err.span.length - 1; i++)
+        for (i32 i = 0; i < err.span.len - 1; i++)
             printf("~");
         printf(" %s\n\n", err.msg);
         if (color)

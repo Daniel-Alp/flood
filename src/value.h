@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#define TABLE_LOAD_FACTOR (0.75)
 
 struct Obj;
 
@@ -26,6 +27,20 @@ struct ValArray {
     Value *vals;
 };
 
+// TODO implement optimization
+struct ValTableEntry {
+    u32 hash;
+    u32 len;
+    const char *chars;
+    Value val;
+};
+
+struct ValTable {
+    u32 cnt;
+    u32 cap;
+    struct ValTableEntry *entries;
+};
+
 #define MK_NIL            ((Value){VAL_NIL, {.number = 0}})
 #define MK_BOOL(val)      ((Value){VAL_BOOL, {.boolean = val}})
 #define MK_NUM(val)       ((Value){VAL_NUM, {.number = val}})
@@ -45,6 +60,21 @@ void init_val_array(struct ValArray *arr);
 void release_val_array(struct ValArray *arr);
 
 u32 push_val_array(struct ValArray *arr, Value val);
+
+u32 hash_string(const char *str, u32 len);
+
+void init_val_table(struct ValTable *tab);
+
+void release_val_table(struct ValTable *tab);
+
+struct ValTableEntry *get_val_table_slot(
+    struct ValTableEntry *vals, 
+    u32 cap, 
+    u32 hash, 
+    u32 strlen, 
+    const char *str);
+
+void insert_val_table(struct ValTable *tab, const char *str, u32 len, Value val);
 
 bool val_eq(Value val1, Value val2);
 

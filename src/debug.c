@@ -27,7 +27,7 @@ const char *binop_str[] = {
 
 static void print_atom(struct AtomNode *node, u32 offset) 
 {
-    printf("Atom %.*s", node->base.span.length, node->base.span.start);
+    printf("Atom %.*s", node->base.span.len, node->base.span.start);
 }
 
 static void print_list(struct ListNode *node, u32 offset)
@@ -39,14 +39,14 @@ static void print_list(struct ListNode *node, u32 offset)
 
 static void print_ident(struct IdentNode *node, u32 offset) 
 {
-    printf("Ident %.*s", node->base.span.length, node->base.span.start);
+    printf("Ident %.*s", node->base.span.len, node->base.span.start);
 }
 
 static void print_unary(struct UnaryNode *node, u32 offset) 
 {
     printf("Unary\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->base.span.length, node->base.span.start);
+    printf("%.*s", node->base.span.len, node->base.span.start);
     print_node(node->rhs, offset + 2);
 }
 
@@ -64,7 +64,7 @@ static void print_get_prop(struct GetPropNode *node, u32 offset)
     printf("GetProp");
     print_node(node->lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
-    printf("%.*s", node->prop.length, node->prop.start);
+    printf("%.*s", node->prop.len, node->prop.start);
 }
 
 static void print_fn_call(struct FnCallNode *node, u32 offset) 
@@ -108,7 +108,7 @@ static void print_var_decl(struct VarDeclNode *node, u32 offset)
 {
     printf("VarDecl\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->base.span.length, node->base.span.start);
+    printf("%.*s", node->base.span.len, node->base.span.start);
     if (node->init)
         print_node(node->init, offset + 2);
 }
@@ -117,13 +117,13 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset)
 {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->base.span.length, node->base.span.start);
+    printf("%.*s", node->base.span.len, node->base.span.start);
     print_node((struct Node*)node->body, offset + 2);
 }
 
 static void print_import(struct ImportNode *node, u32 offset)
 {
-    printf("ImportNode %.*s %.*s", node->path.length, node->path.start, node->base.span.length, node->base.span.start);
+    printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
 }
 
 // TEMP remove when we add functions
@@ -144,7 +144,7 @@ void print_node(struct Node *node, u32 offset)
     case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
     case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_GET_PROP:  print_get_prop((struct GetPropNode*)node, offset); break;
+    case NODE_PROP:  print_get_prop((struct GetPropNode*)node, offset); break;
     case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
     case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:        print_if((struct IfNode*)node, offset); break;
@@ -187,6 +187,7 @@ const char *opcode_str[] = {
     [OP_SET_GLOBAL]    = "OP_SET_LOCAL",
     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
+    [OP_GET_PROP]      = "OP_GET_PROP",
     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
     [OP_JUMP]          = "OP_JUMP",
@@ -219,6 +220,7 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         case OP_JUMP:          
             printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
             break;
+        case OP_GET_PROP:
         case OP_GET_CONST: {
             print_val(chunk->constants.vals[chunk->code[++i]]);
             printf("\n");

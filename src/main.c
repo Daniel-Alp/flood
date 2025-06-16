@@ -5,9 +5,9 @@
 #include "parse.h"
 #include "sema.h"
 #include "compile.h" 
+#include "vm.h"
 #include "debug.h"
 
-// TODO implement snapshot testing framework
 int main(int argc, const char **argv) 
 {
     if (argc != 2) {
@@ -77,7 +77,20 @@ int main(int argc, const char **argv)
         push_val_array(&vm.globals, MK_NIL);
 
     release_symbol_arr(&sym_arr);
+    release_compiler(&compiler);
+    release_sema_state(&sema);
+    release_parser(&parser);
+    release(buf);
+
+    // disassemble_chunk(&fn->chunk, fn->name);
+    // for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
+    //     Value val = fn->chunk.constants.vals[i];
+    //     if (IS_FN(val))
+    //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
+    // }
     run_vm(&vm, fn);
+    release_vm(&vm);
+    return 0;
 
 err_release_compiler:
     release_compiler(&compiler);

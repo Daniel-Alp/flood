@@ -71,7 +71,7 @@ struct Scanner {
 
 struct Span {
     const char *start;
-    i32 length;
+    i32 len;
     u32 line;
 };
 

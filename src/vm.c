@@ -6,6 +6,7 @@
 #include "gc.h"
 #include "object.h"
 #include "debug.h"
+#include "foreign.h"
 
 static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 {
@@ -20,7 +21,8 @@ static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
     }
 }
 
-static void runtime_err(struct VM *vm, const char *msg) 
+// TODO varargs for runtime error messages
+void runtime_err(struct VM *vm, const char *msg) 
 {
     printf("%s\n", msg);
     for (i32 i = vm->call_cnt-1; i >= 1; i--) {
@@ -45,8 +47,10 @@ void release_vm_obj(struct VM *vm)
     while (vm->obj_list) {
         struct Obj *obj = vm->obj_list;
         switch(obj->tag) {
-        case OBJ_FN:   release_fn_obj((struct FnObj*)obj); break;
-        case OBJ_LIST: release_list_obj((struct ListObj*)obj); break;
+        case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
+        case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
+        case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
+        case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
         }
         vm->obj_list = vm->obj_list->next;
         release(obj);
@@ -278,6 +282,7 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             struct Obj *list = alloc_vm_obj(vm, sizeof(struct ListObj));
             // TODO benchmark, maybe inline
             init_list_obj((struct ListObj*)list, vals, cnt);
+            bind_list_methods(vm, (struct ListObj*)list); // TODO consider moving this call to init_list_obj
             sp[0] = MK_OBJ(list);
             sp++;
             break;
@@ -304,7 +309,6 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
                         sp--;
                     } else {
                         frame->ip = ip;
-                        // TODO let runtime_err take var args
                         runtime_err(vm, "list index out of bounds");
                         return INTERP_RUNTIME_ERR;
                     }
@@ -365,6 +369,36 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             vm->globals.vals[idx] = sp[-1];
             break;
         }
+        // TODO implement OP_GET_PROP for fields
+        // TODO implement OP_INVOKE optimization
+        // TODO implement prop ID optimization (do not use strings for props)
+        case OP_GET_PROP: {
+            u8 idx = *ip++;
+            struct StringObj *prop = AS_STRING(frame->fn->chunk.constants.vals[idx]);
+            Value val = sp[-1];
+            if (IS_LIST(val)) {
+                struct ListObj *list = AS_LIST(val);
+                struct ValTableEntry *entry = get_val_table_slot(
+                    list->methods.entries, 
+                    list->methods.cap,
+                    prop->hash,
+                    prop->len,
+                    prop->chars
+                );
+                if (entry->chars != NULL) {
+                    sp[-1] = entry->val;
+                } else {
+                    runtime_err(vm, "property does not exist");
+                    return INTERP_RUNTIME_ERR;
+                }
+            } else {
+                frame->ip = ip;
+                runtime_err(vm, "attempt to get property of non-object");
+                return INTERP_RUNTIME_ERR;
+            }
+            break;
+        }
+        // TODO OP_SET_PROP
         case OP_JUMP: {
             ip += ((*ip++) << 8) + (*ip++);
             break;
@@ -417,6 +451,23 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
                 frame->bp = sp-arg_count;
                 frame->fn = fn;
                 ip = fn->chunk.code;
+            } else if (IS_FOREIGN_METHOD(val)) {
+                struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
+                if (f_method->arity != arg_count) {
+                    frame->ip = ip;
+                    runtime_err(vm, "incorrect number of arguments provided");
+                    return INTERP_RUNTIME_ERR;
+                }
+                if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
+                    frame->ip = ip;
+                    runtime_err(vm, "stack overflow");
+                    return INTERP_RUNTIME_ERR;
+                }
+                frame->ip = ip;
+                vm->sp = sp;
+                if (!f_method->code(vm, f_method->self)) {
+                    return INTERP_RUNTIME_ERR;
+                }
             } else {
                 frame->ip = ip;
                 runtime_err(vm, "attempt to call non-function");
@@ -462,8 +513,10 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         vm->sp = sp;
         // printf("%s\n", opcode_str[op]);
         // print_stack(vm, sp, frame->bp);
-        // TODO run garbage collector only if it exceeds threshold
+        // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
+
+        // THIS IS BORKED!
         collect_garbage(vm);
     }
 }

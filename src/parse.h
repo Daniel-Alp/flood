@@ -11,7 +11,7 @@ enum NodeTag {
     // +, -, *, /, and, or, [
     // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
     NODE_BINARY,    
-    NODE_GET_PROP,  // foo.bar
+    NODE_PROP,      // foo.bar
     NODE_FN_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
