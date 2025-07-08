@@ -20,4 +20,4 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr);
 
 void release_compiler(struct Compiler *compiler);
 
-struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node);
+struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node);

@@ -34,15 +34,17 @@ void collect_garbage(struct VM *vm)
         if (IS_OBJ(val))
             push_gray_stack(vm, AS_OBJ(val));
     }    
-    // each call frame contains a fn which has a constant table
-    // this table may contain objects such as others fns and strings
-    // so we should mark each fn gray
+    // each call frame contains a closure which points to a function which
+    // contains a constant table whose objects are not in scope but cannot be freed
+    // furthermore, the closure contains an array of pointers to heap vals which also cannot be freed
+    // so we should mark each closure gray
     struct CallFrame *frame_lo = vm->call_stack;
     struct CallFrame *frame_hi = frame_lo + vm->call_cnt;
     for (struct CallFrame *frame = frame_lo; frame < frame_hi; frame++)
-        push_gray_stack(vm, (struct Obj*)frame->fn);
+        push_gray_stack(vm, (struct Obj*)frame->closure);
 
     // mark rest
+    // TODO add heap val marking
     while (vm->gray_cnt > 0) {
         struct Obj *obj = vm->gray[vm->gray_cnt-1];
         obj->color = GC_BLACK;
@@ -56,21 +58,30 @@ void collect_garbage(struct VM *vm)
         }
         case OBJ_FN: {
             struct FnObj *fn = (struct FnObj*)obj;
-            Value *val_lo = fn->chunk.constants.vals;
-            Value *val_hi = val_lo + fn->chunk.constants.cnt;
+            Value *lo = fn->chunk.constants.vals;
+            Value *hi = lo + fn->chunk.constants.cnt;
             
-            for (Value *ptr = val_lo; ptr < val_hi; ptr++) {
+            for (Value *ptr = lo; ptr < hi; ptr++) {
                 Value val = *ptr;
                 if (IS_OBJ(val))
                     push_gray_stack(vm, AS_OBJ(val));
             }
             break;
         }
+        case OBJ_CLOSURE: {
+            struct ClosureObj *closure = (struct ClosureObj*)obj;
+            push_gray_stack(vm, (struct Obj*)closure->fn);
+            // LOOKATME this code is very suspicious and probably buggy
+            struct HeapValObj **lo = closure->heap_vals;
+            struct HeapValObj **hi = lo + closure->n;
+            for (struct HeapValObj **ptr = lo; ptr < hi; ptr++)
+                push_gray_stack(vm, (struct Obj*)(*ptr));
+            break;
+        }
         case OBJ_LIST: {
             struct ListObj *list = (struct ListObj*)obj;
             Value *val_lo = list->vals;
             Value *val_hi = val_lo + list->cnt;
-
             for (Value *ptr = val_lo; ptr < val_hi; ptr++) {
                 Value val = *ptr;
                 if (IS_OBJ(val))
@@ -88,6 +99,7 @@ void collect_garbage(struct VM *vm)
         }
     }
 
+    // TODO add heap val sweeping
     // sweep (free white objects, reset every color to white)
     struct Obj **indirect = &vm->obj_list;
     struct Obj *obj;
@@ -98,6 +110,7 @@ void collect_garbage(struct VM *vm)
             switch(obj->tag) {
             case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
             case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
+            case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
             case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
             case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
             }

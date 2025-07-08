@@ -180,6 +180,7 @@ const char *opcode_str[] = {
     [OP_NEGATE]        = "OP_NEGATE",
     [OP_NOT]           = "OP_NOT",
     [OP_LIST]          = "OP_LIST",
+    [OP_CLOSURE]       = "OP_CLOSURE",
     [OP_GET_CONST]     = "OP_GET_CONST",
     [OP_GET_LOCAL]     = "OP_GET_LOCAL",
     [OP_SET_LOCAL]     = "OP_SET_LOCAL",
@@ -212,7 +213,8 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         case OP_SET_GLOBAL:    
         case OP_CALL:          
         case OP_POP_N:
-        case OP_LIST:         
+        case OP_LIST: 
+        case OP_CLOSURE:        
             printf("%d\n", chunk->code[++i]); 
             break;
         case OP_JUMP_IF_FALSE: 

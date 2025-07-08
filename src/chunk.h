@@ -52,6 +52,7 @@ enum OpCode {
     OP_NOT,
 
     OP_LIST,          // args: index 0..=255
+    OP_CLOSURE,       // args: n 0..=255, followed by n indices 0..=255
 
     OP_GET_CONST,     // args: index 0..=255
     OP_GET_LOCAL,     // args: index 0..=255 
@@ -61,7 +62,7 @@ enum OpCode {
     OP_SET_GLOBAL,    // args: index 0..=255
     OP_GET_SUBSCR,    
     OP_SET_SUBSCR,     
-    OP_GET_PROP,  // args: index 0..=255
+    OP_GET_PROP,      // args: index 0..=255
     OP_SET_PROPERTY,  // args: index 0..=255
 
     OP_JUMP,

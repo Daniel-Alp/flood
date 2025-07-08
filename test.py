@@ -12,11 +12,11 @@ def compare(testpath: str, snappath: str) -> None:
         subprocess.run(["./build/flood", testpath], stdout=tmp)
         tmp.flush()
         tmp.seek(0)
+        print(testpath)
         try:
             diff = difflib.unified_diff(snapshot.readlines(), tmp.readlines(), n=0)
             next(diff)
             next(diff)
-            print(testpath)
             for line in diff:
                 if line.startswith("-"):
                     print(f"\033[31m{line}\033[0m",end="")

@@ -281,15 +281,19 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     }
 }
 
-struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node) 
+struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node) 
 {
     compiler->vm = vm;
-    struct FnObj *script = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
+    
+    struct FnObj *top_script = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
     char *name = allocate((6+1)*sizeof(char));
     strcpy(name, "script");
-    init_fn_obj(script, name, 0);
+    init_fn_obj(top_script, name, 0);
 
-    compiler->fn = script;
+    struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
+    init_closure_obj(top_closure, top_script, 0);
+
+    compiler->fn = top_script;
     for (i32 i = 0; i < node->cnt; i++) {
         // TODO global variables
         // Compile function body, wrap in OBJ_FN, add to constant table of script
@@ -318,9 +322,11 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
         emit_byte(cur_chunk(compiler), OP_RETURN, fn_span.line);
         compiler->stack_pos = stack_pos;
 
-        compiler->fn = script;
+        compiler->fn = top_script;
         emit_byte(cur_chunk(compiler), OP_GET_CONST, fn_span.line);
-        emit_byte(cur_chunk(compiler), add_constant(&script->chunk, MK_OBJ((struct Obj*)fn)), fn_span.line);
+        emit_byte(cur_chunk(compiler), add_constant(&top_script->chunk, MK_OBJ((struct Obj*)fn)), fn_span.line);
+        emit_byte(cur_chunk(compiler), OP_CLOSURE, fn_span.line);
+        emit_byte(cur_chunk(compiler), 0, fn_span.line);
         emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, fn_span.line);
         // TODO handle > 256 globals
         emit_byte(cur_chunk(compiler), compiler->global_cnt, fn_span.line);
@@ -328,5 +334,5 @@ struct FnObj *compile_file(struct VM *vm, struct Compiler *compiler, struct File
         compiler->global_cnt++;
     }
     compiler->vm = NULL;
-    return script;
+    return top_closure;
 }

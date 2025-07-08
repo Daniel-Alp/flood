@@ -128,15 +128,26 @@ void print_val(Value val)
             printf("...");
             return;
         } 
-
+        
         AS_OBJ(val)->printed = 1;
-        if (IS_FOREIGN_METHOD(val)) {
+        enum ObjTag tag = AS_OBJ(val)->tag;
+        switch(tag) {
+        case OBJ_FOREIGN_METHOD: {
             const char *name = AS_FOREIGN_METHOD(val)->name;
             printf("<foreign method %s>", name);
-        } else if (IS_FN(val)) {
+            break;
+        }
+        case OBJ_FN: {
             const char *name = AS_FN(val)->name;
             printf("<function %s>", name);
-        } else if (IS_LIST(val)) {
+            break;
+        }
+        case OBJ_CLOSURE: {
+            const char *name = AS_CLOSURE(val)->fn->name;
+            printf("<function %s>", name);
+            break;
+        }
+        case OBJ_LIST: {
             printf("[");
             struct ListObj *list = AS_LIST(val);
             Value *vals = list->vals;
@@ -149,8 +160,12 @@ void print_val(Value val)
                 print_val(vals[cnt-1]);
             }
             printf("]");
-        } else if (IS_STRING(val)) {
+            break;
+        }
+        case OBJ_STRING: {
             printf("%s", AS_STRING(val)->chars);
+            break;
+        }
         }
         AS_OBJ(val)->printed = 0;
         break;

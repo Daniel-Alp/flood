@@ -27,8 +27,8 @@ void runtime_err(struct VM *vm, const char *msg)
     printf("%s\n", msg);
     for (i32 i = vm->call_cnt-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
-        u32 line = get_opcode_line(frame.fn->chunk.lines, frame.ip-1 - frame.fn->chunk.code);
-        printf("[line %d] in %s\n", line, frame.fn->name);
+        u32 line = get_opcode_line(frame.closure->fn->chunk.lines, frame.ip-1 - frame.closure->fn->chunk.code);
+        printf("[line %d] in %s\n", line, frame.closure->fn->name);
     }
 }
 
@@ -49,6 +49,7 @@ void release_vm_obj(struct VM *vm)
         switch(obj->tag) {
         case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
         case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
+        case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
         case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
         case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
         }
@@ -81,15 +82,15 @@ void release_vm(struct VM *vm)
 }
 
 // TODO check if exceeding max stack size
-enum InterpResult run_vm(struct VM *vm, struct FnObj *fn) 
+enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure) 
 {
     Value *sp = vm->val_stack;
 
     struct CallFrame *frame = vm->call_stack;
-    frame->fn = fn;
+    frame->closure = closure;
     frame->bp = sp;
     vm->call_cnt = 1;
-    register u8 *ip = frame->fn->chunk.code;
+    register u8 *ip = frame->closure->fn->chunk.code;
     while(true) {
         u8 op = *ip;
         ip++;
@@ -287,9 +288,19 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             sp++;
             break;
         }
+        case OP_CLOSURE: {
+            // n = 0 for now TODO
+            u8 n = *ip++;
+            struct Obj *closure = alloc_vm_obj(vm, sizeof(struct ClosureObj));
+            init_closure_obj((struct ClosureObj*)closure, AS_FN(sp[-1]), n);
+            // replaces fn on top of stack with closure
+            sp[-1] = MK_OBJ(closure);
+            break;
+        }
+
         case OP_GET_CONST: {
             u16 idx = *ip++;
-            sp[0] = frame->fn->chunk.constants.vals[idx];
+            sp[0] = frame->closure->fn->chunk.constants.vals[idx];
             sp++;
             break;
         }
@@ -297,6 +308,11 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             u8 idx = *ip++;
             sp[0] = frame->bp[idx];
             sp++;
+            break;
+        }
+        case OP_SET_LOCAL: {
+            u8 idx = *ip++;
+            frame->bp[idx] = sp[-1];
             break;
         }
         case OP_GET_SUBSCR: {
@@ -353,11 +369,6 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
             }
             break;
         }
-        case OP_SET_LOCAL: {
-            u8 idx = *ip++;
-            frame->bp[idx] = sp[-1];
-            break;
-        }
         case OP_GET_GLOBAL: {
             u8 idx = *ip++;
             sp[0] = vm->globals.vals[idx];
@@ -371,10 +382,11 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         }
         // TODO implement OP_GET_PROP for fields
         // TODO implement OP_INVOKE optimization
+        // TODO string interning to optimize method lookup
         // TODO implement prop ID optimization (do not use strings for props)
         case OP_GET_PROP: {
             u8 idx = *ip++;
-            struct StringObj *prop = AS_STRING(frame->fn->chunk.constants.vals[idx]);
+            struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
             Value val = sp[-1];
             if (IS_LIST(val)) {
                 struct ListObj *list = AS_LIST(val);
@@ -432,9 +444,9 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         case OP_CALL: {
             u8 arg_count = *ip++;
             Value val = sp[-1-arg_count];
-            if (IS_FN(val)) {
-                struct FnObj *fn = AS_FN(val);
-                if (fn->arity != arg_count) {
+            if (IS_CLOSURE(val)) {
+                struct ClosureObj *closure = AS_CLOSURE(val);
+                if (closure->fn->arity != arg_count) {
                     frame->ip = ip;
                     runtime_err(vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
@@ -449,8 +461,8 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
                 vm->call_cnt++;
                 frame++;
                 frame->bp = sp-arg_count;
-                frame->fn = fn;
-                ip = fn->chunk.code;
+                frame->closure = closure;
+                ip = closure->fn->chunk.code;
             } else if (IS_FOREIGN_METHOD(val)) {
                 struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
                 if (f_method->arity != arg_count) {
@@ -516,7 +528,6 @@ enum InterpResult run_vm(struct VM *vm, struct FnObj *fn)
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
 
-        // THIS IS BORKED!
         collect_garbage(vm);
     }
 }

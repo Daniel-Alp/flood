@@ -56,7 +56,7 @@ int main(int argc, const char **argv)
     struct VM vm;
     init_vm(&vm);
 
-    struct FnObj *fn = compile_file(&vm, &compiler, ast);
+    struct ClosureObj *closure = compile_file(&vm, &compiler, ast);
     if (compiler.errlist.cnt > 0) {
         print_errlist(&compiler.errlist, color);
         release_symbol_arr(&sym_arr);
@@ -65,13 +65,13 @@ int main(int argc, const char **argv)
 
     // invoke main function if defined
     if (compiler.main_fn_idx != -1) {
-        emit_byte(&fn->chunk, OP_GET_GLOBAL, 1);
-        emit_byte(&fn->chunk, compiler.main_fn_idx, 1);
-        emit_byte(&fn->chunk, OP_CALL, 1);
-        emit_byte(&fn->chunk, 0, 1);
+        emit_byte(&closure->fn->chunk, OP_GET_GLOBAL, 1);
+        emit_byte(&closure->fn->chunk, compiler.main_fn_idx, 1);
+        emit_byte(&closure->fn->chunk, OP_CALL, 1);
+        emit_byte(&closure->fn->chunk, 0, 1);
     }
-    emit_byte(&fn->chunk, OP_NIL, 1);
-    emit_byte(&fn->chunk, OP_RETURN, 1);
+    emit_byte(&closure->fn->chunk, OP_NIL, 1);
+    emit_byte(&closure->fn->chunk, OP_RETURN, 1);
     // push globals
     for (i32 i = 0; i < compiler.global_cnt; i++)
         push_val_array(&vm.globals, MK_NIL);
@@ -81,14 +81,15 @@ int main(int argc, const char **argv)
     release_sema_state(&sema);
     release_parser(&parser);
     release(buf);
+    fclose(fp);
 
-    // disassemble_chunk(&fn->chunk, fn->name);
-    // for (i32 i = 0; i < fn->chunk.constants.cnt; i++) {
-    //     Value val = fn->chunk.constants.vals[i];
+    // disassemble_chunk(&closure->fn->chunk, closure->fn->name);
+    // for (i32 i = 0; i < closure->fn->chunk.constants.cnt; i++) {
+    //     Value val = closure->fn->chunk.constants.vals[i];
     //     if (IS_FN(val))
     //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
     // }
-    run_vm(&vm, fn);
+    run_vm(&vm, closure);
     release_vm(&vm);
     return 0;
 

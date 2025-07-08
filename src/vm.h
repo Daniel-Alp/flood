@@ -6,7 +6,7 @@
 #define MAX_STACK       (MAX_CALL_FRAMES * 256)
 
 struct CallFrame {
-    struct FnObj *fn;
+    struct ClosureObj *closure;
     u8 *ip;
     Value *bp;
 };
@@ -43,6 +43,6 @@ void release_vm(struct VM *vm);
 
 void runtime_err(struct VM *vm, const char *msg);
 
-enum InterpResult run_vm(struct VM *vm, struct FnObj *fn);
+enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure);
 
 struct Obj *alloc_vm_obj(struct VM *vm, u64 size);

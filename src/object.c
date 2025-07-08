@@ -40,6 +40,32 @@ void release_fn_obj(struct FnObj *fn)
     fn->arity = 0;
 }
 
+void init_heap_val_obj(struct HeapValObj *heap_val, Value val)
+{
+    heap_val->base.tag = OBJ_HEAP_VAL;
+    heap_val->val = val;
+}
+
+// init_closure_obj only creates fn and allocates memory for the heap vals array
+// in the run_vm function the heap vals ptrs are set
+void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 n) 
+{
+    closure->base.tag = OBJ_CLOSURE;
+    closure->fn = fn;
+    closure->n = n;
+    closure->heap_vals = allocate(n * sizeof(struct HeapValObj*));
+}
+
+void release_closure_obj(struct ClosureObj *closure)
+{
+    // the closure does not own the function
+    // the closure also does not own the heap vals it has references to
+    release(closure->heap_vals);
+    closure->n = 0;
+    closure->heap_vals = NULL;
+}
+
+// vals points to the start of the list's elements in the stack 
 void init_list_obj(struct ListObj *list, Value *vals, u32 cnt)
 {
     list->base.tag = OBJ_LIST;

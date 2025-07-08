@@ -4,9 +4,10 @@
 #include "scan.h"
 
 enum ObjTag {
-    OBJ_CLASS, // DELETEME
     OBJ_FOREIGN_METHOD,
     OBJ_FN,
+    OBJ_HEAP_VAL,
+    OBJ_CLOSURE,
     OBJ_LIST,
     OBJ_STRING
 };
@@ -41,6 +42,21 @@ struct FnObj {
     u32 arity;
 };
 
+struct HeapValObj {
+    struct Obj base;
+    Value val;
+};
+
+struct ClosureObj {
+    struct Obj base;
+    struct FnObj *fn;
+    // every element of this array is a pointer to a heap allocated object
+    // specifically a heap val object, which is simply a wrapper around a value
+    u8 n;
+    struct HeapValObj **heap_vals;
+    // TODO store captured values that are not mutated directly in the closure
+};
+
 struct ListObj {
     struct Obj base;
     struct ValTable methods;
@@ -63,11 +79,15 @@ static inline bool is_obj_tag(Value val, enum ObjTag tag)
 
 #define IS_FOREIGN_METHOD(val) (is_obj_tag(val, OBJ_FOREIGN_METHOD)) 
 #define IS_FN(val)             (is_obj_tag(val, OBJ_FN))
+#define IS_HEAP_VAL(val)       (is_obj_tag(val, OBJ_HEAP_VAL))
+#define IS_CLOSURE(val)        (is_obj_tag(val, OBJ_CLOSURE))
 #define IS_LIST(val)           (is_obj_tag(val, OBJ_LIST))
 #define IS_STRING(val)         (is_obj_tag(val, OBJ_STRING))
 
 #define AS_FOREIGN_METHOD(val) ((struct ForeignMethodObj*)AS_OBJ(val))
 #define AS_FN(val)             ((struct FnObj*)AS_OBJ(val))
+#define AS_HEAP_VAL(val)       ((struct HeapValObj*)AS_OBJ(val))
+#define AS_CLOSURE(val)        ((struct ClosureObj*)AS_OBJ(val))
 #define AS_LIST(val)           ((struct ListObj*)AS_OBJ(val))
 #define AS_STRING(val)         ((struct StringObj*)AS_OBJ(val))
 
@@ -84,6 +104,13 @@ void release_foreign_method_obj(struct ForeignMethodObj *f_method);
 void init_fn_obj(struct FnObj *fn, const char *name, u32 arity);
 
 void release_fn_obj(struct FnObj *fn);
+
+// no release method because nothing to release
+void init_heap_val_obj(struct HeapValObj *heap_val, Value val);
+
+void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 cnt);
+
+void release_closure_obj(struct ClosureObj *closure);
 
 void init_list_obj(struct ListObj *list, Value *vals, u32 cnt);
 
