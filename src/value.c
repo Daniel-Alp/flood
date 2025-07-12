@@ -162,6 +162,10 @@ void print_val(Value val)
             printf("]");
             break;
         }
+        case OBJ_HEAP_VAL: {
+            print_val(AS_HEAP_VAL(val)->val);
+            break;
+        }
         case OBJ_STRING: {
             printf("%s", AS_STRING(val)->chars);
             break;

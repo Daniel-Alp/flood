@@ -32,7 +32,7 @@ int main(int argc, const char **argv)
 
     struct Parser parser;
     init_parser(&parser);
-    struct FileNode *ast = parse(&parser, source);
+    struct FnDeclNode *ast = parse(&parser, source);
     if (parser.errlist.cnt > 0) {
         print_errlist(&parser.errlist, color);
         goto err_release_parser;
@@ -50,6 +50,8 @@ int main(int argc, const char **argv)
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
+
+    // print_node(ast, 0);
 
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);
@@ -73,7 +75,7 @@ int main(int argc, const char **argv)
     emit_byte(&closure->fn->chunk, OP_NIL, 1);
     emit_byte(&closure->fn->chunk, OP_RETURN, 1);
     // push globals
-    for (i32 i = 0; i < compiler.global_cnt; i++)
+    for (i32 i = 0; i < compiler.fn_node->body->cnt; i++)
         push_val_array(&vm.globals, MK_NIL);
 
     release_symbol_arr(&sym_arr);
@@ -83,12 +85,6 @@ int main(int argc, const char **argv)
     release(buf);
     fclose(fp);
 
-    // disassemble_chunk(&closure->fn->chunk, closure->fn->name);
-    // for (i32 i = 0; i < closure->fn->chunk.constants.cnt; i++) {
-    //     Value val = closure->fn->chunk.constants.vals[i];
-    //     if (IS_FN(val))
-    //         disassemble_chunk(&AS_FN(val)->chunk, AS_FN(val)->name);
-    // }
     run_vm(&vm, closure);
     release_vm(&vm);
     return 0;

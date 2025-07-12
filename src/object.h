@@ -50,10 +50,9 @@ struct HeapValObj {
 struct ClosureObj {
     struct Obj base;
     struct FnObj *fn;
-    // every element of this array is a pointer to a heap allocated object
-    // specifically a heap val object, which is simply a wrapper around a value
-    u8 n;
-    struct HeapValObj **heap_vals;
+    // every element of this array is a pointer to a heap allocated Val
+    u8 capture_cnt;
+    struct HeapValObj **captures;
     // TODO store captured values that are not mutated directly in the closure
 };
 

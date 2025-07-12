@@ -27,6 +27,7 @@ void collect_garbage(struct VM *vm)
         if (IS_OBJ(val))
             push_gray_stack(vm, AS_OBJ(val));
     }
+    // TEMP remove globals when we added user-defined classes
     Value *globals_lo = vm->globals.vals;
     Value *globals_hi = globals_lo + vm->globals.cnt;
     for (Value *ptr = globals_lo; ptr < globals_hi; ptr++) {
@@ -72,8 +73,8 @@ void collect_garbage(struct VM *vm)
             struct ClosureObj *closure = (struct ClosureObj*)obj;
             push_gray_stack(vm, (struct Obj*)closure->fn);
             // LOOKATME this code is very suspicious and probably buggy
-            struct HeapValObj **lo = closure->heap_vals;
-            struct HeapValObj **hi = lo + closure->n;
+            struct HeapValObj **lo = closure->captures;
+            struct HeapValObj **hi = lo + closure->capture_cnt;
             for (struct HeapValObj **ptr = lo; ptr < hi; ptr++)
                 push_gray_stack(vm, (struct Obj*)(*ptr));
             break;
@@ -92,6 +93,11 @@ void collect_garbage(struct VM *vm)
                     push_gray_stack(vm, AS_OBJ(list->methods.entries[i].val));
             }
             break;
+        }
+        case OBJ_HEAP_VAL: {
+            struct HeapValObj *heap_val = (struct HeapValObj*)obj;
+            if (IS_OBJ(heap_val->val))
+                push_gray_stack(vm, AS_OBJ(heap_val->val));
         }
         case OBJ_STRING: {
             break;
@@ -112,6 +118,7 @@ void collect_garbage(struct VM *vm)
             case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
             case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
             case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
+            case OBJ_HEAP_VAL:       break;
             case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
             }
             release(obj);      

@@ -47,8 +47,7 @@ static bool list_pop(struct VM *vm, struct Obj* self)
         return false;
     }
     list->cnt--;
-    vm->sp[0] = list->vals[list->cnt]; 
-    vm->sp++;
+    vm->sp[-1] = list->vals[list->cnt]; 
     return true;
 }
 

@@ -1,0 +1,21 @@
+fn a() {
+    var x = 0;
+    fn b() {
+        x += 1;
+    }
+    fn c() {
+        print x;
+    }
+    return [b, c];
+}
+
+fn main() {
+    var ret = a();
+    var b = ret[0];
+    var c = ret[1];
+    # print 0
+    c();
+    b();
+    # print 1
+    c();
+}

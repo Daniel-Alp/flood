@@ -52,17 +52,17 @@ void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 n)
 {
     closure->base.tag = OBJ_CLOSURE;
     closure->fn = fn;
-    closure->n = n;
-    closure->heap_vals = allocate(n * sizeof(struct HeapValObj*));
+    closure->capture_cnt = n;
+    closure->captures = allocate(n * sizeof(struct HeapValObj*));
 }
 
 void release_closure_obj(struct ClosureObj *closure)
 {
     // the closure does not own the function
     // the closure also does not own the heap vals it has references to
-    release(closure->heap_vals);
-    closure->n = 0;
-    closure->heap_vals = NULL;
+    release(closure->captures);
+    closure->capture_cnt = 0;
+    closure->captures = NULL;
 }
 
 // vals points to the start of the list's elements in the stack 

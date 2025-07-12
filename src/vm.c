@@ -8,6 +8,8 @@
 #include "debug.h"
 #include "foreign.h"
 
+// TODO add proper comments
+
 static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 {
     // see chunk.h
@@ -51,6 +53,7 @@ void release_vm_obj(struct VM *vm)
         case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
         case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
         case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
+        case OBJ_HEAP_VAL:       break;
         case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
         }
         vm->obj_list = vm->obj_list->next;
@@ -61,9 +64,8 @@ void release_vm_obj(struct VM *vm)
 void init_vm(struct VM *vm)
 {
     vm->sp = vm->val_stack;
-    init_val_array(&vm->globals);
     vm->obj_list = NULL;
-
+    init_val_array(&vm->globals);
     vm->gray_cnt = 0;
     vm->gray_cap = 8;
     vm->gray = allocate(vm->gray_cap * sizeof(struct Obj*));
@@ -72,9 +74,8 @@ void init_vm(struct VM *vm)
 void release_vm(struct VM *vm) 
 {
     vm->sp = NULL;
-    release_val_array(&vm->globals);
     release_vm_obj(vm);
-
+    release_val_array(&vm->globals);
     vm->gray_cnt = 0;
     vm->gray_cap = 0;
     release(vm->gray);
@@ -88,6 +89,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
 
     struct CallFrame *frame = vm->call_stack;
     frame->closure = closure;
+    // TODO some of these other things should probably be marked with register
+    // also consider moving putting bp in its own var so I don't have to go through frame to reach bp each time
     frame->bp = sp;
     vm->call_cnt = 1;
     register u8 *ip = frame->closure->fn->chunk.code;
@@ -288,16 +291,25 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             sp++;
             break;
         }
+        case OP_HEAPVAL: {
+            u8 idx = *ip++;
+            struct Obj *heap_val = alloc_vm_obj(vm, sizeof(struct HeapValObj));
+            init_heap_val_obj((struct HeapValObj*)heap_val, frame->bp[idx]);
+            frame->bp[idx] = MK_OBJ(heap_val);
+            break;
+        }
         case OP_CLOSURE: {
-            // n = 0 for now TODO
-            u8 n = *ip++;
+            u8 stack_captures = *ip++;
+            u8 parent_captures = *ip++;
             struct Obj *closure = alloc_vm_obj(vm, sizeof(struct ClosureObj));
-            init_closure_obj((struct ClosureObj*)closure, AS_FN(sp[-1]), n);
-            // replaces fn on top of stack with closure
+            init_closure_obj((struct ClosureObj*)closure, AS_FN(sp[-1]), stack_captures + parent_captures);
+            for (i32 i = 0; i < stack_captures; i++)
+                ((struct ClosureObj*)closure)->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
+            for (i32 i = 0; i < parent_captures; i++)
+                ((struct ClosureObj*)closure)->captures[stack_captures+i] = frame->closure->captures[*ip++];
             sp[-1] = MK_OBJ(closure);
             break;
         }
-
         case OP_GET_CONST: {
             u16 idx = *ip++;
             sp[0] = frame->closure->fn->chunk.constants.vals[idx];
@@ -313,6 +325,28 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
         case OP_SET_LOCAL: {
             u8 idx = *ip++;
             frame->bp[idx] = sp[-1];
+            break;
+        }
+        case OP_GET_HEAPVAL: {
+            u8 idx = *ip++;
+            sp[0] = AS_HEAP_VAL(frame->bp[idx])->val;
+            sp++;
+            break; 
+        }
+        case OP_SET_HEAPVAL: {
+            u8 idx = *ip++;
+            AS_HEAP_VAL(frame->bp[idx])->val = sp[-1];
+            break;
+        }
+        case OP_GET_CAPTURED: {
+            u8 idx = *ip++;
+            sp[0] = frame->closure->captures[idx]->val;
+            sp++;
+            break;
+        }
+        case OP_SET_CAPTURED: {
+            u8 idx = *ip++;
+            frame->closure->captures[idx]->val = sp[-1];
             break;
         }
         case OP_GET_SUBSCR: {
@@ -380,10 +414,9 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             vm->globals.vals[idx] = sp[-1];
             break;
         }
-        // TODO implement OP_GET_PROP for fields
+        // TODO implement OP_GET_PROP for class members
         // TODO implement OP_INVOKE optimization
         // TODO string interning to optimize method lookup
-        // TODO implement prop ID optimization (do not use strings for props)
         case OP_GET_PROP: {
             u8 idx = *ip++;
             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
@@ -460,7 +493,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 
                 vm->call_cnt++;
                 frame++;
-                frame->bp = sp-arg_count;
+                frame->bp = sp-1-arg_count;
                 frame->closure = closure;
                 ip = closure->fn->chunk.code;
             } else if (IS_FOREIGN_METHOD(val)) {
@@ -492,16 +525,16 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (vm->call_cnt == 0)
                 return INTERP_OK;
             // when a function returns the stack looks like this
-            //      <function foo> 
-            // bp-> <arg>
+            // bp-> <function foo> 
+            //      <arg>
             //      ...
             //      <arg>
             //      <local>
             //      ...
             //      <local> <-return value
             // sp-> 
-            frame->bp[-1] = sp[-1]; // move return value 
-            sp = frame->bp; // pop locals
+            frame->bp[0] = sp[-1]; // move return value 
+            sp = frame->bp + 1;    // pop locals
             frame--; 
             ip = frame->ip;
             break;

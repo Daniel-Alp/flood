@@ -1,4 +1,4 @@
 fn main() {
-    var list = [];
-    list.pop();
+    var list = [3];
+    print list.pop();
 }

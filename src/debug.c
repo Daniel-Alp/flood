@@ -39,7 +39,7 @@ static void print_list(struct ListNode *node, u32 offset)
 
 static void print_ident(struct IdentNode *node, u32 offset) 
 {
-    printf("Ident %.*s", node->base.span.len, node->base.span.start);
+    printf("Ident %.*s id: %d", node->base.span.len, node->base.span.start, node->id);
 }
 
 static void print_unary(struct UnaryNode *node, u32 offset) 
@@ -108,7 +108,7 @@ static void print_var_decl(struct VarDeclNode *node, u32 offset)
 {
     printf("VarDecl\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->base.span.len, node->base.span.start);
+    printf("%.*s id: %d", node->base.span.len, node->base.span.start, node->id);
     if (node->init)
         print_node(node->init, offset + 2);
 }
@@ -117,7 +117,31 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset)
 {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->base.span.len, node->base.span.start);
+    printf("%.*s(", node->base.span.len, node->base.span.start);
+    for (i32 i = 0; i < node->arity-1; i++) {
+        struct IdentNode param = node->params[i];
+        printf("%.*s id: %d, ", param.base.span.len, param.base.span.start, param.id);
+    }
+    if (node->arity > 0) {
+        struct IdentNode param = node->params[node->arity-1];
+        printf("%.*s id: %d", param.base.span.len, param.base.span.start, param.id);
+    }
+    printf(") id: %d\n", node->id);
+    
+    printf("%*s", offset + 2, "");
+    printf("stack_captures:  [");
+    for (i32 i = 0; i < node->stack_capture_cnt-1; i++)
+        printf("%d, ", node->stack_captures[i]);
+    if (node->stack_capture_cnt > 0)
+        printf("%d", node->stack_captures[node->stack_capture_cnt-1]);
+    printf("]\n");
+    printf("%*s", offset + 2, "");
+    printf("parent_captures: [");
+    for (i32 i = 0; i < node->parent_capture_cnt-1; i++)
+        printf("%d, ", node->parent_captures[i]);
+    if (node->parent_capture_cnt > 0)
+        printf("%d", node->parent_captures[node->parent_capture_cnt-1]);
+    printf("]");
     print_node((struct Node*)node->body, offset + 2);
 }
 
@@ -184,8 +208,14 @@ const char *opcode_str[] = {
     [OP_GET_CONST]     = "OP_GET_CONST",
     [OP_GET_LOCAL]     = "OP_GET_LOCAL",
     [OP_SET_LOCAL]     = "OP_SET_LOCAL",
+    [OP_HEAPVAL]       = "OP_HEAPVAL",
+    [OP_GET_HEAPVAL]   = "OP_GET_HEAPVAL",
+    [OP_SET_HEAPVAL]   = "OP_SET_HEAPVAL",
+    [OP_GET_CAPTURED]  = "OP_GET_CAPTURED",
+    [OP_SET_CAPTURED]  = "OP_SET_CAPTURED",
+    // TEMP remove globals when we added user-defined classes
     [OP_GET_GLOBAL]    = "OP_GET_GLOBAL",
-    [OP_SET_GLOBAL]    = "OP_SET_LOCAL",
+    [OP_SET_GLOBAL]    = "OP_SET_GLOBAL",
     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
     [OP_GET_PROP]      = "OP_GET_PROP",
@@ -199,6 +229,8 @@ const char *opcode_str[] = {
     [OP_PRINT]         = "OP_PRINT"
 };
 
+// TODO currently this instruction is a bit confusing because for constants we print their value
+// but for GET/SET we print the index. Would make a bit more sense to print the name of the ident
 void disassemble_chunk(struct Chunk *chunk, const char *name)
 {
     printf("     [disassembly for %s]\n", name);
@@ -208,13 +240,17 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         printf("%-20s", opcode_str[op]);
         switch (op) {
         case OP_GET_LOCAL:     
-        case OP_SET_LOCAL:    
+        case OP_SET_LOCAL:   
+        case OP_GET_HEAPVAL:
+        case OP_SET_HEAPVAL:
+        case OP_GET_CAPTURED:
+        case OP_SET_CAPTURED: 
         case OP_GET_GLOBAL:   
         case OP_SET_GLOBAL:    
         case OP_CALL:          
         case OP_POP_N:
         case OP_LIST: 
-        case OP_CLOSURE:        
+        case OP_HEAPVAL:
             printf("%d\n", chunk->code[++i]); 
             break;
         case OP_JUMP_IF_FALSE: 
@@ -228,6 +264,15 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             printf("\n");
             break;
         }
+        case OP_CLOSURE: {
+            u32 stack_captures = chunk->code[++i];
+            printf("%d\n", stack_captures); 
+            u32 parent_captures = chunk->code[++i];
+            printf("     | %*s%d\n", 20, "", parent_captures);
+            for (i32 j = 0; j < stack_captures + parent_captures; j++)
+                printf("     | %*s%d\n", 20, "", chunk->code[++i]);
+            break;
+        }      
         default:
             printf("\n");
         }

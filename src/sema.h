@@ -1,29 +1,18 @@
 #pragma once
 #include "symbol.h"
 #include "parse.h"
-// TODO add GET_LOCAL_LONG and GET_GLOBAL_LONG opcodes to support more than 256 locals and 256 globals
-#define MAX_LOCALS (256)
-#define MAX_GLOBALS (256)
-
-struct Ident {
-    struct Span span;
-    u32 id;
-    u32 depth;
-};
 
 struct SemaState {
-    u32 local_cnt;
-    u32 global_cnt;
-    u32 depth;
-    struct Ident locals[MAX_LOCALS];
-    struct Ident globals[MAX_GLOBALS];
-    
-    struct ErrList errlist;
+    u32 depth;                // level of nestedness while traversing AST
+    u32 local_cnt;            // num locals on stack while traversing AST 
+    u32 locals[MAX_LOCALS];   // ids of locals on the stack while traversing AST
     struct SymArr *sym_arr;
+    struct FnDeclNode *fn;    // fn we are inside of while traversing AST
+    struct ErrList errlist;
 };
 
 void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr);
 
 void release_sema_state(struct SemaState *sema);
 
-void analyze(struct SemaState *sema, struct FileNode *file);
+void analyze(struct SemaState *sema, struct FnDeclNode *file);

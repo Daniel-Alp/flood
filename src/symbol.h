@@ -1,16 +1,14 @@
 #pragma once
 #include "scan.h"
-#define FLAG_NONE   (0)
-#define FLAG_LOCAL  (1)
-#define FLAG_GLOBAL (1 << 1)
+#define FLAG_NONE     (0)
+#define FLAG_CAPTURED (1 << 1) // variable that a function closes over
 
 struct Symbol {
     struct Span span; // identifier
-    u32 hash;         // hash of identifier
-    // index into value stack if local (determined during compilation)
-    // index into globals array if global (determined during semantic phase)
-    u32 idx;         
     u32 flags;
+    u32 depth;
+    // offset from base of enclosing function -1 initially to indiciate it's unset
+    i32 idx;
 };
 
 struct SymArr {

@@ -263,6 +263,9 @@ static struct FnDeclNode *mk_fn_decl(
     node->arity = arity;
     node->body = body;
     node->id = -1;
+    node->stack_capture_cnt = 0;
+    node->parent_capture_cnt = 0;
+    node->parent = NULL;
     return node;
 }
 
@@ -296,17 +299,6 @@ static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct 
     struct BlockNode *node = push_arena(arena, sizeof(struct BlockNode));
     node->base.tag = NODE_BLOCK;
     node->base.span = span;
-    node->stmts = stmts;
-    node->cnt = cnt;
-    return node;
-}
-
-static struct FileNode *mk_file_node(struct Arena *arena, struct Node **stmts, u32 cnt) 
-{
-    struct FileNode *node = push_arena(arena, sizeof(struct FileNode));
-    node->base.tag = NODE_FILE;
-    node->base.span.len = 0;
-    node->base.span.start = NULL;
     node->stmts = stmts;
     node->cnt = cnt;
     return node;
@@ -431,7 +423,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         expect(parser, TOKEN_R_SQUARE, "expected `]`");
         u32 cnt = items_tmp.cnt;
         struct Node **items = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &items_tmp);
-        lhs = mk_list(&parser->arena, token.span, items, cnt);
+        lhs = (struct Node*)mk_list(&parser->arena, token.span, items, cnt);
         break;
     case TOKEN_L_PAREN:
         lhs = (struct Node*)parse_expr(parser, 1);
@@ -609,6 +601,8 @@ static struct BlockNode *parse_block(struct Parser *parser)
             node = (struct Node*)parse_var_decl(parser);
         } else if (eat(parser, TOKEN_RETURN)) {
             node = (struct Node*)parse_return(parser);  
+        } else if (eat(parser, TOKEN_FN)) {
+            node = (struct Node*)parse_fn_decl(parser);
         } else if (eat(parser, TOKEN_PRINT)) {
             node = (struct Node*)parse_print(parser);
         } else if (expr_first(at(parser).tag)) {
@@ -643,30 +637,35 @@ static struct ImportNode *parse_import(struct Parser *parser)
     return node;
 }
 
-static struct FileNode *parse_file(struct Parser *parser) 
+// for now, a file is implicitly a fn except 
+// the body can only contain fn decls and mutual recursion is allowed
+static struct FnDeclNode *parse_file(struct Parser *parser) 
 {
     struct PtrArray tmp;
     init_ptr_array(&tmp);
     while (at(parser).tag != TOKEN_EOF) {
-        // TODO allow global variables
         struct Node *node = NULL;
-        if (eat(parser, TOKEN_FN)) {
+        if (eat(parser, TOKEN_FN))
             node = (struct Node*)parse_fn_decl(parser);
-        } else if (eat(parser, TOKEN_IMPORT)) {
-            node = (struct Node*)parse_import(parser);
-        } else {
+        else
             advance_with_err(parser, "expected declaration");
-        }
         push_ptr_array(&tmp, node);
     }
     u32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);
-    return mk_file_node(&parser->arena, stmts, cnt);
+    struct Span span = {
+        .start = "script", 
+        .len = 7, 
+        .line = 1,
+    };
+    struct BlockNode *body = mk_block(&parser->arena, span, stmts, cnt);
+    return mk_fn_decl(&parser->arena, span, NULL, 0, body);
 }
 
-// TODO disallow trailing comma in function declarations and calls
-struct FileNode *parse(struct Parser *parser, const char *source) 
+// TODO maybe disallow trailing comma in function declarations and calls
+struct FnDeclNode *parse(struct Parser *parser, const char *source) 
 {
+    // TODO I should probably be clearing the errorlist each time
     init_scanner(&parser->scanner, source);
     parser->at = next_token(&parser->scanner);
     parser->panic = false;

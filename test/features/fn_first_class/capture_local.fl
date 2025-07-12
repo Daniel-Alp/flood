@@ -1,0 +1,15 @@
+fn a() {
+    var x = 3;
+    var y = 4;
+    fn b() {
+        print x + y;
+    }
+    return b;
+}
+
+fn main() {
+    var b = a();
+    # print 7 twice
+    b();
+    b();
+}

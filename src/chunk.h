@@ -51,22 +51,29 @@ enum OpCode {
     OP_NEGATE,
     OP_NOT,
 
-    OP_LIST,          // args: index 0..=255
-    OP_CLOSURE,       // args: n 0..=255, followed by n indices 0..=255
+    OP_LIST,          // args: n 0..=255
+    // args: n 0..=255, then n indices 0..=255 offset from bp
+    // then  m 0..=255, then m indices 0..=255 idx into capture arr
+    OP_CLOSURE,         
 
-    OP_GET_CONST,     // args: index 0..=255
-    OP_GET_LOCAL,     // args: index 0..=255 
-    OP_SET_LOCAL,     // args: index 0..=255
-    // TODO remove globals once files are made implicitly into classes
-    OP_GET_GLOBAL,    // args: index 0..=255
-    OP_SET_GLOBAL,    // args: index 0..=255
+    OP_GET_CONST,     // args: index 0..=255 idx into constant arr
+    OP_GET_LOCAL,     // args: index 0..=255 offset from bp
+    OP_SET_LOCAL,     // args: index 0..=255 offset from bp
+    OP_HEAPVAL,       // args: index 0..=255 offset from bp
+    OP_GET_HEAPVAL,   // args: index 0..=255 offset from bp
+    OP_SET_HEAPVAL,   // args: index 0..=255 offset from bp
+    OP_GET_CAPTURED,  // args: index 0..=255 idx into capture arr
+    OP_SET_CAPTURED,  // args: index 0..=255 idx into capture arr
+    // TEMP remove globals when we added user-defined classes
+    OP_GET_GLOBAL,    // args: index 0..=255 idx into global arr
+    OP_SET_GLOBAL,    // args: index 0..=255 idx into global arr
     OP_GET_SUBSCR,    
     OP_SET_SUBSCR,     
-    OP_GET_PROP,      // args: index 0..=255
-    OP_SET_PROPERTY,  // args: index 0..=255
+    OP_GET_PROP,      // args: index 0..=255 idx into constant arr
+    OP_SET_PROPERTY,  // args: index 0..=255 idx into constant arr
 
     OP_JUMP,
-    OP_JUMP_IF_FALSE,
+    OP_JUMP_IF_FALSE, 
     OP_JUMP_IF_TRUE,
     OP_CALL,
     OP_RETURN,

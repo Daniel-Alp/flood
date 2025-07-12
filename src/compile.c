@@ -5,13 +5,16 @@
 #include "symbol.h"
 #include "parse.h"
 
-// TODO look at the line info being passed and check that it makes sense
+// TODO add proper comments
 
+// TODO this isn't important right now but it's weird 
+// that the compiler takes some arguments such as sym arr upon initialization 
+// and others like VM each time you call compile_file
+// later I'll probably have it so that the compiler owns its errlist but everything else 
+// is passed in as args. This way you can use a single compiler struct for however many VMs you like.
 void init_compiler(struct Compiler *compiler, struct SymArr *arr) 
 {
     init_errlist(&compiler->errlist);
-    compiler->stack_pos = 0;
-    compiler->global_cnt = 0;
     compiler->main_fn_idx = -1;
     compiler->sym_arr = arr;
     compiler->vm = NULL;
@@ -20,11 +23,10 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr)
 void release_compiler(struct Compiler *compiler)
 {
     release_errlist(&compiler->errlist);
-    compiler->stack_pos = 0;
-    compiler->global_cnt = 0;
     compiler->main_fn_idx = -1;
-    // compiler does not own sym_arr
+    // compiler does not own these
     compiler->sym_arr = NULL;
+    compiler->vm = NULL;
 }
 
 static struct Chunk *cur_chunk(struct Compiler *compiler) 
@@ -50,6 +52,7 @@ static u32 emit_jump(struct Compiler *compiler, enum OpCode op, u32 line)
     return offset;
 }
 
+// TODO is the comment below still relevant?
 // make jump instr jump to the instr that will be emitted next
 static void patch_jump(struct Compiler *compiler, u32 offset) 
 {
@@ -84,15 +87,51 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
     }
 }
 
+// given an identifier that is captured return what it's idx will be 
+// in the fn's capture array, or -1 if this fn does not capture it
+static i32 resolve_captured(struct FnDeclNode *node, u32 id)
+{
+    // capture count cannot exceed MAX_LOCALS
+    for (i32 j = 0; j < MAX_LOCALS; j++) {
+        if (j < node->stack_capture_cnt && id == node->stack_captures[j])
+            return j;
+        if (j < node->parent_capture_cnt && id == node->parent_captures[j])
+            return j + node->stack_capture_cnt;
+    }
+    return -1;
+}
+
+static void compile_ident_get_or_set(struct Compiler *compiler, u32 id, bool get, u32 line)
+{
+    struct Symbol sym = symbols(compiler)[id];
+    if (sym.depth == 0) {
+        emit_byte(cur_chunk(compiler), get ? OP_GET_GLOBAL : OP_SET_GLOBAL, line);
+        emit_byte(cur_chunk(compiler), sym.idx, line);
+        return;
+    }
+
+    if (sym.flags & FLAG_CAPTURED) {
+        i32 captures_arr_idx = resolve_captured(compiler->fn_node, id);
+        // ptr to the value lives on the stack
+        if (captures_arr_idx == -1) {
+            emit_byte(cur_chunk(compiler), get ? OP_GET_HEAPVAL : OP_SET_HEAPVAL, line);
+            emit_byte(cur_chunk(compiler), sym.idx, line);
+            return;
+        }
+        emit_byte(cur_chunk(compiler), get ? OP_GET_CAPTURED : OP_SET_CAPTURED, line);
+        emit_byte(cur_chunk(compiler), captures_arr_idx, line);
+        return;
+    } 
+    emit_byte(cur_chunk(compiler), get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
+    // a function does not capture itself (even if it invokes itself) and is instead 
+    // treated as the 0th local, which we have a special case here
+    emit_byte(cur_chunk(compiler), id == compiler->fn_node->id ? 0 : sym.idx, line);
+}
+
+// ident get
 static void compile_ident(struct Compiler *compiler, struct IdentNode *node) 
 {
-    u32 line = node->base.span.line;
-    struct Symbol sym = symbols(compiler)[node->id];
-    if (sym.flags & FLAG_LOCAL)
-        emit_byte(cur_chunk(compiler), OP_GET_LOCAL, line);
-    else // TODO OP_GET_GLOBAL_LONG
-        emit_byte(cur_chunk(compiler), OP_GET_GLOBAL, line);
-    emit_byte(cur_chunk(compiler), sym.idx, line);
+    compile_ident_get_or_set(compiler, node->id, true, node->base.span.line);
 }
 
 static void compile_list(struct Compiler *compiler, struct ListNode *node) 
@@ -123,8 +162,8 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
     if (op_tag == TOKEN_EQ) {
         if (node->lhs->tag == NODE_IDENT) {
             compile_node(compiler, node->rhs);
-            emit_byte(cur_chunk(compiler), OP_SET_LOCAL, line);
-            emit_byte(cur_chunk(compiler), symbols(compiler)[((struct IdentNode*)node->lhs)->id].idx, line);
+            // ident set
+            compile_ident_get_or_set(compiler, ((struct IdentNode*)node->lhs)->id, false, node->lhs->span.line);
         } else if (node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE) {
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->lhs);
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->rhs);
@@ -189,31 +228,21 @@ static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node)
     // the callee is responsible for cleanup and moving the return value
 }
 
-static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node) 
-{
-    symbols(compiler)[node->id].idx = compiler->stack_pos;
-    compiler->stack_pos++;
-    if (node->init)
-        compile_node(compiler, node->init);
-    else 
-        emit_byte(cur_chunk(compiler), OP_NIL, node->base.span.line);
-}
-
 static void compile_block(struct Compiler *compiler, struct BlockNode *node) 
 {
     u32 line = node->base.span.line;
-    u32 stack_pos = compiler->stack_pos;
+    u32 local_cnt = compiler->fn_local_cnt;
     for (i32 i = 0; i < node->cnt; i++)
         compile_node(compiler, node->stmts[i]);
-    // TODO handle more than 256 locals
-    u32 n = compiler->stack_pos - stack_pos;
+    // TODO handle more than 256 locals 
+    u32 n = compiler->fn_local_cnt - local_cnt;
     if (n == 1) {
         emit_byte(cur_chunk(compiler), OP_POP, line);
     } else if (n > 1) {
         emit_byte(cur_chunk(compiler), OP_POP_N, line);
         emit_byte(cur_chunk(compiler), n, line);
     }
-    compiler->stack_pos = stack_pos;
+    compiler->fn_local_cnt = local_cnt;
 }
 
 static void compile_if(struct Compiler *compiler, struct IfNode *node) 
@@ -261,6 +290,90 @@ static void compile_print(struct Compiler *compiler, struct PrintNode *node)
     emit_byte(cur_chunk(compiler), OP_PRINT, node->base.span.line);
 }
 
+static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node) 
+{
+    u32 line = node->base.span.line;
+    // TODO var decls for class members 
+    struct Symbol* sym = &symbols(compiler)[node->id];
+    sym->idx = compiler->fn_local_cnt;
+    compiler->fn_local_cnt++;
+    if (node->init)
+        compile_node(compiler, node->init);
+    else 
+        emit_byte(cur_chunk(compiler), OP_NIL, line);
+    // move variable on heap if it is captured
+    if (sym->flags & FLAG_CAPTURED) {
+        emit_byte(cur_chunk(compiler), OP_HEAPVAL, line);
+        emit_byte(cur_chunk(compiler), sym->idx, line);
+    }
+}
+
+static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
+{
+    u32 line = node->base.span.line;
+    struct Symbol* sym = &symbols(compiler)[node->id];
+    // top level functions are hoisted
+    if (sym->idx == -1) {
+        sym->idx = compiler->fn_local_cnt;
+        compiler->fn_local_cnt++;
+    }
+
+    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
+    struct Span span = node->base.span;
+    char *name = allocate((span.len+1)*sizeof(char));
+    strncpy(name, span.start, span.len);
+    name[span.len] = '\0';
+    init_fn_obj(fn, name, node->arity);
+
+    // push state and enter the fn
+    u32 parent_local_cnt = compiler->fn_local_cnt;
+    struct FnObj* parent = compiler->fn; 
+    struct FnDeclNode *parent_node = compiler->fn_node;
+    compiler->fn_local_cnt = 1;
+    compiler->fn = fn;
+    compiler->fn_node = node;
+    for (i32 i = 0; i < node->arity; i++) {
+        struct Symbol *sym = &symbols(compiler)[node->params[i].id];
+        sym->idx = compiler->fn_local_cnt;
+        compiler->fn_local_cnt++;
+        // move param on heap if it is captured
+        if (sym->flags & FLAG_CAPTURED) {
+            emit_byte(cur_chunk(compiler), OP_HEAPVAL, line);
+            emit_byte(cur_chunk(compiler), sym->idx, line);
+        }
+    }
+    compile_block(compiler, node->body);
+    emit_byte(cur_chunk(compiler), OP_NIL, line);
+    emit_byte(cur_chunk(compiler), OP_RETURN, line);
+
+    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name);
+
+    // pop state and exit the fn
+    compiler->fn_local_cnt = parent_local_cnt;
+    compiler->fn = parent;
+    compiler->fn_node = parent_node;
+    emit_byte(cur_chunk(compiler), OP_GET_CONST, line);
+    emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)fn)), line);
+    // wrap the fn in a closure
+    emit_byte(cur_chunk(compiler), OP_CLOSURE, line);
+    emit_byte(cur_chunk(compiler), node->stack_capture_cnt, line);
+    emit_byte(cur_chunk(compiler), node->parent_capture_cnt, line);
+    for (i32 i = 0; i < node->stack_capture_cnt; i++) {
+        u32 id = node->stack_captures[i];
+        emit_byte(cur_chunk(compiler), symbols(compiler)[id].idx, line);
+    }
+    for (i32 i = 0; i < node->parent_capture_cnt; i++) {
+        u32 id = node->parent_captures[i];
+        // node->parent can't be NULL
+        emit_byte(cur_chunk(compiler), resolve_captured(node->parent, id), line);
+    }
+    // move closure on heap if it is captured
+    if (sym->flags & FLAG_CAPTURED) {
+        emit_byte(cur_chunk(compiler), OP_HEAPVAL, line);
+        emit_byte(cur_chunk(compiler), sym->idx, line);
+    }
+}
+
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {
     switch (node->tag) {
@@ -269,70 +382,56 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_IDENT:     compile_ident(compiler, (struct IdentNode*)node); break;
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;
-    case NODE_PROP:  compile_get_prop(compiler, (struct GetPropNode*)node); break;
+    case NODE_PROP:      compile_get_prop(compiler, (struct GetPropNode*)node); break;
     case NODE_FN_CALL:   compile_fn_call(compiler, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:        compile_if(compiler, (struct IfNode*)node); break;
-    case NODE_EXPR_STMT: compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break;
-    case NODE_VAR_DECL:  compile_var_decl(compiler, (struct VarDeclNode*)node); break;
+    case NODE_EXPR_STMT: compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
     case NODE_RETURN:    compile_return(compiler, (struct ReturnNode*)node); break;
     // TEMP remove when we add functions
     case NODE_PRINT:     compile_print(compiler, (struct PrintNode*)node); break; 
+    case NODE_VAR_DECL:  compile_var_decl(compiler, (struct VarDeclNode*)node); break;
+    case NODE_FN_DECL:   compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
     }
 }
 
-struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FileNode *node) 
-{
+struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FnDeclNode *node) 
+{    
+    // TODO I should probably be clearing the errorlist each time
+    // have to clear other things in the compiler as well each time we compile
     compiler->vm = vm;
-    
-    struct FnObj *top_script = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
-    char *name = allocate((6+1)*sizeof(char));
+
+    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
+    char *name = allocate(7*sizeof(char));
     strcpy(name, "script");
-    init_fn_obj(top_script, name, 0);
+    init_fn_obj(top_fn, name, 0);
 
     struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
-    init_closure_obj(top_closure, top_script, 0);
+    init_closure_obj(top_closure, top_fn, 0);
 
-    compiler->fn = top_script;
-    for (i32 i = 0; i < node->cnt; i++) {
-        // TODO global variables
-        // Compile function body, wrap in OBJ_FN, add to constant table of script
-        struct FnDeclNode* fn_decl = (struct FnDeclNode*)node->stmts[i];
-        struct Span fn_span = fn_decl->base.span;
+    compiler->fn_node = node;
+    compiler->fn = top_fn;
+    compiler->fn_local_cnt = 0;
 
+    for (i32 i = 0; i < node->body->cnt; i++) {
+        struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
+        // for top-level functions we set their index before we compile them, hosting them up
+        symbols(compiler)[fn_node->id].idx = compiler->fn_local_cnt;
+        struct Span fn_span = fn_node->base.span;
         if (fn_span.len == 4 && strncmp(fn_span.start, "main", 4) == 0)
-            compiler->main_fn_idx = symbols(compiler)[fn_decl->id].idx;
-
-        struct FnObj *fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
-        char *name = allocate((fn_decl->base.span.len+1)*sizeof(char));
-        strncpy(name, fn_span.start, fn_span.len);
-        name[fn_span.len] = '\0';
-
-        init_fn_obj(fn, name, fn_decl->arity);
-
-        // TODO clean up
-        u32 stack_pos = compiler->stack_pos;
-        for (i32 i = 0; i < fn_decl->arity; i++) {
-            symbols(compiler)[fn_decl->params[i].id].idx = compiler->stack_pos;
-            compiler->stack_pos++;
-        }
-        compiler->fn = fn;
-        compile_node(compiler, (struct Node*)fn_decl->body);
-        emit_byte(cur_chunk(compiler), OP_NIL, fn_span.line);
-        emit_byte(cur_chunk(compiler), OP_RETURN, fn_span.line);
-        compiler->stack_pos = stack_pos;
-
-        compiler->fn = top_script;
-        emit_byte(cur_chunk(compiler), OP_GET_CONST, fn_span.line);
-        emit_byte(cur_chunk(compiler), add_constant(&top_script->chunk, MK_OBJ((struct Obj*)fn)), fn_span.line);
-        emit_byte(cur_chunk(compiler), OP_CLOSURE, fn_span.line);
-        emit_byte(cur_chunk(compiler), 0, fn_span.line);
-        emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, fn_span.line);
-        // TODO handle > 256 globals
-        emit_byte(cur_chunk(compiler), compiler->global_cnt, fn_span.line);
-        emit_byte(cur_chunk(compiler), OP_POP, fn_span.line);
-        compiler->global_cnt++;
+            compiler->main_fn_idx = compiler->fn_local_cnt;
+        compiler->fn_local_cnt++;
     }
-    compiler->vm = NULL;
+    for (i32 i = 0; i < node->body->cnt; i++) {
+        struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
+        u32 line = fn_node->base.span.line;
+        compile_fn_decl(compiler, fn_node);
+        emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, line);
+        emit_byte(cur_chunk(compiler), i, line);
+        emit_byte(cur_chunk(compiler), OP_POP, line);
+    }
+    
+    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name);
+
     return top_closure;
 }

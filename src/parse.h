@@ -2,6 +2,7 @@
 #include "arena.h"
 #include "error.h"
 #include "scan.h"
+#define MAX_LOCALS (256)
 
 enum NodeTag {
     NODE_ATOM,      // nil, true, false, TODO strings
@@ -20,7 +21,6 @@ enum NodeTag {
     NODE_BLOCK,
     NODE_IF,
     NODE_RETURN,
-    NODE_FILE,
     // TEMP remove when we add functions
     NODE_PRINT
 };
@@ -93,8 +93,18 @@ struct FnDeclNode {
     struct Node base;
     struct BlockNode *body;
     struct IdentNode *params;
-    u32 arity;
+    i32 arity;
     i32 id;
+    // when a closure is created at runtime there are two ways 
+    // to get a ptr to a captured value
+    //      (1) the ptr is in the current stack frame
+    //      (2) the ptr is in the parent closure's ptr list
+    // in both cases the ptr is copied to the new closure's ptr list
+    i32 stack_capture_cnt;
+    u32 stack_captures[MAX_LOCALS];
+    i32 parent_capture_cnt;
+    u32 parent_captures[MAX_LOCALS];
+    struct FnDeclNode *parent; 
 };
 
 // TEMP remove when we add functions
@@ -138,12 +148,6 @@ struct ImportNode {
     i32 id;
 };
 
-struct FileNode {
-    struct Node base;
-    struct Node **stmts;
-    u32 cnt;
-};
-
 struct Parser {
     struct ErrList errlist;
     struct Arena arena;
@@ -157,4 +161,4 @@ void init_parser(struct Parser *parser);
 
 void release_parser(struct Parser *parser);
 
-struct FileNode *parse(struct Parser *parser, const char *source);
+struct FnDeclNode *parse(struct Parser *parser, const char *source);

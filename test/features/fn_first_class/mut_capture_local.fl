@@ -1,0 +1,16 @@
+fn a() {
+    var x = 0;
+    fn b() {
+        x += 1;
+        print x;
+    }
+    return b;
+}
+
+fn main() {
+    var b = a();
+    # print 1 
+    b();
+    # print 2
+    b();
+}

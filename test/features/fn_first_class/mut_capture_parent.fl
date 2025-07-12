@@ -1,0 +1,19 @@
+fn a(x) {
+    fn b() {
+        fn c() {
+            x += 1;
+            print x;
+        }
+        return c;
+    }
+    return b;
+}
+
+fn main() {
+    var b = a(0);
+    var c = b();
+    # print 1 
+    c();
+    # print 2
+    c();
+}
