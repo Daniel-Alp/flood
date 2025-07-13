@@ -24,8 +24,13 @@ static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 }
 
 // TODO varargs for runtime error messages
-void runtime_err(struct VM *vm, const char *msg) 
+void runtime_err(u8 *ip, struct VM *vm, const char *msg) 
 {
+    // we keep the ip in a register to avoid doing frame->ip each time
+    // this means we have to update the top frame's ip before we can report errors
+    // however, a foreign function may also call the runtime_err method in which case there is nothing to update
+    if (ip)
+        vm->call_stack[vm->call_cnt-1].ip = ip;
     printf("%s\n", msg);
     for (i32 i = vm->call_cnt-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
@@ -120,8 +125,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(AS_NUM(lhs)+AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -133,8 +137,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(AS_NUM(lhs)-AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -146,8 +149,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(AS_NUM(lhs)*AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -159,8 +161,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(AS_NUM(lhs)/AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -172,8 +173,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(floor(AS_NUM(lhs)/AS_NUM(rhs)));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -185,8 +185,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_NUM(fmod(AS_NUM(lhs),AS_NUM(rhs)));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -198,8 +197,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_BOOL(AS_NUM(lhs)<AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -211,8 +209,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_BOOL(AS_NUM(lhs)<=AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -224,8 +221,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_BOOL(AS_NUM(lhs)>AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -237,8 +233,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 sp[-2] = MK_BOOL(AS_NUM(lhs)>=AS_NUM(rhs));
                 sp--;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operands must be numbers");
+                runtime_err(ip, vm, "operands must be numbers");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -262,8 +257,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (IS_NUM(val)) {
                 sp[-1] = MK_NUM(-AS_NUM(val));
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operand must be number");
+                runtime_err(ip, vm, "operand must be number");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -273,8 +267,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (IS_BOOL(val)) {
                 sp[-1] = MK_BOOL(!AS_BOOL(val));
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operand must be boolean");
+                runtime_err(ip, vm, "operand must be boolean");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -358,18 +351,15 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                         sp[-2] = AS_LIST(container)->vals[(u32)AS_NUM(idx)];
                         sp--;
                     } else {
-                        frame->ip = ip;
-                        runtime_err(vm, "list index out of bounds");
+                        runtime_err(ip, vm, "list index out of bounds");
                         return INTERP_RUNTIME_ERR;
                     }
                 } else {
-                    frame->ip = ip;
-                    runtime_err(vm, "list index must be number");
+                    runtime_err(ip, vm, "list index must be number");
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "object is not subscriptable");
+                runtime_err(ip, vm, "object is not subscriptable");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -386,19 +376,16 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                         sp[-3] = sp[-1];
                         sp -= 2;
                     } else {
-                        frame->ip = ip;
                         // TODO let runtime_err take var args
-                        runtime_err(vm, "list index out of bounds");
+                        runtime_err(ip, vm, "list index out of bounds");
                         return INTERP_RUNTIME_ERR;
                     }
                 } else {
-                    frame->ip = ip;
-                    runtime_err(vm, "list index must be number");
+                    runtime_err(ip, vm, "list index must be number");
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "object is not subscriptable");
+                runtime_err(ip, vm, "object is not subscriptable");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -433,12 +420,11 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 if (entry->chars != NULL) {
                     sp[-1] = entry->val;
                 } else {
-                    runtime_err(vm, "property does not exist");
+                    runtime_err(ip, vm, "property does not exist");
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "attempt to get property of non-object");
+                runtime_err(ip, vm, "attempt to get property of non-object");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -455,8 +441,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 if (!AS_BOOL(val))
                     ip += offset;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operand must be boolean");
+                runtime_err(ip, vm, "operand must be boolean");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -468,8 +453,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 if (AS_BOOL(val))
                     ip += offset;
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "operand must be boolean");
+                runtime_err(ip, vm, "operand must be boolean");
                 return INTERP_RUNTIME_ERR;
             }
             break;
@@ -480,13 +464,11 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (IS_CLOSURE(val)) {
                 struct ClosureObj *closure = AS_CLOSURE(val);
                 if (closure->fn->arity != arg_count) {
-                    frame->ip = ip;
-                    runtime_err(vm, "incorrect number of arguments provided");
+                    runtime_err(ip, vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
                 }
                 if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
-                    frame->ip = ip;
-                    runtime_err(vm, "stack overflow");
+                    runtime_err(ip, vm, "stack overflow");
                     return INTERP_RUNTIME_ERR;
                 }
                 frame->ip = ip; 
@@ -499,13 +481,11 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             } else if (IS_FOREIGN_METHOD(val)) {
                 struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
                 if (f_method->arity != arg_count) {
-                    frame->ip = ip;
-                    runtime_err(vm, "incorrect number of arguments provided");
+                    runtime_err(ip, vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
                 }
                 if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
-                    frame->ip = ip;
-                    runtime_err(vm, "stack overflow");
+                    runtime_err(ip, vm, "stack overflow");
                     return INTERP_RUNTIME_ERR;
                 }
                 frame->ip = ip;
@@ -514,8 +494,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                frame->ip = ip;
-                runtime_err(vm, "attempt to call non-function");
+                runtime_err(ip, vm, "attempt to call non-function");
                 return INTERP_RUNTIME_ERR;
             }
             break;

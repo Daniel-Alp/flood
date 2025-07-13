@@ -1,0 +1,4 @@
+fn main() {
+    var list = [];
+    print list.length();
+}

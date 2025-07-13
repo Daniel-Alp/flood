@@ -104,12 +104,18 @@ static i32 resolve_captured(struct FnDeclNode *node, u32 id)
 static void compile_ident_get_or_set(struct Compiler *compiler, u32 id, bool get, u32 line)
 {
     struct Symbol sym = symbols(compiler)[id];
+    // special case, if a function is referencing itself we can do OP_GET_LOCAL 0
+    // we assume this is always done if we can do it, so this rule takes precedence
+    if (id == compiler->fn_node->id) {
+        emit_byte(cur_chunk(compiler), get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
+        emit_byte(cur_chunk(compiler), 0, line);
+        return;
+    }
     if (sym.depth == 0) {
         emit_byte(cur_chunk(compiler), get ? OP_GET_GLOBAL : OP_SET_GLOBAL, line);
         emit_byte(cur_chunk(compiler), sym.idx, line);
         return;
     }
-
     if (sym.flags & FLAG_CAPTURED) {
         i32 captures_arr_idx = resolve_captured(compiler->fn_node, id);
         // ptr to the value lives on the stack
@@ -123,9 +129,7 @@ static void compile_ident_get_or_set(struct Compiler *compiler, u32 id, bool get
         return;
     } 
     emit_byte(cur_chunk(compiler), get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
-    // a function does not capture itself (even if it invokes itself) and is instead 
-    // treated as the 0th local, which we have a special case here
-    emit_byte(cur_chunk(compiler), id == compiler->fn_node->id ? 0 : sym.idx, line);
+    emit_byte(cur_chunk(compiler), sym.idx, line);
 }
 
 // ident get

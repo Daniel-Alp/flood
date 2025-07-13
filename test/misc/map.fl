@@ -1,0 +1,18 @@
+fn map(list, func) {
+    fn map_inner(i) {
+        if (i < list.len()) {
+            list[i] = func(list[i]);
+            map_inner(i+1);
+        }
+    }
+    map_inner(0);
+}
+
+fn main() {
+    fn sqr(x) {
+        return x * x;
+    }
+    var list = [1, 2, 3, 4];
+    map(list, sqr);
+    print list;
+}

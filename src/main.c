@@ -52,6 +52,7 @@ int main(int argc, const char **argv)
     }
 
     // print_node(ast, 0);
+    // printf("\n");
 
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);

@@ -1,0 +1,32 @@
+fn sort(list, comp) {
+    # i is idx cur
+    # j is idx min
+    fn select(i, j) {
+        if (i == list.len()) {
+            return j;
+        }
+        if (comp(list[i], list[j])) {
+            j = i;
+        }
+        return select(i+1, j);
+    }
+    fn sort_inner(i) {
+        if (i < list.len()) {
+            var j = select(i, i);
+            var tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
+            sort_inner(i+1);
+        }
+    }
+    sort_inner(0);
+}
+
+fn main() {
+    var list = [16, 15, 12, 14, 13, 11, 10, 2, 8, 7, 6, 9, 4, 3, 5, 1];
+    fn comp(x, y) {
+        return x < y;
+    }
+    sort(list, comp);
+    print list;
+}

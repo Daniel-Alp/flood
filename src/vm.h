@@ -41,7 +41,7 @@ void init_vm(struct VM *vm);
 
 void release_vm(struct VM *vm);
 
-void runtime_err(struct VM *vm, const char *msg);
+void runtime_err(u8 *ip, struct VM *vm, const char *msg);
 
 enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure);
 

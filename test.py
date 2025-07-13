@@ -12,32 +12,26 @@ def diff(testpath: str, snappath: str) -> None:
         subprocess.run(["./build/flood", testpath], stdout=tmp)
         tmp.flush()
         tmp.seek(0)
-        try:
-            diff = difflib.unified_diff(snapshot.readlines(), tmp.readlines(), n=0)
-            next(diff)
-            next(diff)
+        diff = list(difflib.unified_diff(snapshot.readlines(), tmp.readlines(), n=0))
+        if not diff:
+            print(f"\033[32m{testpath}\033[0m")
+        else:
             print(f"\033[31m{testpath}\033[0m\n")
             for line in diff:
                 if line.startswith("-"):
-                    print(f"\033[31m{line}\033[0m",end="")
+                    print(f"\033[31m{line}\033[0m", end="")
                 elif line.startswith("+"):
-                    print(f"\033[32m{line}\033[0m",end="")
+                    print(f"\033[32m{line}\033[0m", end="")
                 else:
-                    print(line,end="")
+                    print(line, end="")
             print()
-        except StopIteration:
-            # the diff iterator was empty meaning the test passed
-            print(f"\033[32m{testpath}\033[0m")
 
 def upgrade(testpath: str, snappath: str) -> None:
     snapdir = snappath[:snappath.rfind("/")]
     os.makedirs(snapdir, exist_ok=True)
     with open(snappath, "w") as snapshot:
         subprocess.run(["./build/flood", testpath], stdout=snapshot)
-        if os.path.isfile(snappath):
-            print(f"\033[32mupgraded: {snappath}\033[0m")
-        else:
-            print(f"\033[32mcreated: {snappath}\033[0m")
+        print(f"\033[32mupgraded: {snappath}\033[0m")
 
 def run() -> None:
     argv = sys.argv

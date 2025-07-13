@@ -43,7 +43,7 @@ static bool list_pop(struct VM *vm, struct Obj* self)
 {
     struct ListObj *list = (struct ListObj*)self;
     if (list->cnt == 0) {
-        runtime_err(vm, "pop from empty list");
+        runtime_err(NULL, vm, "pop from empty list");
         return false;
     }
     list->cnt--;
