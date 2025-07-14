@@ -8,8 +8,6 @@
 #include "debug.h"
 #include "foreign.h"
 
-// TODO add proper comments
-
 static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 {
     // see chunk.h
@@ -26,9 +24,10 @@ static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
 // TODO varargs for runtime error messages
 void runtime_err(u8 *ip, struct VM *vm, const char *msg) 
 {
-    // we keep the ip in a register to avoid doing frame->ip each time
-    // this means we have to update the top frame's ip before we can report errors
-    // however, a foreign function may also call the runtime_err method in which case there is nothing to update
+    // NOTE: 
+    // we put ip in a local variable for performance
+    // this means we need to save the top frame's ip before we print the stack trace.
+    // however, a foreign method can also call run_time err, in which case there is nothing to save.
     if (ip)
         vm->call_stack[vm->call_cnt-1].ip = ip;
     printf("%s\n", msg);
@@ -472,7 +471,6 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                     return INTERP_RUNTIME_ERR;
                 }
                 frame->ip = ip; 
-                
                 vm->call_cnt++;
                 frame++;
                 frame->bp = sp-1-arg_count;
@@ -503,6 +501,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             vm->call_cnt--;
             if (vm->call_cnt == 0)
                 return INTERP_OK;
+            // NOTE: 
             // when a function returns the stack looks like this
             // bp-> <function foo> 
             //      <arg>
@@ -512,8 +511,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             //      ...
             //      <local> <-return value
             // sp-> 
-            frame->bp[0] = sp[-1]; // move return value 
-            sp = frame->bp + 1;    // pop locals
+            frame->bp[0] = sp[-1];
+            sp = frame->bp + 1;   
             frame--; 
             ip = frame->ip;
             break;

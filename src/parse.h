@@ -95,8 +95,8 @@ struct FnDeclNode {
     struct IdentNode *params;
     i32 arity;
     i32 id;
-    // when a closure is created at runtime there are two ways 
-    // to get a ptr to a captured value
+    // NOTE: 
+    // when a closure is created at runtime there are two ways to get a ptr to a captured value
     //      (1) the ptr is in the current stack frame
     //      (2) the ptr is in the parent closure's ptr list
     // in both cases the ptr is copied to the new closure's ptr list

@@ -6,6 +6,7 @@ struct Chunk {
     u32 cnt;
     u32 cap;
     u8 *code;
+    // NOTE: 
     // representing line info
     //      var x;
     //      x = 1 + 2;
@@ -24,7 +25,6 @@ struct Chunk {
     //      1       opcode cnt
     //      2       line no
     //      8       opcode_cnt
-    // this is wasteful, but good enough for now
     u32 lines_cnt; 
     u32 lines_cap;                 
     u32 *lines;

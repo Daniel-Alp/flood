@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include "sema.h"
 
-// TODO add proper comments
-
 // TEMP remove globals when we added user-defined classes
 
 void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr) 
@@ -37,29 +35,35 @@ static i32 resolve_ident(struct SemaState *sema, struct Span span)
 
 static void analyze_node(struct SemaState *sema, struct Node *node);
 
-// (1) when we analyze an identifier we call this method to update 
-//     the stack_captures and parent_captures of the fn 
-// (2) when we finish analyzing a fn body we call this method
-//     with the ids of the fn's parent_captures arr to update 
-//     the stack_captures and parent_captures of the fn's parent
+// NOTE: 
+// given a fn and an ident, we update the capture arrs of the fn
+// we do this
+//      (1) when we analyze an ident we update the stack_captures and parent_captures of the fn
+//      (2) after analyzing fn body we propagate captures to its parent. for example
+//          fn foo() {
+//              var x = 1;
+//              fn bar() {
+//                  var y = 2;
+//                  fn baz() {
+//                      print x + y;
+//                  }
+//                  return baz;
+//              }
+//              return bar;
+//          }
+//          in this case y is in the stack_captures of baz and x is in the parent_captures of baz 
+//          we take every ident in the parent_captures of baz, and use it to update the captures arrs of bar
 static void update_captures(struct SemaState *sema, u32 id)
 {
     struct Symbol *sym = &sema->sym_arr->symbols[id];
     struct FnDeclNode *fn = sema->fn;
     struct FnDeclNode *parent = fn->parent;
-    // special case. consider the following example
-    //      fn foo() {
-    //          fn bar() {
-    //              print 1;
-    //              return bar;     
-    //          }
-    //          return bar;         
-    //      }
-    // in this case we don't have to put bar on the heap since every time we call bar 
-    // it'll be the 0th local in it's own call frame
-    // special case: globals can't be captured 
-    // TODO later we'll have to change this so that field members don't have to be captured
-    if (sym->depth > sema->sym_arr->symbols[fn->id].depth || id == fn->id || sym->depth == 0)
+    // NOTE: 
+    // special cases. 
+    // if sym->depth == 0 the ident is global so we don't need to capture it.
+    // if id == fn->id then the fn we're compiling needs a ptr to itself,
+    // we can get this from the current stack frame.
+    if (sym->depth > sema->sym_arr->symbols[fn->id].depth || sym->depth == 0 || id == fn->id)
         return;
     for (i32 i = 0; i < fn->stack_capture_cnt; i++) {
         if (id == fn->stack_captures[i])
@@ -72,11 +76,9 @@ static void update_captures(struct SemaState *sema, u32 id)
     sym->flags |= FLAG_CAPTURED; 
     // TODO handle more than 256 captures
     if (!parent || sym->depth > sema->sym_arr->symbols[parent->id].depth || id == parent->id) {
-        // get ptr to captured value from the stack
         fn->stack_captures[fn->stack_capture_cnt] = id;
         fn->stack_capture_cnt++;
     } else {
-        // get ptr to captured value from the parent's ptr list
         fn->parent_captures[fn->parent_capture_cnt] = id;
         fn->parent_capture_cnt++;
     }
@@ -179,12 +181,13 @@ static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node)
     if (node->init)
         analyze_node(sema, node->init);
     // TODO error if more than 256 locals
-    // NOTE I don't support global variables because global variables
-    // are being replaced by a different system altogether
+    // NOT:
+    // I don't support global variables because globals are being replaced by a different system altogether
     sema->locals[sema->local_cnt] = id;
     sema->local_cnt++;
 }
 
+// NOTE: 
 // we split analyzing the function signature and body 
 // to allow for mutually recursive functions at the top level
 static void analyze_fn_signature(struct SemaState *sema, struct FnDeclNode *node) 
@@ -243,7 +246,6 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     sema->local_cnt = local_cnt;
     sema->fn = node->parent;
     
-    // update the parent's captures based on the fn's parent_captures
     for (i32 i = 0; i < node->parent_capture_cnt; i++)
         update_captures(sema, node->parent_captures[i]);
 }
@@ -276,12 +278,6 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
 void analyze(struct SemaState *sema, struct FnDeclNode *node)
 {
     // TODO I should probably be clearing the errorlist each time
-
-    // TODO
-    // For now, at runtime, every top-level function will permanently live at the bottom of the stack
-    // this means you are very limited on how many locals you can have, but none of the test
-    // cases come close to this limit so far
-    // this will become an issue in the future though
     struct BlockNode *body = node->body;
     for (i32 i = 0; i < body->cnt; i++) 
         analyze_fn_signature(sema, (struct FnDeclNode*)body->stmts[i]);

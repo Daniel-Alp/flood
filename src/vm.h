@@ -26,7 +26,6 @@ struct VM {
 
     Value *sp;
     Value val_stack[MAX_STACK];
-    // stack pointer is stored in the run_vm function
 
     struct ValArray globals;
     

@@ -18,7 +18,8 @@ void init_foreign_method_obj(
 
 void release_foreign_method_obj(struct ForeignMethodObj *f_method)
 {
-    f_method->self = NULL; // method does not own foreign object
+    // method does not own foreign object
+    f_method->self = NULL; 
     release(f_method->name);
     f_method->name = NULL;
     f_method->arity = 0;
@@ -46,6 +47,7 @@ void init_heap_val_obj(struct HeapValObj *heap_val, Value val)
     heap_val->val = val;
 }
 
+// NOTE: 
 // init_closure_obj only creates fn and allocates memory for the heap vals array
 // in the run_vm function the heap vals ptrs are set
 void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 n) 
@@ -65,7 +67,7 @@ void release_closure_obj(struct ClosureObj *closure)
     closure->captures = NULL;
 }
 
-// vals points to the start of the list's elements in the stack 
+// NOTE: vals points to the start of the list's elements in the stack 
 void init_list_obj(struct ListObj *list, Value *vals, u32 cnt)
 {
     list->base.tag = OBJ_LIST;

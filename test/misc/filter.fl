@@ -1,0 +1,24 @@
+fn filter(list, pred) {
+    var res = [];
+    fn filter_inner(i) {
+        if (i == list.len()) {
+            return res;
+        }
+        var elem = list[i];
+        if (pred(elem)) {
+            res.push(elem);
+        }
+        return filter_inner(i+1);
+    }
+    return filter_inner(0);
+}
+
+fn main() {
+    var list = [1, 2, 2, 4, 4, -1, -3, 4, 2, 8, 4, 6];
+    var threshold = 4;
+    fn pred(x) {
+        return x >= threshold;
+    }
+    var filtered = filter(list, pred);
+    print filtered;
+}
