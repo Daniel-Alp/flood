@@ -59,12 +59,12 @@ static void print_binary(struct BinaryNode *node, u32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_get_prop(struct GetPropNode *node, u32 offset)
+static void print_attr(struct AttrNode *node, u32 offset)
 {
     printf("GetProp");
     print_node(node->lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
-    printf("%.*s", node->prop.len, node->prop.start);
+    printf("%.*s", node->attr.len, node->attr.start);
 }
 
 static void print_fn_call(struct FnCallNode *node, u32 offset) 
@@ -119,11 +119,11 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset)
     printf("%*s", offset + 2, "");
     printf("%.*s(", node->base.span.len, node->base.span.start);
     for (i32 i = 0; i < node->arity-1; i++) {
-        struct IdentNode param = node->params[i];
+        struct VarDeclNode param = node->params[i];
         printf("%.*s id: %d, ", param.base.span.len, param.base.span.start, param.id);
     }
     if (node->arity > 0) {
-        struct IdentNode param = node->params[node->arity-1];
+        struct VarDeclNode param = node->params[node->arity-1];
         printf("%.*s id: %d", param.base.span.len, param.base.span.start, param.id);
     }
     printf(") id: %d\n", node->id);
@@ -168,7 +168,7 @@ void print_node(struct Node *node, u32 offset)
     case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
     case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_PROP:  print_get_prop((struct GetPropNode*)node, offset); break;
+    case NODE_ATTR:      print_attr((struct AttrNode*)node, offset); break;
     case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
     case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:        print_if((struct IfNode*)node, offset); break;
@@ -218,7 +218,7 @@ const char *opcode_str[] = {
     [OP_SET_GLOBAL]    = "OP_SET_GLOBAL",
     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
-    [OP_GET_PROP]      = "OP_GET_PROP",
+    [OP_GET_ATTR]      = "OP_GET_ATTR",
     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
     [OP_JUMP]          = "OP_JUMP",
@@ -258,16 +258,16 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         case OP_JUMP:          
             printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
             break;
-        case OP_GET_PROP:
+        case OP_GET_ATTR:
         case OP_GET_CONST: {
             print_val(chunk->constants.vals[chunk->code[++i]]);
             printf("\n");
             break;
         }
         case OP_CLOSURE: {
-            u32 stack_captures = chunk->code[++i];
+            u8 stack_captures = chunk->code[++i];
             printf("%d\n", stack_captures); 
-            u32 parent_captures = chunk->code[++i];
+            u8 parent_captures = chunk->code[++i];
             printf("     | %*s%d\n", 20, "", parent_captures);
             for (i32 j = 0; j < stack_captures + parent_captures; j++)
                 printf("     | %*s%d\n", 20, "", chunk->code[++i]);

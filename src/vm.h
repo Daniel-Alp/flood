@@ -31,8 +31,8 @@ struct VM {
     
     // linked list of all objects
     struct Obj *obj_list;
-    u32 gray_cnt;
-    u32 gray_cap;
+    i32 gray_cnt;
+    i32 gray_cap;
     struct Obj **gray;
 };
 

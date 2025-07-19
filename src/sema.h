@@ -3,9 +3,9 @@
 #include "parse.h"
 
 struct SemaState {
-    u32 depth;                // level of nestedness while traversing AST
-    u32 local_cnt;            // num locals on stack while traversing AST 
-    u32 locals[MAX_LOCALS];   // ids of locals on the stack while traversing AST
+    i32 depth;                // level of nestedness while traversing AST
+    i32 local_cnt;            // num locals on stack while traversing AST 
+    i32 locals[MAX_LOCALS];   // ids of locals on the stack while traversing AST
     struct SymArr *sym_arr;
     struct FnDeclNode *fn;    // fn we are inside of while traversing AST
     struct ErrList errlist;

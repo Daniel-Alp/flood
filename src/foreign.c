@@ -10,8 +10,8 @@ static void bind_foreign_method(
     struct Obj *self,           // instance method is bound to
     struct ValTable *table,     // instance method table
     char *name,                 // chars of method name
-    u32 len,                    // length of method name
-    u32 arity,                  // arity of method
+    i32 len,                    // length of method name
+    i32 arity,                  // arity of method
     ForeignMethod code
 ) {
     // TODO every instance has it's own copy of the name characters, which is wasteful

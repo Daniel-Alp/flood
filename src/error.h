@@ -7,8 +7,8 @@ struct ErrMsg {
 };
 
 struct ErrList {
-    u32 cnt;
-    u32 cap;
+    i32 cnt;
+    i32 cap;
     struct ErrMsg *errs;
 };
 

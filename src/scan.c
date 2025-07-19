@@ -125,9 +125,9 @@ static struct Token check_at(struct Scanner *scanner, char c, enum TokenTag tag1
     return mk_token(scanner, tag2);
 }
 
-static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenTag tag) 
+static struct Token check_keyword(struct Scanner *scanner, const char *rest, i32 length, enum TokenTag tag) 
 {
-    u32 token_length = scanner->current - scanner->start;
+    i32 token_length = scanner->current - scanner->start;
     if (token_length != length || memcmp(scanner->start+1, rest, length-1) != 0)
         return mk_token(scanner, TOKEN_IDENTIFIER);
     return mk_token(scanner, tag);
@@ -185,6 +185,7 @@ struct Token next_token(struct Scanner *scanner)
                     return check_keyword(scanner, "s", 2, TOKEN_AS);
                 else
                     return check_keyword(scanner, "nd", 3, TOKEN_AND);
+            case 'c': return check_keyword(scanner, "lass", 5, TOKEN_CLASS);
             case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
             case 'f':
                 if (scanner->start[1] == 'n')

@@ -46,6 +46,7 @@ enum TokenTag {
     TOKEN_IMPORT,
     TOKEN_AS,
 
+    TOKEN_CLASS,
     TOKEN_FN,
     TOKEN_VAR,
     TOKEN_IF,
@@ -66,13 +67,13 @@ struct Scanner {
     const char *source;
     const char *start;
     const char *current;
-    u32 line;
+    i32 line;
 };
 
 struct Span {
     const char *start;
     i32 len;
-    u32 line;
+    i32 line;
 };
 
 struct Token {

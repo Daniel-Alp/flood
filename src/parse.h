@@ -12,7 +12,7 @@ enum NodeTag {
     // +, -, *, /, and, or, [
     // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
     NODE_BINARY,    
-    NODE_PROP,      // foo.bar
+    NODE_ATTR,      // foo.bar
     NODE_FN_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
@@ -39,7 +39,7 @@ struct ListNode {
     // span is `[`
     struct Node base;
     struct Node **items;
-    u32 cnt;
+    i32 cnt;
 };
 
 struct IdentNode {
@@ -63,13 +63,13 @@ struct BinaryNode {
     enum TokenTag op_tag;
 }; 
 
-struct GetPropNode {
+struct AttrNode {
     // span is `.`
     struct Node base;
     struct Node *lhs;
     //      foo.bar
-    //          ^~~ prop
-    struct Span prop;
+    //          ^~~ attr
+    struct Span attr;
 };
 
 struct FnCallNode {
@@ -78,32 +78,37 @@ struct FnCallNode {
     // the expression that is being called
     struct Node *lhs;
     struct Node **args;
-    u32 arity;
+    i32 arity;
 };
 
+// NOTE: params and locals, and instance attributes are all represented as a VarDeclNode in AST
 struct VarDeclNode {
     // span is identifier
     struct Node base;
     struct Node *init;
     i32 id;
+    bool var_keyword; // true if `var x;` or `class Foo(var x)` false if `fn foo(x)`
 };
 
+// NOTE: a class is represented as a FnDeclNode in the AST. 
+//       this is because the class declaration is its constructor.
 struct FnDeclNode {
     // span is identifier
     struct Node base;
     struct BlockNode *body;
-    struct IdentNode *params;
+    struct VarDeclNode *params;
     i32 arity;
     i32 id;
+    bool is_constructor; // true if `class Foo()` false if `fn foo()`
     // NOTE: 
     // when a closure is created at runtime there are two ways to get a ptr to a captured value
     //      (1) the ptr is in the current stack frame
     //      (2) the ptr is in the parent closure's ptr list
     // in both cases the ptr is copied to the new closure's ptr list
     i32 stack_capture_cnt;
-    u32 stack_captures[MAX_LOCALS];
+    i32 stack_captures[MAX_LOCALS];
     i32 parent_capture_cnt;
-    u32 parent_captures[MAX_LOCALS];
+    i32 parent_captures[MAX_LOCALS];
     struct FnDeclNode *parent; 
 };
 
@@ -124,7 +129,7 @@ struct BlockNode {
     // span is `{`
     struct Node base;
     struct Node **stmts;
-    u32 cnt;
+    i32 cnt;
 };
 
 struct IfNode {

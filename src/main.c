@@ -51,8 +51,7 @@ int main(int argc, const char **argv)
         goto err_release_sema_state;
     }
 
-    // print_node(ast, 0);
-    // printf("\n");
+    print_node(ast, 0);
 
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);
@@ -86,7 +85,7 @@ int main(int argc, const char **argv)
     release(buf);
     fclose(fp);
 
-    run_vm(&vm, closure);
+    // run_vm(&vm, closure);
     release_vm(&vm);
     return 0;
 

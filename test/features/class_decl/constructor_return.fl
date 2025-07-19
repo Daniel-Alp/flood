@@ -1,0 +1,13 @@
+class Foo() {
+    return 4;
+}
+
+class Bar() {
+    if (true) {
+
+    } else {
+        {
+            return 3;
+        }
+    }
+}

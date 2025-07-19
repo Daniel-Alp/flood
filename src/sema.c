@@ -53,7 +53,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node);
 //          }
 //          in this case y is in the stack_captures of baz and x is in the parent_captures of baz 
 //          we take every ident in the parent_captures of baz, and use it to update the captures arrs of bar
-static void update_captures(struct SemaState *sema, u32 id)
+static void update_captures(struct SemaState *sema, i32 id)
 {
     struct Symbol *sym = &sema->sym_arr->symbols[id];
     struct FnDeclNode *fn = sema->fn;
@@ -118,7 +118,7 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
     analyze_node(sema, node->rhs);
 }
 
-static void analyze_get_prop(struct SemaState *sema, struct GetPropNode *node)
+static void analyze_attr(struct SemaState *sema, struct AttrNode *node)
 {
     analyze_node(sema, node->lhs);
 }
@@ -132,7 +132,7 @@ static void analyze_fn_call(struct SemaState *sema, struct FnCallNode *node)
 
 static void analyze_block(struct SemaState *sema, struct BlockNode *node) 
 {
-    u32 local_cnt = sema->local_cnt;
+    i32 local_cnt = sema->local_cnt;
     sema->depth++;
     for (i32 i = 0; i < node->cnt; i++)
         analyze_node(sema, node->stmts[i]);
@@ -224,7 +224,7 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     // push state and enter the fn
     node->parent = sema->fn;
     sema->fn = node;
-    u32 local_cnt = sema->local_cnt;
+    i32 local_cnt = sema->local_cnt;
 
     for (i32 i = 0; i < node->arity; i++) {
         struct Span span = node->params[i].base.span;
@@ -234,7 +234,7 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
             .depth = sema->depth + 1,
             .idx   = -1
         };
-        u32 id = push_symbol_arr(sema->sym_arr, sym);
+        i32 id = push_symbol_arr(sema->sym_arr, sym);
         node->params[i].id = id;
         // TODO error if more than 256 locals
         sema->locals[sema->local_cnt] = id;
@@ -258,7 +258,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
-    case NODE_PROP:      analyze_get_prop(sema, (struct GetPropNode*)node); break;
+    case NODE_ATTR:      analyze_attr(sema, (struct AttrNode*)node); break;
     case NODE_FN_CALL:   analyze_fn_call(sema, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
     case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;

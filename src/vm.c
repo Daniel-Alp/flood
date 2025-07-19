@@ -347,7 +347,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (IS_LIST(container)) {
                 if (IS_NUM(idx)) {
                     if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->cnt) {
-                        sp[-2] = AS_LIST(container)->vals[(u32)AS_NUM(idx)];
+                        sp[-2] = AS_LIST(container)->vals[(i32)AS_NUM(idx)];
                         sp--;
                     } else {
                         runtime_err(ip, vm, "list index out of bounds");
@@ -370,7 +370,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             if (IS_LIST(container)) {
                 if (IS_NUM(idx)) {
                     if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->cnt) {
-                        AS_LIST(container)->vals[(u32)AS_NUM(idx)] = val;
+                        AS_LIST(container)->vals[(i32)AS_NUM(idx)] = val;
                         // TODO consider making assignment a statement rather than an expression
                         sp[-3] = sp[-1];
                         sp -= 2;
@@ -400,10 +400,10 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             vm->globals.vals[idx] = sp[-1];
             break;
         }
-        // TODO implement OP_GET_PROP for class members
+        // TODO implement OP_GET_ATTR for class members
         // TODO implement OP_INVOKE optimization
         // TODO string interning to optimize method lookup
-        case OP_GET_PROP: {
+        case OP_GET_ATTR: {
             u8 idx = *ip++;
             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
             Value val = sp[-1];
@@ -419,11 +419,11 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 if (entry->chars != NULL) {
                     sp[-1] = entry->val;
                 } else {
-                    runtime_err(ip, vm, "property does not exist");
+                    runtime_err(ip, vm, "attribute does not exist");
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                runtime_err(ip, vm, "attempt to get property of non-object");
+                runtime_err(ip, vm, "attempt to get attribute of non-object");
                 return INTERP_RUNTIME_ERR;
             }
             break;

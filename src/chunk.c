@@ -9,7 +9,7 @@ void init_chunk(struct Chunk *chunk)
     chunk->code = allocate(chunk->cap * sizeof(u8));
     chunk->lines_cnt = 0;
     chunk->lines_cap = 8;
-    chunk->lines = allocate(chunk->lines_cap * sizeof(u32));
+    chunk->lines = allocate(chunk->lines_cap * sizeof(i32));
     init_val_array(&chunk->constants);
 }
 
@@ -28,12 +28,12 @@ void release_chunk(struct Chunk *chunk)
     release_val_array(&chunk->constants);
 }
 
-void emit_byte(struct Chunk *chunk, u8 byte, u32 line) 
+void emit_byte(struct Chunk *chunk, u8 byte, i32 line) 
 {
     if (chunk->lines_cnt == 0 || chunk->lines[chunk->lines_cnt-2] != line) {
         if (chunk->lines_cnt + 2 >= chunk->lines_cap) {
             chunk->lines_cap *= 2;
-            chunk->lines = reallocate(chunk->lines, chunk->lines_cap * sizeof(u32));
+            chunk->lines = reallocate(chunk->lines, chunk->lines_cap * sizeof(i32));
         }
         chunk->lines_cnt += 2;
         chunk->lines[chunk->lines_cnt-2] = line;
@@ -50,7 +50,7 @@ void emit_byte(struct Chunk *chunk, u8 byte, u32 line)
     chunk->cnt++;
 }
 
-u32 add_constant(struct Chunk *chunk, Value val) 
+i32 add_constant(struct Chunk *chunk, Value val) 
 {
     return push_val_array(&chunk->constants, val);
 }
