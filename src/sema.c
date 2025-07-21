@@ -118,7 +118,7 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
     analyze_node(sema, node->rhs);
 }
 
-static void analyze_get_prop(struct SemaState *sema, struct GetPropNode *node)
+static void analyze_get_prop(struct SemaState *sema, struct PropNode *node)
 {
     analyze_node(sema, node->lhs);
 }
@@ -258,7 +258,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
-    case NODE_PROP:      analyze_get_prop(sema, (struct GetPropNode*)node); break;
+    case NODE_PROP:      analyze_get_prop(sema, (struct PropNode*)node); break;
     case NODE_FN_CALL:   analyze_fn_call(sema, (struct FnCallNode*)node); break;
     case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
     case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;

@@ -59,7 +59,7 @@ static void print_binary(struct BinaryNode *node, u32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_get_prop(struct GetPropNode *node, u32 offset)
+static void print_get_prop(struct PropNode *node, u32 offset)
 {
     printf("GetProp");
     print_node(node->lhs, offset + 2);
@@ -168,7 +168,7 @@ void print_node(struct Node *node, u32 offset)
     case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
     case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_PROP:  print_get_prop((struct GetPropNode*)node, offset); break;
+    case NODE_PROP:  print_get_prop((struct PropNode*)node, offset); break;
     case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
     case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:        print_if((struct IfNode*)node, offset); break;

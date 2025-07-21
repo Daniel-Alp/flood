@@ -1,71 +1,7 @@
-#define _XOPEN_SOURCE 700
 #include <stdlib.h>
 #include <stdio.h>
 #include "memory.h"
 #include "parse.h"
-
-struct PrecLvl {
-    u32 old;
-    u32 new;
-};
-
-static struct PrecLvl infix_prec(enum TokenTag tag) 
-{
-    switch (tag) {
-    case TOKEN_EQ:
-    case TOKEN_PLUS_EQ:
-    case TOKEN_MINUS_EQ:
-    case TOKEN_STAR_EQ:
-    case TOKEN_SLASH_EQ:
-    case TOKEN_SLASH_SLASH_EQ:
-    case TOKEN_PERCENT_EQ:
-        return (struct PrecLvl){.old = 1, .new = 2};
-    case TOKEN_OR:
-        return (struct PrecLvl){.old = 3, .new = 3};
-    case TOKEN_AND:
-        return (struct PrecLvl){.old = 5, .new = 5};
-    case TOKEN_EQEQ:
-    case TOKEN_NEQ:
-        return (struct PrecLvl){.old = 7, .new = 8};
-    case TOKEN_LT:
-    case TOKEN_LEQ:
-    case TOKEN_GT:
-    case TOKEN_GEQ:
-        return (struct PrecLvl){.old = 9, .new = 10};
-    case TOKEN_PLUS:
-    case TOKEN_MINUS:
-        return (struct PrecLvl){.old = 11, .new = 12};
-    case TOKEN_STAR:
-    case TOKEN_SLASH:
-    case TOKEN_SLASH_SLASH:
-    case TOKEN_PERCENT:
-        return (struct PrecLvl){.old = 13, .new = 14};
-    // we view `[` as binary operator lhs[rhs]
-    // the old precedence is high because the operator binds tightly
-    //      e.g. x * y[0] is parsed as x * (y[0])
-    // but the expression within the [ ] should be parsed from the starting 
-    // precedence level, similar to show ( ) resets the precedence level
-    case TOKEN_L_SQUARE:
-        return (struct PrecLvl){.old = 15, .new = 1};
-    default:
-        return (struct PrecLvl){.old = 0, .new = 0};
-    }
-}
-
-// returns whether this token can start an expression
-static bool expr_first(enum TokenTag tag)
-{
-    // TODO add strings
-    return tag == TOKEN_TRUE 
-        || tag == TOKEN_FALSE
-        || tag == TOKEN_NUMBER
-        || tag == TOKEN_STRING
-        || tag == TOKEN_IDENTIFIER
-        || tag == TOKEN_L_SQUARE
-        || tag == TOKEN_L_PAREN
-        || tag == TOKEN_MINUS
-        || tag == TOKEN_NOT;
-}
 
 void init_parser(struct Parser *parser) 
 {
@@ -80,7 +16,6 @@ void release_parser(struct Parser *parser)
     release_arena(&parser->arena);
 }
 
-// dynarray of pointers 
 struct PtrArray {
     u32 cap;
     u32 cnt;
@@ -112,7 +47,16 @@ static void push_ptr_array(struct PtrArray *arr, void *ptr)
     arr->cnt++;
 }
 
-// dynarray of Idents
+// moves contents of ptr array onto arena and release ptr array
+static void **mv_ptr_array_to_arena(struct Arena *arena, struct PtrArray *arr) 
+{
+    void **nodes = push_arena(arena, arr->cnt * sizeof(void*));
+    for (i32 i = 0; i < arr->cnt; i++)
+        nodes[i] = arr->ptrs[i];
+    release_ptr_array(arr);
+    return nodes;
+}
+
 struct IdentArray {
     u32 cap;
     u32 cnt;
@@ -152,16 +96,6 @@ static struct IdentNode *mv_ident_array_to_arena(struct Arena *arena, struct Ide
         idents[i] = arr->idents[i];
     release_ident_array(arr);
     return idents;
-}
-
-// moves contents of ptr array onto arena and release ptr array
-static void **mv_ptr_array_to_arena(struct Arena *arena, struct PtrArray *arr) 
-{
-    void **nodes = push_arena(arena, arr->cnt * sizeof(void*));
-    for (i32 i = 0; i < arr->cnt; i++)
-        nodes[i] = arr->ptrs[i];
-    release_ptr_array(arr);
-    return nodes;
 }
 
 static struct AtomNode *mk_atom(struct Arena *arena, struct Token token) 
@@ -218,9 +152,9 @@ static struct BinaryNode *mk_binary(
     return node;
 }
 
-static struct GetPropNode *mk_get_prop(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
+static struct PropNode *mk_prop(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
 {
-    struct GetPropNode *node = push_arena(arena, sizeof(struct GetPropNode));
+    struct PropNode *node = push_arena(arena, sizeof(struct PropNode));
     node->base.span = span;
     node->base.tag = NODE_PROP;
     node->lhs = lhs;
@@ -374,7 +308,68 @@ static void recover_block(struct Parser *parser)
     }
 }
 
-static struct BlockNode *parse_block(struct Parser *parser);
+struct PrecLvl {
+    u32 old;
+    u32 new;
+};
+
+static struct PrecLvl infix_prec(enum TokenTag tag) 
+{
+    switch (tag) {
+    case TOKEN_EQ:
+    case TOKEN_PLUS_EQ:
+    case TOKEN_MINUS_EQ:
+    case TOKEN_STAR_EQ:
+    case TOKEN_SLASH_EQ:
+    case TOKEN_SLASH_SLASH_EQ:
+    case TOKEN_PERCENT_EQ:
+        return (struct PrecLvl){.old = 1, .new = 2};
+    case TOKEN_OR:
+        return (struct PrecLvl){.old = 3, .new = 3};
+    case TOKEN_AND:
+        return (struct PrecLvl){.old = 5, .new = 5};
+    case TOKEN_EQEQ:
+    case TOKEN_NEQ:
+        return (struct PrecLvl){.old = 7, .new = 8};
+    case TOKEN_LT:
+    case TOKEN_LEQ:
+    case TOKEN_GT:
+    case TOKEN_GEQ:
+        return (struct PrecLvl){.old = 9, .new = 10};
+    case TOKEN_PLUS:
+    case TOKEN_MINUS:
+        return (struct PrecLvl){.old = 11, .new = 12};
+    case TOKEN_STAR:
+    case TOKEN_SLASH:
+    case TOKEN_SLASH_SLASH:
+    case TOKEN_PERCENT:
+        return (struct PrecLvl){.old = 13, .new = 14};
+    // we view `[` as binary operator lhs[rhs]
+    // the old precedence is high because the operator binds tightly
+    //      e.g. x * y[0] is parsed as x * (y[0])
+    // but the expression within the [ ] should be parsed from the starting 
+    // precedence level, similar to show ( ) resets the precedence level
+    case TOKEN_L_SQUARE:
+        return (struct PrecLvl){.old = 15, .new = 1};
+    default:
+        return (struct PrecLvl){.old = 0, .new = 0};
+    }
+}
+
+// returns whether this token can start an expression
+static bool expr_first(enum TokenTag tag)
+{
+    // TODO add strings
+    return tag == TOKEN_TRUE 
+        || tag == TOKEN_FALSE
+        || tag == TOKEN_NUMBER
+        || tag == TOKEN_STRING
+        || tag == TOKEN_IDENTIFIER
+        || tag == TOKEN_L_SQUARE
+        || tag == TOKEN_L_PAREN
+        || tag == TOKEN_MINUS
+        || tag == TOKEN_NOT;
+}
 
 // e.g. given += return + and return -1 if cannot be desugared
 static i32 desugar(enum TokenTag tag) {
@@ -386,6 +381,25 @@ static i32 desugar(enum TokenTag tag) {
     case TOKEN_SLASH_SLASH_EQ: return TOKEN_SLASH_SLASH;
     case TOKEN_PERCENT_EQ:     return TOKEN_PERCENT;
     default:                   return -1;
+    }
+}
+
+static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl);
+
+// precondition: `[` or `(` token consumed
+// parses arguments and fills the ptr array provided
+static void parse_arg_list(struct Parser *parser, struct PtrArray *args_tmp, enum TokenTag tag_right)
+{
+    while(at(parser).tag != tag_right && at(parser).tag != TOKEN_EOF) {
+        // breaking early helps when the right token is missing
+        if (!expr_first(at(parser).tag)) {
+            emit_err(parser, at(parser).span, "expected expression");
+            break;
+        }
+        struct Node *arg = parse_expr(parser, 1);
+        push_ptr_array(args_tmp, arg);
+        if (at(parser).tag != tag_right)
+            expect(parser, TOKEN_COMMA, "expected `,`");            
     }
 }
 
@@ -409,17 +423,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
     case TOKEN_L_SQUARE:
         struct PtrArray items_tmp;
         init_ptr_array(&items_tmp);
-        while(at(parser).tag != TOKEN_R_SQUARE && at(parser).tag != TOKEN_EOF) {
-            // breaking early helps when the closing `]` is missing
-            if (!expr_first(at(parser).tag)) {
-                emit_err(parser, at(parser).span, "expected expression");
-                break;
-            }
-            struct Node *item = parse_expr(parser, 1);
-            push_ptr_array(&items_tmp, item);
-            if (at(parser).tag != TOKEN_R_SQUARE)
-                expect(parser, TOKEN_COMMA, "expected `,`");
-        }
+        parse_arg_list(parser, &items_tmp, TOKEN_R_SQUARE);
         expect(parser, TOKEN_R_SQUARE, "expected `]`");
         u32 cnt = items_tmp.cnt;
         struct Node **items = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &items_tmp);
@@ -442,7 +446,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         if (eat(parser, TOKEN_DOT)) {
             struct Span span = prev(parser).span;
             expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-            lhs = (struct Node*)mk_get_prop(&parser->arena, span, lhs, prev(parser).span);
+            lhs = (struct Node*)mk_prop(&parser->arena, span, lhs, prev(parser).span);
             continue;
         }
         // parse fn_call
@@ -450,17 +454,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
             struct Span fn_call_span = prev(parser).span;
             struct PtrArray args_tmp;
             init_ptr_array(&args_tmp);
-            while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
-                // breaking early helps when the closing `)` is missing
-                if (!expr_first(at(parser).tag)) {
-                    emit_err(parser, at(parser).span, "expected expression");
-                    break;
-                }
-                struct Node *arg = parse_expr(parser, 1);
-                push_ptr_array(&args_tmp, arg);
-                if (at(parser).tag != TOKEN_R_PAREN)
-                    expect(parser, TOKEN_COMMA, "expected `,`");            
-            }
+            parse_arg_list(parser, &args_tmp, TOKEN_R_PAREN);
             expect(parser, TOKEN_R_PAREN, "expected `)`");
             u32 cnt = args_tmp.cnt;
             struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &args_tmp);
@@ -491,6 +485,8 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
     }
     return lhs;
 }
+
+static struct BlockNode *parse_block(struct Parser *parser);
 
 // precondition: `if` token consumed
 static struct IfNode *parse_if(struct Parser *parser) 

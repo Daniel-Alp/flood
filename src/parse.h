@@ -63,7 +63,7 @@ struct BinaryNode {
     enum TokenTag op_tag;
 }; 
 
-struct GetPropNode {
+struct PropNode {
     // span is `.`
     struct Node base;
     struct Node *lhs;
