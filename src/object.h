@@ -31,7 +31,7 @@ struct ForeignMethodObj {
     struct Obj *self;
     const char *name;
     ForeignMethod code;
-    u32 arity;
+    i32 arity;
 };
 
 // TEMP remove once we implement non-foreign methods
@@ -39,7 +39,7 @@ struct FnObj {
     struct Obj base;
     const char *name;
     struct Chunk chunk; 
-    u32 arity;
+    i32 arity;
 };
 
 struct HeapValObj {
@@ -59,15 +59,15 @@ struct ClosureObj {
 struct ListObj {
     struct Obj base;
     struct ValTable methods;
-    u32 cap;
-    u32 cnt;
+    i32 cap;
+    i32 cnt;
     Value *vals;
 };
 
 struct StringObj {
     struct Obj base;
     u32 hash;
-    u32 len;
+    i32 len;
     char *chars; // has null byte at the end, but len does not count it
 };
 
@@ -94,13 +94,13 @@ void init_foreign_method_obj(
     struct ForeignMethodObj *f_method, 
     struct Obj* self,
     const char *name,
-    u32 arity,
+    i32 arity,
     ForeignMethod code
 );
 
 void release_foreign_method_obj(struct ForeignMethodObj *f_method);
 
-void init_fn_obj(struct FnObj *fn, const char *name, u32 arity);
+void init_fn_obj(struct FnObj *fn, const char *name, i32 arity);
 
 void release_fn_obj(struct FnObj *fn);
 
@@ -111,10 +111,10 @@ void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 cnt);
 
 void release_closure_obj(struct ClosureObj *closure);
 
-void init_list_obj(struct ListObj *list, Value *vals, u32 cnt);
+void init_list_obj(struct ListObj *list, Value *vals, i32 cnt);
 
 void release_list_obj(struct ListObj *list);
 
-void init_string_obj(struct StringObj *str, u32 hash, u32 len, char *chars);
+void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars);
 
 void release_string_obj(struct StringObj *str);

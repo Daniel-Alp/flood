@@ -17,7 +17,7 @@ void release_symbol_arr(struct SymArr *arr)
     arr->symbols = NULL;
 }
 
-u32 push_symbol_arr(struct SymArr *arr, struct Symbol sym) 
+i32 push_symbol_arr(struct SymArr *arr, struct Symbol sym) 
 {
     if (arr->cnt == arr->cap) {
         arr->cap *= 2;

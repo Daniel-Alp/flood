@@ -125,10 +125,10 @@ static struct Token check_at(struct Scanner *scanner, char c, enum TokenTag tag1
     return mk_token(scanner, tag2);
 }
 
-static struct Token check_keyword(struct Scanner *scanner, const char *rest, u32 length, enum TokenTag tag) 
+static struct Token check_keyword(struct Scanner *scanner, const char *rest, i32 len, enum TokenTag tag) 
 {
-    u32 token_length = scanner->current - scanner->start;
-    if (token_length != length || memcmp(scanner->start+1, rest, length-1) != 0)
+    i32 token_len = scanner->current - scanner->start;
+    if (token_len != len || memcmp(scanner->start+1, rest, len-1) != 0)
         return mk_token(scanner, TOKEN_IDENTIFIER);
     return mk_token(scanner, tag);
 }

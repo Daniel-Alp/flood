@@ -3,8 +3,8 @@
 #include "value.h"
 
 struct Chunk {
-    u32 cnt;
-    u32 cap;
+    i32 cnt;
+    i32 cap;
     u8 *code;
     // NOTE: 
     // representing line info
@@ -25,9 +25,9 @@ struct Chunk {
     //      1       opcode cnt
     //      2       line no
     //      8       opcode_cnt
-    u32 lines_cnt; 
-    u32 lines_cap;                 
-    u32 *lines;
+    i32 lines_cnt; 
+    i32 lines_cap;                 
+    i32 *lines;
     struct ValArray constants;
 };
 
@@ -88,6 +88,6 @@ void init_chunk(struct Chunk *chunk);
 
 void release_chunk(struct Chunk *chunk);
 
-void emit_byte(struct Chunk *chunk, u8 byte, u32 line);
+void emit_byte(struct Chunk *chunk, u8 byte, i32 line);
 
-u32 add_constant(struct Chunk *chunk, Value val);
+i32 add_constant(struct Chunk *chunk, Value val);

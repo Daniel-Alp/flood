@@ -22,22 +22,22 @@ typedef struct {
 } Value;
 
 struct ValArray {
-    u32 cnt;
-    u32 cap;
+    i32 cnt;
+    i32 cap;
     Value *vals;
 };
 
 // TODO implement optimization
 struct ValTableEntry {
     u32 hash;
-    u32 len;
+    i32 len;
     const char *chars;
     Value val;
 };
 
 struct ValTable {
-    u32 cnt;
-    u32 cap;
+    i32 cnt;
+    i32 cap;
     struct ValTableEntry *entries;
 };
 
@@ -59,9 +59,9 @@ void init_val_array(struct ValArray *arr);
 
 void release_val_array(struct ValArray *arr);
 
-u32 push_val_array(struct ValArray *arr, Value val);
+i32 push_val_array(struct ValArray *arr, Value val);
 
-u32 hash_string(const char *str, u32 len);
+u32 hash_string(const char *str, i32 len);
 
 void init_val_table(struct ValTable *tab);
 
@@ -69,12 +69,12 @@ void release_val_table(struct ValTable *tab);
 
 struct ValTableEntry *get_val_table_slot(
     struct ValTableEntry *vals, 
-    u32 cap, 
+    i32 cap, 
     u32 hash, 
-    u32 strlen, 
+    i32 len, 
     const char *str);
 
-void insert_val_table(struct ValTable *tab, const char *str, u32 len, Value val);
+void insert_val_table(struct ValTable *tab, const char *str, i32 len, Value val);
 
 bool val_eq(Value val1, Value val2);
 

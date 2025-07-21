@@ -29,9 +29,9 @@ void push_errlist(struct ErrList *errlist, struct Span span, const char *msg)
 }
 
 // n != 0
-static u32 num_digits(u32 n) 
+static i32 num_digits(i32 n) 
 {
-    u32 c = 0;
+    i32 c = 0;
     while(n) {
         c++;
         n /= 10;
@@ -39,9 +39,9 @@ static u32 num_digits(u32 n)
     return c;
 }
 
-static u32 line_num(const char *ptr) 
+static i32 line_num(const char *ptr) 
 {
-    u32 line = 1;
+    i32 line = 1;
     // error at EOF
     if (*ptr == '\0')
         ptr--;
@@ -53,7 +53,7 @@ static u32 line_num(const char *ptr)
     return line;
 }
 
-static u32 line_indent(const char *ptr) 
+static i32 line_indent(const char *ptr) 
 {
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
@@ -69,7 +69,7 @@ static void print_line(const char *ptr)
     const char *end = ptr;
     while (*end != '\0' && *end != '\n')
         end++;
-    u32 length = end-start;
+    i32 length = end-start;
     printf("%.*s\n", length, start);
 }
 
@@ -82,14 +82,14 @@ static void print_line(const char *ptr)
 // precondition: at least one error
 void print_errlist(struct ErrList *errlist, bool color) 
 {
-    u32 last_line = line_num(errlist->errs[errlist->cnt-1].span.start);
-    u32 max_pad = num_digits(last_line);
+    i32 last_line = line_num(errlist->errs[errlist->cnt-1].span.start);
+    i32 max_pad = num_digits(last_line);
 
     for (i32 i = 0; i < errlist->cnt; i++) {
         struct ErrMsg err = errlist->errs[i];
         
-        u32 line = line_num(err.span.start);
-        u32 pad = num_digits(line);
+        i32 line = line_num(err.span.start);
+        i32 pad = num_digits(line);
 
         if (color)
             printf(ANSI_COLOR_BLUE ANSI_BOLD);      

@@ -66,13 +66,13 @@ struct Scanner {
     const char *source;
     const char *start;
     const char *current;
-    u32 line;
+    i32 line;
 };
 
 struct Span {
     const char *start;
     i32 len;
-    u32 line;
+    i32 line;
 };
 
 struct Token {

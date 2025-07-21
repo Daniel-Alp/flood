@@ -25,24 +25,24 @@ const char *binop_str[] = {
     [TOKEN_L_SQUARE]    = "[]"
 };
 
-static void print_atom(struct AtomNode *node, u32 offset) 
+static void print_atom(struct AtomNode *node, i32 offset) 
 {
     printf("Atom %.*s", node->base.span.len, node->base.span.start);
 }
 
-static void print_list(struct ListNode *node, u32 offset)
+static void print_list(struct ListNode *node, i32 offset)
 {
     printf("List");
     for (i32 i = 0; i < node->cnt; i++)
         print_node(node->items[i], offset + 2);
 }
 
-static void print_ident(struct IdentNode *node, u32 offset) 
+static void print_ident(struct IdentNode *node, i32 offset) 
 {
     printf("Ident %.*s id: %d", node->base.span.len, node->base.span.start, node->id);
 }
 
-static void print_unary(struct UnaryNode *node, u32 offset) 
+static void print_unary(struct UnaryNode *node, i32 offset) 
 {
     printf("Unary\n");
     printf("%*s", offset + 2, "");
@@ -50,7 +50,7 @@ static void print_unary(struct UnaryNode *node, u32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_binary(struct BinaryNode *node, u32 offset) 
+static void print_binary(struct BinaryNode *node, i32 offset) 
 {
     printf("Binary\n");
     printf("%*s", offset + 2, "");
@@ -59,7 +59,7 @@ static void print_binary(struct BinaryNode *node, u32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_get_prop(struct PropNode *node, u32 offset)
+static void print_get_prop(struct PropNode *node, i32 offset)
 {
     printf("GetProp");
     print_node(node->lhs, offset + 2);
@@ -67,7 +67,7 @@ static void print_get_prop(struct PropNode *node, u32 offset)
     printf("%.*s", node->prop.len, node->prop.start);
 }
 
-static void print_fn_call(struct FnCallNode *node, u32 offset) 
+static void print_fn_call(struct FnCallNode *node, i32 offset) 
 {
     printf("FnCall");    
     print_node(node->lhs, offset + 2);
@@ -75,14 +75,14 @@ static void print_fn_call(struct FnCallNode *node, u32 offset)
         print_node(node->args[i], offset + 2);
 }
 
-static void print_block(struct BlockNode *node, u32 offset) 
+static void print_block(struct BlockNode *node, i32 offset) 
 {
     printf("Block");
     for (i32 i = 0; i < node->cnt; i++)
         print_node(node->stmts[i], offset + 2);
 }
 
-static void print_if(struct IfNode *node, u32 offset) 
+static void print_if(struct IfNode *node, i32 offset) 
 {
     printf("If");
     print_node(node->cond, offset + 2);
@@ -91,20 +91,20 @@ static void print_if(struct IfNode *node, u32 offset)
         print_node((struct Node*)node->els, offset + 2);
 }
 
-static void print_expr_stmt(struct ExprStmtNode *node, u32 offset) 
+static void print_expr_stmt(struct ExprStmtNode *node, i32 offset) 
 {
     printf("ExprStmt");
     print_node(node->expr, offset + 2);
 }
 
-static void print_return(struct ReturnNode *node, u32 offset) 
+static void print_return(struct ReturnNode *node, i32 offset) 
 {
     printf("Return");
     if (node->expr)
         print_node(node->expr, offset + 2);
 }
 
-static void print_var_decl(struct VarDeclNode *node, u32 offset) 
+static void print_var_decl(struct VarDeclNode *node, i32 offset) 
 {
     printf("VarDecl\n");
     printf("%*s", offset + 2, "");
@@ -113,7 +113,7 @@ static void print_var_decl(struct VarDeclNode *node, u32 offset)
         print_node(node->init, offset + 2);
 }
 
-static void print_fn_decl(struct FnDeclNode *node, u32 offset) 
+static void print_fn_decl(struct FnDeclNode *node, i32 offset) 
 {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
@@ -145,19 +145,19 @@ static void print_fn_decl(struct FnDeclNode *node, u32 offset)
     print_node((struct Node*)node->body, offset + 2);
 }
 
-static void print_import(struct ImportNode *node, u32 offset)
+static void print_import(struct ImportNode *node, i32 offset)
 {
     printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
 }
 
 // TEMP remove when we add functions
-static void print_print(struct PrintNode *node, u32 offset) 
+static void print_print(struct PrintNode *node, i32 offset) 
 {
     printf("Print");
     print_node(node->expr, offset + 2);
 }
 
-void print_node(struct Node *node, u32 offset) 
+void print_node(struct Node *node, i32 offset) 
 {
     if (offset != 0)
         printf("\n");
@@ -265,9 +265,9 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             break;
         }
         case OP_CLOSURE: {
-            u32 stack_captures = chunk->code[++i];
+            i32 stack_captures = chunk->code[++i];
             printf("%d\n", stack_captures); 
-            u32 parent_captures = chunk->code[++i];
+            i32 parent_captures = chunk->code[++i];
             printf("     | %*s%d\n", 20, "", parent_captures);
             for (i32 j = 0; j < stack_captures + parent_captures; j++)
                 printf("     | %*s%d\n", 20, "", chunk->code[++i]);

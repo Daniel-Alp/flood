@@ -21,7 +21,7 @@ void release_val_array(struct ValArray *arr)
     arr->vals = NULL;
 }
 
-u32 push_val_array(struct ValArray *arr, Value val) 
+i32 push_val_array(struct ValArray *arr, Value val) 
 {
     // TODO error if cnt >= 256
     // TODO add LOAD_CONST_LONG opcode
@@ -52,7 +52,7 @@ void release_val_table(struct ValTable *tab)
     tab->entries = NULL;
 }
 
-u32 hash_string(const char *str, u32 len) 
+u32 hash_string(const char *str, i32 len) 
 {
     u32 hash = 2166136261u;
     for (int i = 0; i < len; i++) {
@@ -65,12 +65,12 @@ u32 hash_string(const char *str, u32 len)
 // return pointer to first slot matching key or first empty slot
 struct ValTableEntry *get_val_table_slot(
     struct ValTableEntry *vals, 
-    u32 cap, 
+    i32 cap, 
     u32 hash, 
-    u32 len, 
+    i32 len, 
     const char *chars
 ) {
-    u32 i = hash & (cap-1);
+    i32 i = hash & (cap-1);
     while (true) {
         struct ValTableEntry *entry = vals + i;
         if (entry->chars == NULL
@@ -80,10 +80,10 @@ struct ValTableEntry *get_val_table_slot(
     }
 }
 
-void insert_val_table(struct ValTable *tab, const char *chars, u32 len, Value val)
+void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value val)
 {
     if (tab->cnt * TABLE_LOAD_FACTOR >= tab->cap) {
-        u32 new_cap = tab->cap * 2;
+        i32 new_cap = tab->cap * 2;
         struct ValTableEntry *new_entries = allocate(new_cap * sizeof(struct ValTableEntry));
         for (i32 i = 0; i < new_cap; i++) 
             tab->entries[i].chars = NULL;
@@ -151,7 +151,7 @@ void print_val(Value val)
             printf("[");
             struct ListObj *list = AS_LIST(val);
             Value *vals = list->vals;
-            u32 cnt = list->cnt;
+            i32 cnt = list->cnt;
             if (cnt > 0) {
                 for (i32 i = 0; i < cnt-1; i++) {
                     print_val(vals[i]);

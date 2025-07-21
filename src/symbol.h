@@ -6,14 +6,14 @@
 struct Symbol {
     struct Span span; // identifier
     u32 flags;
-    u32 depth;
+    i32 depth;
     // offset from base of enclosing function -1 initially to indiciate it's unset
     i32 idx;
 };
 
 struct SymArr {
-    u32 cap;
-    u32 cnt;
+    i32 cap;
+    i32 cnt;
     struct Symbol *symbols;
 };
 
@@ -21,4 +21,4 @@ void init_symbol_arr(struct SymArr *arr);
 
 void release_symbol_arr(struct SymArr *arr);
 
-u32 push_symbol_arr(struct SymArr *arr, struct Symbol sym);
+i32 push_symbol_arr(struct SymArr *arr, struct Symbol sym);

@@ -39,9 +39,9 @@ static struct Symbol *symbols(struct Compiler *compiler)
     return compiler->sym_arr->symbols;
 }
 
-static u32 emit_jump(struct Compiler *compiler, enum OpCode op, u32 line) 
+static i32 emit_jump(struct Compiler *compiler, enum OpCode op, i32 line) 
 {
-    u32 offset = cur_chunk(compiler)->cnt;
+    i32 offset = cur_chunk(compiler)->cnt;
     emit_byte(cur_chunk(compiler), op, line);
     // skip two bytes for jump
     //      OP_JUMP
@@ -54,11 +54,11 @@ static u32 emit_jump(struct Compiler *compiler, enum OpCode op, u32 line)
 
 // TODO is the comment below still relevant?
 // make jump instr jump to the instr that will be emitted next
-static void patch_jump(struct Compiler *compiler, u32 offset) 
+static void patch_jump(struct Compiler *compiler, i32 offset) 
 {
     // offset points to the OP_JUMP instr
     // compiler->chunk.count points to the to-be-executed instr
-    u32 jump =  cur_chunk(compiler)->cnt - (offset+3);
+    i32 jump =  cur_chunk(compiler)->cnt - (offset+3);
     // TODO error if jump > max u16
     cur_chunk(compiler)->code[offset+1] = (jump >> 8) & 0xff;
     cur_chunk(compiler)->code[offset+2] = jump & 0xff; 
@@ -68,7 +68,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node);
 
 static void compile_atom(struct Compiler *compiler, struct AtomNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     switch(node->atom_tag) {
     case TOKEN_TRUE:
         emit_byte(cur_chunk(compiler), OP_TRUE, line);
@@ -89,7 +89,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
 
 // given an identifier that is captured return what it's idx will be 
 // in the fn's capture array, or -1 if this fn does not capture it
-static i32 resolve_captured(struct FnDeclNode *node, u32 id)
+static i32 resolve_captured(struct FnDeclNode *node, i32 id)
 {
     // capture count cannot exceed MAX_LOCALS
     for (i32 j = 0; j < MAX_LOCALS; j++) {
@@ -101,7 +101,7 @@ static i32 resolve_captured(struct FnDeclNode *node, u32 id)
     return -1;
 }
 
-static void compile_ident_get_or_set(struct Compiler *compiler, u32 id, bool get, u32 line)
+static void compile_ident_get_or_set(struct Compiler *compiler, i32 id, bool get, i32 line)
 {
     struct Symbol sym = symbols(compiler)[id];
     // special case, if a function is referencing itself we can do OP_GET_LOCAL 0
@@ -142,7 +142,7 @@ static void compile_list(struct Compiler *compiler, struct ListNode *node)
 {
     // TODO allow lists to be initialized with more than 256 elements
     // TODO handle lists being initialized with too many elements
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     for (i32 i = 0; i < node->cnt; i++)
         compile_node(compiler, node->items[i]);    
     emit_byte(cur_chunk(compiler), OP_LIST, line);
@@ -151,7 +151,7 @@ static void compile_list(struct Compiler *compiler, struct ListNode *node)
 
 static void compile_unary(struct Compiler *compiler, struct UnaryNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     compile_node(compiler, node->rhs);
     if (node->op_tag == TOKEN_MINUS)
         emit_byte(cur_chunk(compiler), OP_NEGATE, line);
@@ -161,7 +161,7 @@ static void compile_unary(struct Compiler *compiler, struct UnaryNode *node)
 
 static void compile_binary(struct Compiler *compiler, struct BinaryNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     enum TokenTag op_tag = node->op_tag;
     if (op_tag == TOKEN_EQ) {
         if (node->lhs->tag == NODE_IDENT) {
@@ -178,7 +178,7 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         }
     } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
         compile_node(compiler, node->lhs);
-        u32 offset = emit_jump(compiler, op_tag == TOKEN_AND ? OP_JUMP_IF_FALSE : OP_JUMP_IF_TRUE, line);
+        i32 offset = emit_jump(compiler, op_tag == TOKEN_AND ? OP_JUMP_IF_FALSE : OP_JUMP_IF_TRUE, line);
         emit_byte(cur_chunk(compiler), OP_POP, line);
         compile_node(compiler, node->rhs);
         patch_jump(compiler, offset);
@@ -205,10 +205,10 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
 
 static void compile_get_prop(struct Compiler *compiler, struct PropNode *node)
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
 
-    u32 len = node->prop.len;
+    i32 len = node->prop.len;
     char *chars = allocate((len+1)*sizeof(char));
     memcpy(chars, node->prop.start, len);
     chars[len] = '\0';
@@ -222,7 +222,7 @@ static void compile_get_prop(struct Compiler *compiler, struct PropNode *node)
 
 static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
     for (i32 i = 0; i < node->arity; i++)
         compile_node(compiler, node->args[i]);
@@ -234,12 +234,12 @@ static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node)
 
 static void compile_block(struct Compiler *compiler, struct BlockNode *node) 
 {
-    u32 line = node->base.span.line;
-    u32 local_cnt = compiler->fn_local_cnt;
+    i32 line = node->base.span.line;
+    i32 local_cnt = compiler->fn_local_cnt;
     for (i32 i = 0; i < node->cnt; i++)
         compile_node(compiler, node->stmts[i]);
     // TODO handle more than 256 locals 
-    u32 n = compiler->fn_local_cnt - local_cnt;
+    i32 n = compiler->fn_local_cnt - local_cnt;
     if (n == 1) {
         emit_byte(cur_chunk(compiler), OP_POP, line);
     } else if (n > 1) {
@@ -251,7 +251,7 @@ static void compile_block(struct Compiler *compiler, struct BlockNode *node)
 
 static void compile_if(struct Compiler *compiler, struct IfNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     compile_node(compiler, node->cond);
     //      OP_JUMP_IF_FALSE (jump 1)
     //      OP_POP           
@@ -260,11 +260,11 @@ static void compile_if(struct Compiler *compiler, struct IfNode *node)
     //      OP_POP           (destination of jump 1)
     //      els block        
     //      ...              (destination of jump 2)
-    u32 offset1 = emit_jump(compiler, OP_JUMP_IF_FALSE, line);
+    i32 offset1 = emit_jump(compiler, OP_JUMP_IF_FALSE, line);
     emit_byte(cur_chunk(compiler), OP_POP, line);
 
     compile_block(compiler, node->thn);
-    u32 offset2 = emit_jump(compiler, OP_JUMP, line);
+    i32 offset2 = emit_jump(compiler, OP_JUMP, line);
     patch_jump(compiler, offset1);
     
     emit_byte(cur_chunk(compiler), OP_POP, line);
@@ -296,7 +296,7 @@ static void compile_print(struct Compiler *compiler, struct PrintNode *node)
 
 static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node) 
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     // TODO var decls for class members 
     struct Symbol* sym = &symbols(compiler)[node->id];
     sym->idx = compiler->fn_local_cnt;
@@ -314,7 +314,7 @@ static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node
 
 static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
 {
-    u32 line = node->base.span.line;
+    i32 line = node->base.span.line;
     struct Symbol* sym = &symbols(compiler)[node->id];
     // top level functions are hoisted
     if (sym->idx == -1) {
@@ -330,7 +330,7 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     init_fn_obj(fn, name, node->arity);
 
     // push state and enter the fn
-    u32 parent_local_cnt = compiler->fn_local_cnt;
+    i32 parent_local_cnt = compiler->fn_local_cnt;
     struct FnObj* parent = compiler->fn; 
     struct FnDeclNode *parent_node = compiler->fn_node;
     compiler->fn_local_cnt = 1;
@@ -363,11 +363,11 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     emit_byte(cur_chunk(compiler), node->stack_capture_cnt, line);
     emit_byte(cur_chunk(compiler), node->parent_capture_cnt, line);
     for (i32 i = 0; i < node->stack_capture_cnt; i++) {
-        u32 id = node->stack_captures[i];
+        i32 id = node->stack_captures[i];
         emit_byte(cur_chunk(compiler), symbols(compiler)[id].idx, line);
     }
     for (i32 i = 0; i < node->parent_capture_cnt; i++) {
-        u32 id = node->parent_captures[i];
+        i32 id = node->parent_captures[i];
         // node->parent can't be NULL
         emit_byte(cur_chunk(compiler), resolve_captured(node->parent, id), line);
     }
@@ -428,7 +428,7 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
     }
     for (i32 i = 0; i < node->body->cnt; i++) {
         struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
-        u32 line = fn_node->base.span.line;
+        i32 line = fn_node->base.span.line;
         compile_fn_decl(compiler, fn_node);
         emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, line);
         emit_byte(cur_chunk(compiler), i, line);

@@ -39,7 +39,7 @@ struct ListNode {
     // span is `[`
     struct Node base;
     struct Node **items;
-    u32 cnt;
+    i32 cnt;
 };
 
 struct IdentNode {
@@ -78,7 +78,7 @@ struct FnCallNode {
     // the expression that is being called
     struct Node *lhs;
     struct Node **args;
-    u32 arity;
+    i32 arity;
 };
 
 struct VarDeclNode {
@@ -101,9 +101,9 @@ struct FnDeclNode {
     //      (2) the ptr is in the parent closure's ptr list
     // in both cases the ptr is copied to the new closure's ptr list
     i32 stack_capture_cnt;
-    u32 stack_captures[MAX_LOCALS];
+    i32 stack_captures[MAX_LOCALS];
     i32 parent_capture_cnt;
-    u32 parent_captures[MAX_LOCALS];
+    i32 parent_captures[MAX_LOCALS];
     struct FnDeclNode *parent; 
 };
 
@@ -124,7 +124,7 @@ struct BlockNode {
     // span is `{`
     struct Node base;
     struct Node **stmts;
-    u32 cnt;
+    i32 cnt;
 };
 
 struct IfNode {

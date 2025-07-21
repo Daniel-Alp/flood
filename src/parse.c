@@ -17,8 +17,8 @@ void release_parser(struct Parser *parser)
 }
 
 struct PtrArray {
-    u32 cap;
-    u32 cnt;
+    i32 cap;
+    i32 cnt;
     void **ptrs;
 };
 
@@ -58,8 +58,8 @@ static void **mv_ptr_array_to_arena(struct Arena *arena, struct PtrArray *arr)
 }
 
 struct IdentArray {
-    u32 cap;
-    u32 cnt;
+    i32 cap;
+    i32 cnt;
     struct IdentNode *idents;
 };
 
@@ -107,7 +107,7 @@ static struct AtomNode *mk_atom(struct Arena *arena, struct Token token)
     return node;
 }
 
-static struct ListNode *mk_list(struct Arena *arena, struct Span span, struct Node **items, u32 cnt)
+static struct ListNode *mk_list(struct Arena *arena, struct Span span, struct Node **items, i32 cnt)
 {
     struct ListNode *node = push_arena(arena, sizeof(struct ListNode));
     node->base.span = span;
@@ -162,7 +162,7 @@ static struct PropNode *mk_prop(struct Arena *arena, struct Span span, struct No
     return node;
 }
 
-static struct FnCallNode *mk_fn_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, u32 arity) 
+static struct FnCallNode *mk_fn_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, i32 arity) 
 {
     struct FnCallNode *node = push_arena(arena, sizeof(struct FnCallNode));
     node->base.tag = NODE_FN_CALL;
@@ -187,7 +187,7 @@ static struct FnDeclNode *mk_fn_decl(
     struct Arena *arena, 
     struct Span span, 
     struct IdentNode *params, 
-    u32 arity, 
+    i32 arity, 
     struct BlockNode *body
 ) {
     struct FnDeclNode *node = push_arena(arena, sizeof(struct FnDeclNode));
@@ -228,7 +228,7 @@ static struct IfNode *mk_if(
     return node;
 }
 
-static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct Node **stmts, u32 cnt) 
+static struct BlockNode *mk_block(struct Arena *arena, struct Span span, struct Node **stmts, i32 cnt) 
 {
     struct BlockNode *node = push_arena(arena, sizeof(struct BlockNode));
     node->base.tag = NODE_BLOCK;
@@ -309,8 +309,8 @@ static void recover_block(struct Parser *parser)
 }
 
 struct PrecLvl {
-    u32 old;
-    u32 new;
+    i32 old;
+    i32 new;
 };
 
 static struct PrecLvl infix_prec(enum TokenTag tag) 
@@ -384,7 +384,7 @@ static i32 desugar(enum TokenTag tag) {
     }
 }
 
-static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl);
+static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl);
 
 // precondition: `[` or `(` token consumed
 // parses arguments and fills the ptr array provided
@@ -403,7 +403,7 @@ static void parse_arg_list(struct Parser *parser, struct PtrArray *args_tmp, enu
     }
 }
 
-static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl) 
+static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl) 
 {
     struct Token token = at(parser);
     if (expr_first(token.tag)) // we could bump in each arm of the switch but this is simpler
@@ -425,7 +425,7 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
         init_ptr_array(&items_tmp);
         parse_arg_list(parser, &items_tmp, TOKEN_R_SQUARE);
         expect(parser, TOKEN_R_SQUARE, "expected `]`");
-        u32 cnt = items_tmp.cnt;
+        i32 cnt = items_tmp.cnt;
         struct Node **items = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &items_tmp);
         lhs = (struct Node*)mk_list(&parser->arena, token.span, items, cnt);
         break;
@@ -456,15 +456,15 @@ static struct Node *parse_expr(struct Parser *parser, u32 prec_lvl)
             init_ptr_array(&args_tmp);
             parse_arg_list(parser, &args_tmp, TOKEN_R_PAREN);
             expect(parser, TOKEN_R_PAREN, "expected `)`");
-            u32 cnt = args_tmp.cnt;
+            i32 cnt = args_tmp.cnt;
             struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &args_tmp);
             lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, cnt);
             continue;
         }
         token = at(parser);
         struct PrecLvl prec = infix_prec(token.tag);
-        u32 old_lvl = prec.old;
-        u32 new_lvl = prec.new;
+        i32 old_lvl = prec.old;
+        i32 new_lvl = prec.new;
         if (old_lvl < prec_lvl) {
             break;
         }
@@ -545,7 +545,7 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
         }
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
-    u32 arity = tmp_params.cnt;
+    i32 arity = tmp_params.cnt;
     struct IdentNode *param_spans = mv_ident_array_to_arena(&parser->arena, &tmp_params);
     struct BlockNode *body = parse_block(parser);
     return mk_fn_decl(&parser->arena, span, param_spans, arity,  body);
@@ -613,7 +613,7 @@ static struct BlockNode *parse_block(struct Parser *parser)
             recover_block(parser);
     }
     expect(parser, TOKEN_R_BRACE, "expected `}`");
-    u32 cnt = tmp.cnt;
+    i32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);
     return mk_block(&parser->arena, span, stmts, cnt);
 }
@@ -647,7 +647,7 @@ static struct FnDeclNode *parse_file(struct Parser *parser)
             advance_with_err(parser, "expected declaration");
         push_ptr_array(&tmp, node);
     }
-    u32 cnt = tmp.cnt;
+    i32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);
     struct Span span = {
         .start = "script", 

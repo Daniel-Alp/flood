@@ -6,7 +6,7 @@ void init_foreign_method_obj(
     struct ForeignMethodObj *f_method, 
     struct Obj* self,
     const char *name,
-    u32 arity,
+    i32 arity,
     ForeignMethod code
 ) {
     f_method->base.tag = OBJ_FOREIGN_METHOD;
@@ -25,7 +25,7 @@ void release_foreign_method_obj(struct ForeignMethodObj *f_method)
     f_method->arity = 0;
 }
 
-void init_fn_obj(struct FnObj *fn, const char *name, u32 arity) 
+void init_fn_obj(struct FnObj *fn, const char *name, i32 arity) 
 {
     fn->base.tag = OBJ_FN;
     init_chunk(&fn->chunk);
@@ -68,10 +68,10 @@ void release_closure_obj(struct ClosureObj *closure)
 }
 
 // NOTE: vals points to the start of the list's elements in the stack 
-void init_list_obj(struct ListObj *list, Value *vals, u32 cnt)
+void init_list_obj(struct ListObj *list, Value *vals, i32 cnt)
 {
     list->base.tag = OBJ_LIST;
-    u32 cap = 8;
+    i32 cap = 8;
     while (cnt > cap)
         cap *= 2;
     list->cnt = cnt;
@@ -84,14 +84,14 @@ void init_list_obj(struct ListObj *list, Value *vals, u32 cnt)
 
 void release_list_obj(struct ListObj *list)
 {
-    u32 cap = 0;
-    u32 cnt = 0;
+    i32 cap = 0;
+    i32 cnt = 0;
     release(list->vals);
     list->vals = NULL;
     release_val_table(&list->methods);
 }
 
-void init_string_obj(struct StringObj *str, u32 hash, u32 len, char *chars)
+void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars)
 {
     str->base.tag = OBJ_STRING;
     str->hash = hash;
