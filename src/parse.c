@@ -420,7 +420,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
     case TOKEN_IDENTIFIER:
         lhs = (struct Node*)mk_ident(&parser->arena, token.span);
         break;
-    case TOKEN_L_SQUARE:
+    case TOKEN_L_SQUARE: {
         struct PtrArray items_tmp;
         init_ptr_array(&items_tmp);
         parse_arg_list(parser, &items_tmp, TOKEN_R_SQUARE);
@@ -429,6 +429,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         struct Node **items = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &items_tmp);
         lhs = (struct Node*)mk_list(&parser->arena, token.span, items, cnt);
         break;
+    }
     case TOKEN_L_PAREN:
         lhs = (struct Node*)parse_expr(parser, 1);
         expect(parser, TOKEN_R_PAREN, "expected `)`");
