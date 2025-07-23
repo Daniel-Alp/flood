@@ -186,6 +186,7 @@ struct Token next_token(struct Scanner *scanner)
                 else
                     return check_keyword(scanner, "nd", 3, TOKEN_AND);
             case 'e': return check_keyword(scanner, "lse", 4, TOKEN_ELSE);
+            case 'c': return check_keyword(scanner, "lass", 5, TOKEN_CLASS);
             case 'f':
                 if (scanner->start[1] == 'n')
                     return check_keyword(scanner, "n", 2, TOKEN_FN);

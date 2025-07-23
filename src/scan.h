@@ -47,6 +47,7 @@ enum TokenTag {
     TOKEN_AS,
 
     TOKEN_FN,
+    TOKEN_CLASS,
     TOKEN_VAR,
     TOKEN_IF,
     TOKEN_ELSE,

@@ -38,6 +38,10 @@ int main(int argc, const char **argv)
         goto err_release_parser;
     }
 
+    // DELETEME!
+    // print_node(ast, 0);
+    // return 0;
+
     // sym_arr is shared by the sema and compiler
     struct SymArr sym_arr;
     init_symbol_arr(&sym_arr);
@@ -50,9 +54,6 @@ int main(int argc, const char **argv)
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
-
-    // print_node(ast, 0);
-    // printf("\n");
 
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);

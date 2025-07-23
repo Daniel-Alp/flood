@@ -13,9 +13,10 @@ enum NodeTag {
     // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
     NODE_BINARY,    
     NODE_PROP,      // foo.bar
-    NODE_FN_CALL,
+    NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
+    NODE_CLASS_DECL,
     NODE_IMPORT,
     NODE_EXPR_STMT,
     NODE_BLOCK,
@@ -72,7 +73,7 @@ struct PropNode {
     struct Span prop;
 };
 
-struct FnCallNode {
+struct CallNode {
     // span is `(`
     struct Node base;
     // the expression that is being called
@@ -105,6 +106,14 @@ struct FnDeclNode {
     i32 parent_capture_cnt;
     i32 parent_captures[MAX_LOCALS];
     struct FnDeclNode *parent; 
+};
+
+struct ClassDeclNode {
+    // span is identifier
+    struct Node base;
+    i32 cnt;
+    struct FnDeclNode **methods;
+    i32 id;
 };
 
 // TEMP remove when we add functions

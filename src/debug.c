@@ -59,17 +59,17 @@ static void print_binary(struct BinaryNode *node, i32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_get_prop(struct PropNode *node, i32 offset)
+static void print_prop(struct PropNode *node, i32 offset)
 {
-    printf("GetProp");
+    printf("Prop");
     print_node(node->lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
     printf("%.*s", node->prop.len, node->prop.start);
 }
 
-static void print_fn_call(struct FnCallNode *node, i32 offset) 
+static void print_call(struct CallNode *node, i32 offset) 
 {
-    printf("FnCall");    
+    printf("Call");    
     print_node(node->lhs, offset + 2);
     for (i32 i = 0; i < node->arity; i++)
         print_node(node->args[i], offset + 2);
@@ -145,6 +145,16 @@ static void print_fn_decl(struct FnDeclNode *node, i32 offset)
     print_node((struct Node*)node->body, offset + 2);
 }
 
+static void print_class_decl(struct ClassDeclNode *node, i32 offset)
+{
+    printf("ClassDeclNode\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node->base.span.len, node->base.span.start);
+    printf(" id: %d", node->id);
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->methods[i], offset + 2);
+}
+
 static void print_import(struct ImportNode *node, i32 offset)
 {
     printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
@@ -163,22 +173,23 @@ void print_node(struct Node *node, i32 offset)
         printf("\n");
     printf("%*s(", offset, "");
     switch (node->tag) {
-    case NODE_ATOM:      print_atom((struct AtomNode*)node, offset); break;
-    case NODE_LIST:      print_list((struct ListNode*)node, offset); break;
-    case NODE_IDENT:     print_ident((struct IdentNode*)node, offset); break;
-    case NODE_UNARY:     print_unary((struct UnaryNode*)node, offset); break;
-    case NODE_BINARY:    print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_PROP:  print_get_prop((struct PropNode*)node, offset); break;
-    case NODE_FN_CALL:   print_fn_call((struct FnCallNode*)node, offset); break;
-    case NODE_BLOCK:     print_block((struct BlockNode*)node, offset); break;
-    case NODE_IF:        print_if((struct IfNode*)node, offset); break;
-    case NODE_EXPR_STMT: print_expr_stmt((struct ExprStmtNode*)node, offset); break;
-    case NODE_VAR_DECL:  print_var_decl((struct VarDeclNode*)node, offset); break;
-    case NODE_FN_DECL:   print_fn_decl((struct FnDeclNode*)node, offset); break;
-    case NODE_IMPORT:    print_import((struct ImportNode*)node, offset); break;
-    case NODE_RETURN:    print_return((struct ReturnNode*)node, offset); break;
+    case NODE_ATOM:        print_atom((struct AtomNode*)node, offset); break;
+    case NODE_LIST:        print_list((struct ListNode*)node, offset); break;
+    case NODE_IDENT:       print_ident((struct IdentNode*)node, offset); break;
+    case NODE_UNARY:       print_unary((struct UnaryNode*)node, offset); break;
+    case NODE_BINARY:      print_binary((struct BinaryNode*)node, offset); break;
+    case NODE_PROP:        print_prop((struct PropNode*)node, offset); break;
+    case NODE_CALL:        print_call((struct CallNode*)node, offset); break;
+    case NODE_BLOCK:       print_block((struct BlockNode*)node, offset); break;
+    case NODE_IF:          print_if((struct IfNode*)node, offset); break;
+    case NODE_EXPR_STMT:   print_expr_stmt((struct ExprStmtNode*)node, offset); break;
+    case NODE_VAR_DECL:    print_var_decl((struct VarDeclNode*)node, offset); break;
+    case NODE_FN_DECL:     print_fn_decl((struct FnDeclNode*)node, offset); break;
+    case NODE_CLASS_DECL:  print_class_decl((struct ClassDeclNode*)node, offset); break;
+    case NODE_IMPORT:      print_import((struct ImportNode*)node, offset); break;
+    case NODE_RETURN:      print_return((struct ReturnNode*)node, offset); break;
     // TEMP remove when we add functions
-    case NODE_PRINT:     print_print((struct PrintNode*)node, offset); break; 
+    case NODE_PRINT:       print_print((struct PrintNode*)node, offset); break; 
     }
     printf(")");
     if (offset == 0)
