@@ -1,5 +1,5 @@
 import tempfile
-import difflib
+import filecmp
 import os
 import subprocess
 import sys
@@ -12,19 +12,14 @@ def diff(testpath: str, snappath: str) -> None:
         subprocess.run(["./build/flood", testpath], stdout=tmp)
         tmp.flush()
         tmp.seek(0)
-        diff = list(difflib.unified_diff(snapshot.readlines(), tmp.readlines(), n=0))
-        if not diff:
+        if filecmp.cmp(tmp.name, snappath):
             print(f"\033[32m{testpath}\033[0m")
         else:
             print(f"\033[31m{testpath}\033[0m\n")
-            for line in diff:
-                if line.startswith("-"):
-                    print(f"\033[31m{line}\033[0m", end="")
-                elif line.startswith("+"):
-                    print(f"\033[32m{line}\033[0m", end="")
-                else:
-                    print(line, end="")
-            print()
+            print("old:")
+            print(snapshot.read())
+            print("new:")
+            print(tmp.read())
 
 def upgrade(testpath: str, snappath: str) -> None:
     snapdir = snappath[:snappath.rfind("/")]

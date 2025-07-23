@@ -8,6 +8,7 @@ void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr)
 {
     sema->depth = 0;
     sema->local_cnt = 0;
+    sema->global_cnt = 0;
     sema->sym_arr = sym_arr;
     sema->fn = NULL;
     init_errlist(&sema->errlist);
@@ -16,6 +17,7 @@ void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr)
 void release_sema_state(struct SemaState *sema)
 {
     sema->local_cnt = 0;
+    sema->global_cnt = 0;
     sema->depth = 0;
     // sema does not own sym_arr
     sema->sym_arr = NULL;
@@ -30,10 +32,37 @@ static i32 resolve_ident(struct SemaState *sema, struct Span span)
         if (span.len == other.len && memcmp(span.start, other.start, span.len) == 0) 
             return sema->locals[i];
     }
+    for (i32 i = sema->global_cnt-1; i >= 0; i--) {
+        struct Span other = sema->sym_arr->symbols[sema->globals[i]].span;        
+        if (span.len == other.len && memcmp(span.start, other.start, span.len) == 0) 
+            return sema->globals[i];
+    }
     return -1;
 }
 
-static void analyze_node(struct SemaState *sema, struct Node *node);
+static i32 declare_ident(struct SemaState *sema, struct Span span)
+{
+    // TODO we can make this faster by only checking in the current scope
+    i32 id = resolve_ident(sema, span);
+    if (id != -1 && sema->sym_arr->symbols[id].depth == sema->depth)
+        push_errlist(&sema->errlist, span, "redeclared variable");
+    struct Symbol sym = {
+        .span  = span,
+        .flags = FLAG_NONE,
+        .depth = sema->depth,
+        .idx   = -1
+    };
+    id = push_symbol_arr(sema->sym_arr, sym);
+    // TODO error if more than 256 locals or 256 globals
+    if (sema->depth > 0) {
+        sema->locals[sema->local_cnt] = id;
+        sema->local_cnt++;
+    } else {
+        sema->globals[sema->global_cnt] = id;
+        sema->global_cnt++;
+    }
+    return id;
+}
 
 // NOTE: 
 // given a fn and an ident, we update the capture arrs of the fn
@@ -83,6 +112,8 @@ static void update_captures(struct SemaState *sema, i32 id)
         fn->parent_capture_cnt++;
     }
 }
+
+static void analyze_node(struct SemaState *sema, struct Node *node);
 
 static void analyze_ident(struct SemaState *sema, struct IdentNode *node)
 {
@@ -166,57 +197,9 @@ static void analyze_return(struct SemaState *sema, struct ReturnNode *node)
 
 static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node) 
 {
-    struct Span span = node->base.span;
-    i32 id = resolve_ident(sema, span);
-    if (id != -1 && sema->sym_arr->symbols[id].depth == sema->depth)
-        push_errlist(&sema->errlist, span, "redeclared variable");
-    struct Symbol sym = {
-        .span  = span,
-        .flags = FLAG_NONE,
-        .depth = sema->depth,
-        .idx   = -1
-    };
-    id = push_symbol_arr(sema->sym_arr, sym);
-    node->id = id;
+    node->id = declare_ident(sema, node->base.span);
     if (node->init)
         analyze_node(sema, node->init);
-    // TODO error if more than 256 locals
-    // NOT:
-    // I don't support global variables because globals are being replaced by a different system altogether
-    sema->locals[sema->local_cnt] = id;
-    sema->local_cnt++;
-}
-
-// NOTE: 
-// we split analyzing the function signature and body 
-// to allow for mutually recursive functions at the top level
-static void analyze_fn_signature(struct SemaState *sema, struct FnDeclNode *node) 
-{
-    struct Span fn_span = node->base.span;
-    i32 id = resolve_ident(sema, fn_span);
-    if (id != -1 && sema->sym_arr->symbols[id].depth == sema->depth)
-        push_errlist(&sema->errlist, fn_span, "redeclared variable");
-    struct Symbol sym = {
-        .span  = fn_span,
-        .flags = FLAG_NONE,
-        .depth = sema->depth,
-        .idx   = -1
-    };
-    id = push_symbol_arr(sema->sym_arr, sym);
-    node->id = id;
-    // TODO error if more than 256 locals 
-    sema->locals[sema->local_cnt] = id;
-    sema->local_cnt++;
-    for (i32 i = 0; i < node->arity; i++) {
-        struct Span param_span = node->params[i].base.span;
-        for (i32 j = 0; j < i; j++) {
-            struct Span other = node->params[j].base.span;
-            if (other.len == param_span.len && memcmp(other.start, param_span.start, param_span.len) == 0) {
-                push_errlist(&sema->errlist, param_span, "used as parameter more than once");
-                break;
-            }
-        }
-    }
 }
 
 static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
@@ -226,20 +209,10 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     sema->fn = node;
     i32 local_cnt = sema->local_cnt;
 
-    for (i32 i = 0; i < node->arity; i++) {
-        struct Span span = node->params[i].base.span;
-        struct Symbol sym = {
-            .span = span,
-            .flags = FLAG_NONE,
-            .depth = sema->depth + 1,
-            .idx   = -1
-        };
-        i32 id = push_symbol_arr(sema->sym_arr, sym);
-        node->params[i].id = id;
-        // TODO error if more than 256 locals
-        sema->locals[sema->local_cnt] = id;
-        sema->local_cnt++;
-    }
+    sema->depth++;
+    for (i32 i = 0; i < node->arity; i++)
+        node->params[i].id = declare_ident(sema, node->params[i].base.span);
+    sema->depth--;
     analyze_block(sema, node->body);
 
     // pop state and leave the fn
@@ -248,6 +221,15 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     
     for (i32 i = 0; i < node->parent_capture_cnt; i++)
         update_captures(sema, node->parent_captures[i]);
+}
+
+static void analyze_class_body(struct SemaState *sema, struct ClassDeclNode *node)
+{
+    for (i32 i = 0; i < node->cnt; i++) {
+        struct FnDeclNode *fn_decl = (struct FnDeclNode*)node->methods[i];
+        fn_decl->id = declare_ident(sema, fn_decl->base.span);           
+        analyze_fn_body(sema, node->methods[i]);
+    }
 }
 
 static void analyze_node(struct SemaState *sema, struct Node *node)
@@ -259,7 +241,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
     case NODE_PROP:      analyze_get_prop(sema, (struct PropNode*)node); break;
-    case NODE_CALL:   analyze_fn_call(sema, (struct CallNode*)node); break;
+    case NODE_CALL:      analyze_fn_call(sema, (struct CallNode*)node); break;
     case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
     case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;
     case NODE_EXPR_STMT: analyze_expr_stmt(sema, (struct ExprStmtNode*)node); break;
@@ -268,9 +250,15 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_PRINT:     analyze_print(sema, (struct PrintNode*)node); break;
     case NODE_VAR_DECL:  analyze_var_decl(sema, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL: {
-        analyze_fn_signature(sema, (struct FnDeclNode*)node);
-        analyze_fn_body(sema, (struct FnDeclNode*)node);
+        struct FnDeclNode *fn_decl = (struct FnDeclNode*)node;
+        fn_decl->id = declare_ident(sema, fn_decl->base.span);        
+        analyze_fn_body(sema, fn_decl);
         break;
+    }
+    case NODE_CLASS_DECL: {
+        struct ClassDeclNode *class_decl = (struct ClassDeclNode*)node;
+        class_decl->id = declare_ident(sema, class_decl->base.span);        
+        analyze_class_body(sema, class_decl);
     }
     }
 }
@@ -279,8 +267,19 @@ void analyze(struct SemaState *sema, struct FnDeclNode *node)
 {
     // TODO I should probably be clearing the errorlist each time
     struct BlockNode *body = node->body;
-    for (i32 i = 0; i < body->cnt; i++) 
-        analyze_fn_signature(sema, (struct FnDeclNode*)body->stmts[i]);
-    for (i32 i = 0; i < body->cnt; i++)
-        analyze_fn_body(sema, (struct FnDeclNode*)body->stmts[i]);
+    for (i32 i = 0; i < body->cnt; i++) {
+        if (body->stmts[i]->tag == NODE_FN_DECL) {
+            struct FnDeclNode *fn_decl = (struct FnDeclNode*)body->stmts[i];
+            fn_decl->id = declare_ident(sema, fn_decl->base.span);
+        } else {
+            struct ClassDeclNode *class_decl = (struct ClassDeclNode*)body->stmts[i];
+            class_decl->id = declare_ident(sema, class_decl->base.span);
+        }
+    } 
+    for (i32 i = 0; i < body->cnt; i++) {
+        if (body->stmts[i]->tag == NODE_FN_DECL) 
+            analyze_fn_body(sema, (struct FnDeclNode*)body->stmts[i]);
+        else
+            analyze_class_body(sema, (struct ClassDeclNode*)body->stmts[i]);
+    }
 }
