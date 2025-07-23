@@ -1,7 +1,7 @@
-fn foo() {
-
-}
-
-class Baz {
-
+fn foo(x) {
+    class Bar {
+        fn baz() {
+            print x;
+        }
+    }
 }
