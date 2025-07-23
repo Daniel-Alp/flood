@@ -9,3 +9,9 @@ fn main( {
 fn foo(x, y) {
     1 + @
 }
+
+bar
+
+fn baz() {
+    1 + @
+}

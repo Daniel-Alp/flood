@@ -152,6 +152,17 @@ static struct BinaryNode *mk_binary(
     return node;
 }
 
+static struct CallNode *mk_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, i32 arity) 
+{
+    struct CallNode *node = push_arena(arena, sizeof(struct CallNode));
+    node->base.tag = NODE_CALL;
+    node->base.span = span;
+    node->lhs = lhs;
+    node->args = args;
+    node->arity = arity;
+    return node;
+}
+
 static struct PropNode *mk_prop(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
 {
     struct PropNode *node = push_arena(arena, sizeof(struct PropNode));
@@ -159,17 +170,6 @@ static struct PropNode *mk_prop(struct Arena *arena, struct Span span, struct No
     node->base.tag = NODE_PROP;
     node->lhs = lhs;
     node->prop = prop;
-    return node;
-}
-
-static struct FnCallNode *mk_fn_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, i32 arity) 
-{
-    struct FnCallNode *node = push_arena(arena, sizeof(struct FnCallNode));
-    node->base.tag = NODE_FN_CALL;
-    node->base.span = span;
-    node->lhs = lhs;
-    node->args = args;
-    node->arity = arity;
     return node;
 }
 
@@ -200,6 +200,17 @@ static struct FnDeclNode *mk_fn_decl(
     node->stack_capture_cnt = 0;
     node->parent_capture_cnt = 0;
     node->parent = NULL;
+    return node;
+}
+
+static struct ClassDeclNode *mk_class_decl(struct Arena *Arena, struct Span span, struct FnDeclNode **methods, i32 cnt)
+{
+    struct ClassDeclNode *node = push_arena(Arena, sizeof(struct ClassDeclNode));
+    node->base.tag = NODE_CLASS_DECL;
+    node->base.span = span; 
+    node->methods = methods;
+    node->cnt = cnt;
+    node->id = -1;
     return node;
 }
 
@@ -293,6 +304,8 @@ static void recover_block(struct Parser *parser)
         switch(at(parser).tag) {
         case TOKEN_IF:
         case TOKEN_VAR:
+        case TOKEN_FN:
+        case TOKEN_CLASS:
             return;
         case TOKEN_L_BRACE:
             depth++;
@@ -388,7 +401,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl);
 
 // precondition: `[` or `(` token consumed
 // parses arguments and fills the ptr array provided
-static void parse_arg_list(struct Parser *parser, struct PtrArray *args_tmp, enum TokenTag tag_right)
+static void parse_arg_list(struct Parser *parser, struct PtrArray *tmp, enum TokenTag tag_right)
 {
     while(at(parser).tag != tag_right && at(parser).tag != TOKEN_EOF) {
         // breaking early helps when the right token is missing
@@ -397,7 +410,7 @@ static void parse_arg_list(struct Parser *parser, struct PtrArray *args_tmp, enu
             break;
         }
         struct Node *arg = parse_expr(parser, 1);
-        push_ptr_array(args_tmp, arg);
+        push_ptr_array(tmp, arg);
         if (at(parser).tag != tag_right)
             expect(parser, TOKEN_COMMA, "expected `,`");            
     }
@@ -453,13 +466,13 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         // parse fn_call
         if (eat(parser, TOKEN_L_PAREN)) {
             struct Span fn_call_span = prev(parser).span;
-            struct PtrArray args_tmp;
-            init_ptr_array(&args_tmp);
-            parse_arg_list(parser, &args_tmp, TOKEN_R_PAREN);
+            struct PtrArray tmp;
+            init_ptr_array(&tmp);
+            parse_arg_list(parser, &tmp, TOKEN_R_PAREN);
             expect(parser, TOKEN_R_PAREN, "expected `)`");
-            i32 cnt = args_tmp.cnt;
-            struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &args_tmp);
-            lhs = (struct Node*)mk_fn_call(&parser->arena, fn_call_span, lhs, args, cnt);
+            i32 cnt = tmp.cnt;
+            struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &tmp);
+            lhs = (struct Node*)mk_call(&parser->arena, fn_call_span, lhs, args, cnt);
             continue;
         }
         token = at(parser);
@@ -536,13 +549,14 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
             push_ident_array(&tmp_params, ident);
             if (at(parser).tag != TOKEN_R_PAREN)
                 expect(parser, TOKEN_COMMA, "expected `,`");
+        } else if (at(parser).tag == TOKEN_FN
+                   || at(parser).tag == TOKEN_CLASS
+                   || at(parser).tag == TOKEN_L_BRACE
+                   || at(parser).tag == TOKEN_IMPORT) {
+            // breaking early helps when there is no matching `)`
+            break;            
         } else {
             advance_with_err(parser, "expected identifier");
-            if (at(parser).tag == TOKEN_FN || at(parser).tag == TOKEN_IMPORT) {
-                parser->panic = false;
-                release_ident_array(&tmp_params);
-                return NULL;
-            }
         }
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
@@ -550,6 +564,29 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
     struct IdentNode *param_spans = mv_ident_array_to_arena(&parser->arena, &tmp_params);
     struct BlockNode *body = parse_block(parser);
     return mk_fn_decl(&parser->arena, span, param_spans, arity,  body);
+}
+
+// precondition: `class` token consumed
+static struct ClassDeclNode *parse_class_decl(struct Parser *parser)
+{
+    struct Span span = at(parser).span;
+    expect(parser, TOKEN_IDENTIFIER, "expected identifier");
+    expect(parser, TOKEN_L_BRACE, "expected `{`");
+
+    struct PtrArray tmp;
+    init_ptr_array(&tmp);
+    while (at(parser).tag != TOKEN_R_BRACE && at(parser).tag != TOKEN_EOF) {
+        if (eat(parser, TOKEN_FN)) {
+            parser->panic = false;
+            push_ptr_array(&tmp, parse_fn_decl(parser));
+        } else {
+            advance_with_err(parser, "expected method declaration");
+        }    
+    }
+    expect(parser, TOKEN_R_BRACE, "expected `}`");
+    i32 cnt = tmp.cnt;
+    struct FnDeclNode **methods = (struct FnDeclNode**)mv_ptr_array_to_arena(&parser->arena, &tmp);
+    return mk_class_decl(&parser->arena, span, methods, cnt);
 }
 
 // precondition: `return` token consumed
@@ -600,6 +637,8 @@ static struct BlockNode *parse_block(struct Parser *parser)
             node = (struct Node*)parse_return(parser);  
         } else if (eat(parser, TOKEN_FN)) {
             node = (struct Node*)parse_fn_decl(parser);
+        } else if (eat(parser, TOKEN_CLASS)) {
+            node = (struct Node*)parse_class_decl(parser);
         } else if (eat(parser, TOKEN_PRINT)) {
             node = (struct Node*)parse_print(parser);
         } else if (expr_first(at(parser).tag)) {
@@ -635,18 +674,21 @@ static struct ImportNode *parse_import(struct Parser *parser)
 }
 
 // for now, a file is implicitly a fn except 
-// the body can only contain fn decls and mutual recursion is allowed
+// the body can only contain fn and class decls and mutual recursion is allowed
 static struct FnDeclNode *parse_file(struct Parser *parser) 
 {
     struct PtrArray tmp;
     init_ptr_array(&tmp);
     while (at(parser).tag != TOKEN_EOF) {
-        struct Node *node = NULL;
-        if (eat(parser, TOKEN_FN))
-            node = (struct Node*)parse_fn_decl(parser);
-        else
+        if (eat(parser, TOKEN_FN)) {
+            parser->panic = false;
+            push_ptr_array(&tmp, parse_fn_decl(parser));
+        } else if (eat(parser, TOKEN_CLASS)) {
+            parser->panic = false;
+            push_ptr_array(&tmp, parse_class_decl(parser));
+        } else {
             advance_with_err(parser, "expected declaration");
-        push_ptr_array(&tmp, node);
+        }
     }
     i32 cnt = tmp.cnt;
     struct Node **stmts = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);

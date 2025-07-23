@@ -220,7 +220,7 @@ static void compile_get_prop(struct Compiler *compiler, struct PropNode *node)
     emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
 }
 
-static void compile_fn_call(struct Compiler *compiler, struct FnCallNode *node) 
+static void compile_fn_call(struct Compiler *compiler, struct CallNode *node) 
 {
     i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
@@ -387,7 +387,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;
     case NODE_PROP:      compile_get_prop(compiler, (struct PropNode*)node); break;
-    case NODE_FN_CALL:   compile_fn_call(compiler, (struct FnCallNode*)node); break;
+    case NODE_CALL:   compile_fn_call(compiler, (struct CallNode*)node); break;
     case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:        compile_if(compiler, (struct IfNode*)node); break;
     case NODE_EXPR_STMT: compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
