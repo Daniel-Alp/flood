@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdlib.h>
 #include "object.h"
 #include "memory.h"
@@ -5,7 +6,7 @@
 void init_foreign_method_obj(
     struct ForeignMethodObj *f_method, 
     struct Obj* self,
-    const char *name,
+    struct StringObj *name,
     i32 arity,
     ForeignMethod code
 ) {
@@ -19,13 +20,13 @@ void init_foreign_method_obj(
 void release_foreign_method_obj(struct ForeignMethodObj *f_method)
 {
     // method does not own foreign object
-    f_method->self = NULL; 
-    release(f_method->name);
+
+    // GC handles lifetime of name
     f_method->name = NULL;
     f_method->arity = 0;
 }
 
-void init_fn_obj(struct FnObj *fn, const char *name, i32 arity) 
+void init_fn_obj(struct FnObj *fn, struct StringObj *name, i32 arity) 
 {
     fn->base.tag = OBJ_FN;
     init_chunk(&fn->chunk);
@@ -36,7 +37,7 @@ void init_fn_obj(struct FnObj *fn, const char *name, i32 arity)
 void release_fn_obj(struct FnObj *fn) 
 {
     release_chunk(&fn->chunk);
-    release(fn->name);
+    // GC handles lifetime of name
     fn->name = NULL;
     fn->arity = 0;
 }
@@ -65,6 +66,49 @@ void release_closure_obj(struct ClosureObj *closure)
     release(closure->captures);
     closure->capture_cnt = 0;
     closure->captures = NULL;
+}
+
+void init_class_obj(struct ClassObj *class, struct StringObj *name)
+{
+    class->base.tag = OBJ_CLASS;
+    class->name = name;
+    init_val_table(&class->methods);
+}
+
+void release_class_obj(struct ClassObj *class)
+{
+    // GC handles lifetime of name
+    release_val_table(&class->methods);
+}
+
+// NOTE: vals is the methods defined on the class
+void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class)
+{
+    instance->base.tag = OBJ_INSTANCE;
+    instance->class = class;
+    init_val_table(&instance->props);
+}
+
+void release_instance_obj(struct InstanceObj *instance)
+{
+    // instance does not own class
+    instance->class = NULL;
+    release_val_table(&instance->props);
+}
+
+// TODO consider copying contents of closure to avoid going through pointer
+void init_method_obj(struct MethodObj *method, struct ClosureObj *closure, struct InstanceObj *self)
+{
+    method->base.tag = OBJ_METHOD;
+    method->closure = closure;
+    method->self = self;
+}
+
+// TODO consider copying contents of closure to avoid going through pointer
+void release_method_obj(struct MethodObj *method)
+{
+    method->closure = NULL;
+    method->self = NULL;
 }
 
 // NOTE: vals points to the start of the list's elements in the stack 

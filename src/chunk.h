@@ -51,26 +51,33 @@ enum OpCode {
     OP_NEGATE,
     OP_NOT,
 
+    // TODO make OP_LIST_LONG which can more elems
     OP_LIST,          // args: n 0..=255
     // args: n 0..=255, then n indices 0..=255 offset from bp
     // then  m 0..=255, then m indices 0..=255 idx into capture arr
+    OP_HEAPVAL,       // args: 0..=255 offset from bp
     OP_CLOSURE,         
+    OP_CLASS,
+    OP_METHOD,
 
-    OP_GET_CONST,     // args: index 0..=255 idx into constant arr
-    OP_GET_LOCAL,     // args: index 0..=255 offset from bp
-    OP_SET_LOCAL,     // args: index 0..=255 offset from bp
-    OP_HEAPVAL,       // args: index 0..=255 offset from bp
-    OP_GET_HEAPVAL,   // args: index 0..=255 offset from bp
-    OP_SET_HEAPVAL,   // args: index 0..=255 offset from bp
-    OP_GET_CAPTURED,  // args: index 0..=255 idx into capture arr
-    OP_SET_CAPTURED,  // args: index 0..=255 idx into capture arr
+    OP_GET_CONST,     // args: 0..=255 idx into constant arr
+    OP_GET_LOCAL,     // args: 0..=255 offset from bp
+    OP_SET_LOCAL,     // args: 0..=255 offset from bp
+    OP_GET_HEAPVAL,   // args: 0..=255 offset from bp
+    OP_SET_HEAPVAL,   // args: 0..=255 offset from bp
+    OP_GET_CAPTURED,  // args: 0..=255 idx into capture arr
+    OP_SET_CAPTURED,  // args: 0..=255 idx into capture arr
     // TEMP remove globals when we added user-defined classes
-    OP_GET_GLOBAL,    // args: index 0..=255 idx into global arr
-    OP_SET_GLOBAL,    // args: index 0..=255 idx into global arr
+    OP_GET_GLOBAL,    // args: 0..=255 idx into global arr
+    OP_SET_GLOBAL,    // args: 0..=255 idx into global arr
     OP_GET_SUBSCR,    
-    OP_SET_SUBSCR,     
-    OP_GET_PROP,      // args: index 0..=255 idx into constant arr
-    OP_SET_PROPERTY,  // args: index 0..=255 idx into constant arr
+    OP_SET_SUBSCR,    
+    // TODO optimize OP_GET_SELF with these opcodes
+    // OP_GET_SELF_PROP, // args: 0..=255 idx into constant arr  
+    // OP_SET_SELF_PROP, // args: 0..=255 idx into constant arr
+    // TODO OP_INVOKE optimization
+    OP_GET_PROP,      // args: 0..=255 idx into constant arr
+    OP_SET_PROPERTY,  // args: 0..=255 idx into constant arr
 
     OP_JUMP,
     OP_JUMP_IF_FALSE, 

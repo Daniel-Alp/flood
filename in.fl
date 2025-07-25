@@ -1,7 +1,0 @@
-fn foo(x) {
-    class Bar {
-        fn baz() {
-            print x;
-        }
-    }
-}

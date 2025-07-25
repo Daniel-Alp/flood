@@ -1,0 +1,6 @@
+fn main() {
+    class Foo {
+
+    }
+    print Foo;
+}

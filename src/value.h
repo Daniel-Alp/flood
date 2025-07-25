@@ -3,6 +3,7 @@
 #define TABLE_LOAD_FACTOR (0.75)
 
 struct Obj;
+struct StringObj;
 
 enum ValTag {
     VAL_NIL,
@@ -29,6 +30,8 @@ struct ValArray {
 
 // TODO implement optimization
 struct ValTableEntry {
+    // we should really be using ObjString here but it means we need to 
+    // pass an instance of VM to certain functions in object.c
     u32 hash;
     i32 len;
     const char *chars;

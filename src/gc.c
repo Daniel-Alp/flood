@@ -16,6 +16,16 @@ static inline void push_gray_stack(struct VM *vm, struct Obj *obj)
     obj->color = GC_GRAY;
 }
 
+// TODO move other mark methods into separate fns
+void mark_table(struct VM *vm, struct ValTable *tab)
+{
+    for (i32 i = 0; i < tab->cap; i++) {
+        struct ValTableEntry entry = tab->entries[i];
+        if (entry.chars != NULL && IS_OBJ(entry.val))
+            push_gray_stack(vm, AS_OBJ(entry.val));
+    }
+}
+
 // precondition: all objects white
 void collect_garbage(struct VM *vm) 
 {
@@ -59,9 +69,9 @@ void collect_garbage(struct VM *vm)
         }
         case OBJ_FN: {
             struct FnObj *fn = (struct FnObj*)obj;
+            push_gray_stack(vm, (struct Obj*)fn->name);
             Value *lo = fn->chunk.constants.vals;
             Value *hi = lo + fn->chunk.constants.cnt;
-            
             for (Value *ptr = lo; ptr < hi; ptr++) {
                 Value val = *ptr;
                 if (IS_OBJ(val))
@@ -98,6 +108,25 @@ void collect_garbage(struct VM *vm)
             struct HeapValObj *heap_val = (struct HeapValObj*)obj;
             if (IS_OBJ(heap_val->val))
                 push_gray_stack(vm, AS_OBJ(heap_val->val));
+            break;
+        }
+        case OBJ_CLASS: {
+            struct ClassObj *class = (struct ClassObj*)obj;
+            push_gray_stack(vm, class->name);
+            mark_table(vm, &class->methods);
+            break;
+        }
+        case OBJ_INSTANCE: {
+            struct InstanceObj *instance = (struct InstanceObj*)obj;
+            push_gray_stack(vm, (struct Obj*)instance->class);
+            mark_table(vm, &instance->props);
+            break;
+        }
+        case OBJ_METHOD: {
+            struct MethodObj *method = (struct MethodObj*)obj;
+            push_gray_stack(vm, (struct Obj*)method->closure);
+            push_gray_stack(vm, (struct Obj*)method->self);
+            break;
         }
         case OBJ_STRING: {
             break;

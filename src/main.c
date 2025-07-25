@@ -50,11 +50,7 @@ int main(int argc, const char **argv)
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
-
-    // DELETEME!
-    print_node(ast, 0);
-    return 0;
-
+    
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);
     struct VM vm;
@@ -66,6 +62,8 @@ int main(int argc, const char **argv)
         release_symbol_arr(&sym_arr);
         goto err_release_compiler;
     }
+
+    // TODO check main has 0 args
 
     // invoke main function if defined
     if (compiler.main_fn_idx != -1) {
