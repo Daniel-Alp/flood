@@ -82,6 +82,7 @@ struct ValTableEntry *get_val_table_slot(
 
 void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value val)
 {
+    // TODO consider passing in the hash here so that we don't recompute it when we don't need to
     if (tab->cnt * TABLE_LOAD_FACTOR >= tab->cap) {
         i32 new_cap = tab->cap * 2;
         struct ValTableEntry *new_entries = allocate(new_cap * sizeof(struct ValTableEntry));
@@ -133,17 +134,32 @@ void print_val(Value val)
         enum ObjTag tag = AS_OBJ(val)->tag;
         switch(tag) {
         case OBJ_FOREIGN_METHOD: {
-            const char *name = AS_FOREIGN_METHOD(val)->name;
+            const char *name = AS_FOREIGN_METHOD(val)->name->chars;
             printf("<foreign method %s>", name);
             break;
         }
         case OBJ_FN: {
-            const char *name = AS_FN(val)->name;
+            const char *name = AS_FN(val)->name->chars;
             printf("<function %s>", name);
             break;
         }
         case OBJ_CLOSURE: {
-            const char *name = AS_CLOSURE(val)->fn->name;
+            const char *name = AS_CLOSURE(val)->fn->name->chars;
+            printf("<function %s>", name);
+            break;
+        }
+        case OBJ_CLASS: {
+            const char *name = AS_CLASS(val)->name->chars;
+            printf("<class %s>", name);
+            break;
+        }
+        case OBJ_INSTANCE: {
+            const char *name = AS_INSTANCE(val)->class->name->chars;
+            printf("<instance %s>", name);
+            break;
+        }
+        case OBJ_METHOD: {
+            const char *name = AS_METHOD(val)->closure->fn->name->chars;
             printf("<function %s>", name);
             break;
         }

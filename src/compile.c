@@ -322,11 +322,15 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         compiler->fn_local_cnt++;
     }
 
-    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
     struct Span span = node->base.span;
-    char *name = allocate((span.len+1)*sizeof(char));
-    strncpy(name, span.start, span.len);
-    name[span.len] = '\0';
+
+    char *chars = allocate((span.len+1)*sizeof(char));
+    strncpy(chars, span.start, span.len);
+    chars[span.len] = '\0';
+    struct StringObj *name = (struct StringObj*)alloc_vm_obj(compiler->vm, sizeof(struct StringObj));
+    init_string_obj(name, hash_string(chars, span.len), span.len, chars);
+
+    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
     init_fn_obj(fn, name, node->arity);
 
     // push state and enter the fn
@@ -405,10 +409,12 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
     // have to clear other things in the compiler as well each time we compile
     compiler->vm = vm;
 
-    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
-    char *name = allocate(7*sizeof(char));
-    strcpy(name, "script");
-    init_fn_obj(top_fn, name, 0);
+    struct StringObj *top_fn_name = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj)); 
+    init_string_obj(top_fn_name, hash_string("script", 6), 6, strcpy(allocate(7*sizeof(char)), "script"));
+    strcpy(top_fn_name->chars, "script");
+
+    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));;
+    init_fn_obj(top_fn, top_fn_name, 0);
 
     struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
     init_closure_obj(top_closure, top_fn, 0);

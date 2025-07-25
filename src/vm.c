@@ -8,10 +8,10 @@
 #include "debug.h"
 #include "foreign.h"
 
-static u32 get_opcode_line(u32 *lines, u32 tgt_opcode_idx)
+static i32 get_opcode_line(i32 *lines, i32 tgt_opcode_idx)
 {
     // see chunk.h
-    u32 opcode_idx = 0;
+    i32 opcode_idx = 0;
     i32 i = 1;
     while (true) {
         opcode_idx += lines[i];
@@ -33,8 +33,8 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg)
     printf("%s\n", msg);
     for (i32 i = vm->call_cnt-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
-        u32 line = get_opcode_line(frame.closure->fn->chunk.lines, frame.ip-1 - frame.closure->fn->chunk.code);
-        printf("[line %d] in %s\n", line, frame.closure->fn->name);
+        i32 line = get_opcode_line(frame.closure->fn->chunk.lines, frame.ip-1 - frame.closure->fn->chunk.code);
+        printf("[line %d] in %s\n", line, frame.closure->fn->name->chars);
     }
 }
 

@@ -1,0 +1,10 @@
+fn foo(x) {
+    fn bar() {
+        print x;
+    }
+    print bar;
+}
+
+fn main() {
+    foo(3);
+}

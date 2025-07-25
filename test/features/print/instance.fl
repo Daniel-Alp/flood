@@ -1,0 +1,7 @@
+fn main() {
+    class Foo {
+
+    }
+    var foo = Foo();
+    print foo;
+}
