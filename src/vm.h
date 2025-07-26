@@ -43,4 +43,4 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg);
 
 enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure);
 
-struct Obj *alloc_vm_obj(struct VM *vm, u64 size);
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size, struct ClassObj *class);

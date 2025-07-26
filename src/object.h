@@ -160,7 +160,7 @@ void init_class_obj(struct ClassObj *class, struct StringObj *name);
 
 void release_class_obj(struct ClassObj *class);
 
-void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class);
+void init_instance_obj(struct InstanceObj *instance);
 
 void release_instance_obj(struct InstanceObj *instance);
 
@@ -176,4 +176,4 @@ void release_string_obj(struct StringObj *str);
 
 struct StringObj *string_from_span(struct VM *vm, struct Span span);
 
-struct Stringobj *string_from_c_str(struct VM *vm, const char *c_str);
+struct StringObj *string_from_c_str(struct VM *vm, const char *c_str);

@@ -1,3 +1,14 @@
+class Foo {
+    fn init() {
+        self.x = 3;
+    }
+
+    fn print_x() {
+        print self.x;
+    }
+}
+
 fn main() {
-    
+    var foo = Foo();
+    foo.print_x();
 }

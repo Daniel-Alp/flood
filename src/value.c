@@ -81,6 +81,7 @@ struct ValTableEntry *get_val_table_slot(
     }
 }
 
+// TODO make this take an StringObj probably
 void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value val)
 {
     // TODO consider passing in the hash here so that we don't recompute it when we don't need to
@@ -151,7 +152,7 @@ void print_val(Value val)
         }
         case OBJ_CLOSURE: {
             const char *name = AS_CLOSURE(val)->fn->name->chars;
-            printf("<function %s>", name);
+            printf("<closure %s>", name);
             break;
         }
         case OBJ_CLASS: {
