@@ -215,12 +215,12 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     i32 local_cnt = sema->local_cnt;
 
     sema->depth++;
+    for (i32 i = 0; i < node->arity; i++)
+        node->params[i].id = declare_ident(sema, node->params[i].base.span, FLAG_NONE);
+    // NOTE: most languages have `self` be the bp[0] but in our case bp[0] is the function
     if (sema->sym_arr->symbols[node->id].flags & FLAG_METHOD)
         // TODO will need FLAG_SELF at some point
         declare_ident(sema, (struct Span){.len = 4, .start = "self", .line = node->base.span.line}, FLAG_SELF);
-
-    for (i32 i = 0; i < node->arity; i++)
-        node->params[i].id = declare_ident(sema, node->params[i].base.span, FLAG_NONE);
     sema->depth--;
     analyze_block(sema, node->body);
 
@@ -234,15 +234,21 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
 
 static void analyze_class_body(struct SemaState *sema, struct ClassDeclNode *node)
 {
+    bool has_init = false;
     for (i32 i = 0; i < node->cnt; i++) {
         struct FnDeclNode *fn_decl = (struct FnDeclNode*)node->methods[i];
         struct Span fn_span = fn_decl->base.span;
         u32 flags = FLAG_METHOD;
-        if (fn_span.len == 4 && strncmp(fn_span.start, "init", 4) == 0)
+        if (fn_span.len == 4 && strncmp(fn_span.start, "init", 4) == 0) {
             flags |= FLAG_INIT;
+            has_init = true;
+        }
         fn_decl->id = declare_ident(sema, fn_span, flags);
         analyze_fn_body(sema, node->methods[i]);
     }
+    // TODO allow implicit `init` methods
+    if (!has_init)
+        push_errlist(&sema->errlist, node->base.span, "class must have `init` method");
 }
 
 static void analyze_node(struct SemaState *sema, struct Node *node)

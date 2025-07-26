@@ -197,7 +197,7 @@ static void compile_get_prop(struct Compiler *compiler, struct DotNode *node)
     emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
 }
 
-static void compile_fn_call(struct Compiler *compiler, struct CallNode *node) 
+static void compile_call(struct Compiler *compiler, struct CallNode *node) 
 {
     i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
@@ -258,10 +258,15 @@ static void compile_expr_stmt(struct Compiler *compiler, struct ExprStmtNode *no
 
 static void compile_return(struct Compiler *compiler, struct ReturnNode *node) 
 {
-    if (node->expr)
+    if (node->expr) {
         compile_node(compiler, node->expr);
-    else
+    } else if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
+        // `init` method implicitly returns `self` which is at bp[arity+1]
+        emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
+        emit_byte(cur_chunk(compiler), compiler->fn_node->arity+1, node->base.span.line);
+    } else {
         emit_byte(cur_chunk(compiler), OP_NIL, node->base.span.line);
+    }
     emit_byte(cur_chunk(compiler), OP_RETURN, node->base.span.line);
 }
 
@@ -299,7 +304,7 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         compiler->fn_local_cnt++;
     }
 
-    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
+    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj), NULL);
     init_fn_obj(fn, string_from_span(compiler->vm, node->base.span), node->arity);
 
     // push state and enter the fn
@@ -320,9 +325,14 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         }
     }
     compile_block(compiler, node->body);
-    emit_byte(cur_chunk(compiler), OP_NIL, line);
+    if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
+        // `init` method implicitly returns `self` which is at bp[arity+1]
+        emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
+        emit_byte(cur_chunk(compiler), compiler->fn_node->arity+1, node->base.span.line);
+    } else {
+        emit_byte(cur_chunk(compiler), OP_NIL, line);
+    }
     emit_byte(cur_chunk(compiler), OP_RETURN, line);
-
     // disassemble_chunk(cur_chunk(compiler), compiler->fn->name->chars);
 
     // pop state and exit the fn
@@ -353,6 +363,13 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
 static void compile_class_decl(struct Compiler *compiler, struct ClassDeclNode *node)
 {
     i32 line = node->base.span.line;
+    struct Symbol* sym = &symbols(compiler)[node->id];
+    // top level functions are hoisted
+    if (sym->idx == -1) {
+        sym->idx = compiler->fn_local_cnt;
+        compiler->fn_local_cnt++;
+    }
+
     emit_byte(cur_chunk(compiler), OP_CLASS, line);
     struct StringObj *str = string_from_span(compiler->vm, node->base.span);
     emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
@@ -372,7 +389,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_UNARY:      compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:     compile_binary(compiler, (struct BinaryNode*)node); break;
     case NODE_DOT:        compile_get_prop(compiler, (struct DotNode*)node); break;
-    case NODE_CALL:       compile_fn_call(compiler, (struct CallNode*)node); break;
+    case NODE_CALL:       compile_call(compiler, (struct CallNode*)node); break;
     case NODE_BLOCK:      compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:         compile_if(compiler, (struct IfNode*)node); break;
     case NODE_EXPR_STMT:  compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
@@ -413,14 +430,14 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
     // have to clear other things in the compiler as well each time we compile
     compiler->vm = vm;
 
-    struct StringObj *top_fn_name = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj)); 
+    struct StringObj *top_fn_name = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL); 
     init_string_obj(top_fn_name, hash_string("script", 6), 6, strcpy(allocate(7*sizeof(char)), "script"));
     strcpy(top_fn_name->chars, "script");
 
-    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));;
+    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj), NULL);
     init_fn_obj(top_fn, top_fn_name, 0);
 
-    struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
+    struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj), NULL);
     init_closure_obj(top_closure, top_fn, 0);
 
     compiler->fn_node = node;
@@ -453,7 +470,7 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
         emit_byte(cur_chunk(compiler), OP_POP, line);
     }
     
-    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name);
+    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name->chars);
 
     return top_closure;
 }

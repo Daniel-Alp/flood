@@ -38,12 +38,13 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg)
     }
 }
 
-struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size, struct ClassObj *class)
 {
     struct Obj *obj = allocate(size);
     obj->next = vm->obj_list;
     obj->color = GC_WHITE;
     obj->printed = 0;
+    obj->class = class;
     vm->obj_list = obj;
     return obj;
 }
@@ -89,12 +90,13 @@ void release_vm(struct VM *vm)
 }
 
 // TODO check if exceeding max stack size
-enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure) 
+enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script) 
 {
     Value *sp = vm->val_stack;
 
     struct CallFrame *frame = vm->call_stack;
-    frame->closure = closure;
+    // TODO we can probably take things out of frame to avoid going through pointer
+    frame->closure = script;
     // TODO some of these other things should probably be marked with register
     // also consider moving putting bp in its own var so I don't have to go through frame to reach bp each time
     frame->bp = sp;
@@ -277,31 +279,47 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             u8 cnt = *ip++;
             sp -= cnt;
             Value *vals = sp;
-            struct Obj *list = alloc_vm_obj(vm, sizeof(struct ListObj));
-            // TODO benchmark, maybe inline
-            list->class = vm->list_class;
-            init_list_obj((struct ListObj*)list, vals, cnt);
-            sp[0] = MK_OBJ(list);
+            struct ListObj *list = (struct ListObj*)alloc_vm_obj(vm, sizeof(struct ListObj), vm->list_class);
+            init_list_obj(list, vals, cnt);
+            sp[0] = MK_OBJ((struct Obj*)list);
             sp++;
+            break;
+        }
+        case OP_CLASS: {
+            u8 idx = *ip++;
+            struct StringObj *name = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+            struct ClassObj *class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj), NULL);
+            init_class_obj(class, name);
+            sp[0] = MK_OBJ((struct Obj*)class);
+            sp++;
+            break;
+        }
+        // TODO will need something for allowing user-defined foreign methods later
+        case OP_METHOD: {
+            struct ClassObj *class = AS_CLASS(sp[-2]);
+            struct StringObj *name = AS_CLOSURE(sp[-1])->fn->name;
+            // TODO optimize, avoid recomputing hash each time
+            insert_val_table(&class->methods, name->chars, name->len, sp[-1]);
+            sp--;
             break;
         }
         case OP_HEAPVAL: {
             u8 idx = *ip++;
-            struct Obj *heap_val = alloc_vm_obj(vm, sizeof(struct HeapValObj));
-            init_heap_val_obj((struct HeapValObj*)heap_val, frame->bp[idx]);
-            frame->bp[idx] = MK_OBJ(heap_val);
+            struct HeapValObj *heap_val = (struct HeapValObj*)alloc_vm_obj(vm, sizeof(struct HeapValObj), NULL);
+            init_heap_val_obj(heap_val, frame->bp[idx]);
+            frame->bp[idx] = MK_OBJ((struct Obj*)heap_val);
             break;
         }
         case OP_CLOSURE: {
             u8 stack_captures = *ip++;
             u8 parent_captures = *ip++;
-            struct Obj *closure = alloc_vm_obj(vm, sizeof(struct ClosureObj));
-            init_closure_obj((struct ClosureObj*)closure, AS_FN(sp[-1]), stack_captures + parent_captures);
+            struct ClosureObj *closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj), NULL);
+            init_closure_obj(closure, AS_FN(sp[-1]), stack_captures + parent_captures);
             for (i32 i = 0; i < stack_captures; i++)
-                ((struct ClosureObj*)closure)->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
+                closure->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
             for (i32 i = 0; i < parent_captures; i++)
-                ((struct ClosureObj*)closure)->captures[stack_captures+i] = frame->closure->captures[*ip++];
-            sp[-1] = MK_OBJ(closure);
+                closure->captures[stack_captures+i] = frame->closure->captures[*ip++];
+            sp[-1] = MK_OBJ((struct Obj*)closure);
             break;
         }
         case OP_GET_CONST: {
@@ -438,12 +456,12 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 if (entry->chars != NULL) {
                     if (AS_OBJ(entry->val)->tag == OBJ_CLOSURE) { 
                          // user-defined method, bind function to instance
-                        struct MethodObj *method = alloc_vm_obj(vm, sizeof(struct MethodObj));
+                        struct MethodObj *method = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
                         init_method_obj(method, AS_CLOSURE(entry->val), AS_INSTANCE(val));
                         sp[-1] = MK_OBJ((struct Obj*)method); 
                     } else { 
                         // foreign method, bind function to instance
-                        struct ForeignMethodObj *f_method = alloc_vm_obj(vm, sizeof(struct ForeignMethodObj));
+                        struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)alloc_vm_obj(vm, sizeof(struct ForeignMethodObj), NULL);
                         init_foreign_method_obj(f_method, AS_FOREIGN_FN(entry->val), AS_INSTANCE(val));
                         sp[-1] = MK_OBJ((struct Obj*)f_method);
                     }
@@ -473,8 +491,14 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 );
                 if (entry->chars != NULL) {
                     entry->val = val;
-                    break;
+                } else {
+                    // TODO make insert_val_table take hash to avoid recomputing it
+                    insert_val_table(&instance->fields, prop->chars, prop->len, val);
                 }
+                sp[-2] = sp[-1];
+                sp--;
+                break;
+                // FIXME this is unreachable, but we need to only allow creating a field within a method
                 runtime_err(ip, vm, "field does not exist");
                 return INTERP_RUNTIME_ERR;
             }
@@ -513,6 +537,9 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
         case OP_CALL: {
             u8 arg_count = *ip++;
             Value val = sp[-1-arg_count];
+            // TODO consider switching on the tag of obj
+            // TODO avoid copy pasting code here, this is just to get it working :P
+            // (I can probably just do fallthrough class->method->closure and foreign functions separately)
             if (IS_CLOSURE(val)) {
                 struct ClosureObj *closure = AS_CLOSURE(val);
                 if (closure->fn->arity != arg_count) {
@@ -529,6 +556,54 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 frame->bp = sp-1-arg_count;
                 frame->closure = closure;
                 ip = closure->fn->chunk.code;
+            } else if (IS_METHOD(val)) {
+                struct MethodObj *method = AS_METHOD(val);
+                if (method->closure->fn->arity != arg_count) {
+                    runtime_err(ip, vm, "incorrect number of arguments provided");
+                    return INTERP_RUNTIME_ERR;
+                }
+                if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
+                    runtime_err(ip, vm, "stack overflow");
+                    return INTERP_RUNTIME_ERR;
+                }
+                // `self` is the last argument to methods
+                sp[0] = MK_OBJ((struct Obj*)method->self);
+                sp++;
+                frame->ip = ip; 
+                vm->call_cnt++;
+                frame++;
+                frame->bp = sp-1-(arg_count+1); // arg_count+1 because arg_count does not include `self`
+                frame->closure = method->closure;
+                ip = method->closure->fn->chunk.code;
+            } else if (IS_CLASS(val)) {
+                struct ClassObj *class = AS_CLASS(val);
+                struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj), class);
+                init_instance_obj(instance);
+
+                struct ValTableEntry *entry = get_val_table_slot(
+                    class->methods.entries,
+                    class->methods.cap,
+                    hash_string("init", 4),
+                    4,
+                    "init"
+                );
+                struct MethodObj *init = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
+                init_method_obj(init, AS_CLOSURE(entry->val), instance);
+                // replace <class obj> with `init` method and invoke it
+                //      <class obj>
+                //      <arg>
+                //      ...
+                //      <arg>
+                sp[-1-arg_count] = MK_OBJ((struct Obj*)init);
+                // `self` is the last argument to methods
+                sp[0] = MK_OBJ((struct Obj*)instance);
+                sp++;
+                frame->ip = ip; 
+                vm->call_cnt++;
+                frame++;
+                frame->bp = sp-1-(arg_count+1); // arg_count+1 because arg_count does not include `self`
+                frame->closure = init->closure;
+                ip = init->closure->fn->chunk.code; 
             } else if (IS_FOREIGN_METHOD(val)) {
                 struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
                 if (f_method->fn->arity != arg_count) {
@@ -545,7 +620,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                     return INTERP_RUNTIME_ERR;
                 }
             } else {
-                runtime_err(ip, vm, "attempt to call non-function");
+                runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;
             }
             break;

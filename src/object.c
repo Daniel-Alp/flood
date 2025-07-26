@@ -96,7 +96,7 @@ void release_class_obj(struct ClassObj *class)
 }
 
 // NOTE: vals is the methods defined on the class
-void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class)
+void init_instance_obj(struct InstanceObj *instance)
 {
     instance->base.tag = OBJ_INSTANCE;
     init_val_table(&instance->fields);
@@ -165,17 +165,17 @@ struct StringObj *string_from_span(struct VM *vm, struct Span span)
     char *chars = allocate((span.len+1)*sizeof(char));
     memcpy(chars, span.start, span.len);
     chars[span.len] = '\0';
-    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj));
+    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL);
     init_string_obj(str, hash_string(chars, span.len), span.len, chars);
     return str;
 }
 
-struct Stringobj *string_from_c_str(struct VM *vm, const char *c_str)
+struct StringObj *string_from_c_str(struct VM *vm, const char *c_str)
 {
     i32 len = strlen(c_str);
     char *chars = allocate((len+1)*sizeof(char));
     memcpy(chars, c_str, len+1);
-    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj));
+    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL);
     init_string_obj(str, hash_string(chars, len), len, chars);
     return str;
 }
