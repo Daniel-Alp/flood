@@ -3,25 +3,19 @@
 #include "object.h"
 #include "foreign.h"
 
-// TODO implement string interning
-// When I do implement string interning, char *name will be the pointer to the string in the table
-static void bind_foreign_method(
+// TODO implement string interning (and later symbol interning to replace string interning)
+static void define_foreign_method(
     struct VM *vm,
-    struct Obj *self,           // instance method is bound to
     struct ValTable *table,     // instance method table
-    char *name,                 // chars of method name
-    i32 len,                    // length of method name
+    char *c_str,                // chars of method name
     i32 arity,                  // arity of method
-    ForeignMethod code
+    ForeignFn code
 ) {
-    // TODO every instance has it's own copy of the name characters, which is wasteful
-    char *name_cpy = allocate((len+1)*sizeof(char));
-    name_cpy[len] = '\0';
-    memcpy(name_cpy, name, len);
-    struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)alloc_vm_obj(vm, sizeof(struct ForeignMethodObj));
-    init_foreign_method_obj(f_method, self, name_cpy, arity, code);
-    Value val = MK_OBJ((struct Obj*)f_method);
-    insert_val_table(table, name, len, val);
+    struct ForeignFnObj *f_fn = (struct ForeignFnObj*)alloc_vm_obj(vm, sizeof(struct ForeignFnObj));
+    init_foreign_fn_obj(f_fn, string_from_c_str(vm, c_str), arity, code);
+    Value val = MK_OBJ((struct Obj*)f_fn);
+    // we're recalculating strlen here but it should be fine
+    insert_val_table(table, c_str, strlen(c_str), val);
 }
 
 // push element, return null
@@ -57,10 +51,12 @@ static bool list_length(struct VM *vm, struct Obj *self)
     return true;
 }
 
-void bind_list_methods(struct VM *vm, struct ListObj *list)
+void define_list_methods(struct VM *vm)
 {
-    struct Obj *obj = (struct Obj*)list;
-    bind_foreign_method(vm, obj, &list->methods, "push", 4, 1, list_push);
-    bind_foreign_method(vm, obj, &list->methods, "pop", 3, 0, list_pop);
-    bind_foreign_method(vm, obj, &list->methods, "len", 3, 0, list_length);
+    vm->list_class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+    init_class_obj(vm->list_class, string_from_c_str(vm, "List"));
+
+    define_foreign_method(vm, &vm->list_class->methods, "push", 1, list_push);
+    define_foreign_method(vm, &vm->list_class->methods, "pop", 0, list_pop);
+    define_foreign_method(vm, &vm->list_class->methods, "len", 0, list_length);
 }

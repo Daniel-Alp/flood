@@ -62,6 +62,7 @@ u32 hash_string(const char *str, i32 len)
     return hash;
 }
 
+// TODO have this take an ObjString*
 // return pointer to first slot matching key or first empty slot
 struct ValTableEntry *get_val_table_slot(
     struct ValTableEntry *vals, 
@@ -133,8 +134,13 @@ void print_val(Value val)
         AS_OBJ(val)->printed = 1;
         enum ObjTag tag = AS_OBJ(val)->tag;
         switch(tag) {
+        case OBJ_FOREIGN_FN: {
+            const char *name = AS_FOREIGN_FN(val)->name->chars;
+            printf("<foreign function %s>", name);
+            break;   
+        }
         case OBJ_FOREIGN_METHOD: {
-            const char *name = AS_FOREIGN_METHOD(val)->name->chars;
+            const char *name = AS_FOREIGN_METHOD(val)->fn->name->chars;
             printf("<foreign method %s>", name);
             break;
         }
@@ -154,13 +160,13 @@ void print_val(Value val)
             break;
         }
         case OBJ_INSTANCE: {
-            const char *name = AS_INSTANCE(val)->class->name->chars;
+            const char *name = AS_OBJ(val)->class->name->chars;
             printf("<instance %s>", name);
             break;
         }
         case OBJ_METHOD: {
             const char *name = AS_METHOD(val)->closure->fn->name->chars;
-            printf("<function %s>", name);
+            printf("<method %s>", name);
             break;
         }
         case OBJ_LIST: {

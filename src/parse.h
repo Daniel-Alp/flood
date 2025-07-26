@@ -12,7 +12,7 @@ enum NodeTag {
     // +, -, *, /, and, or, [
     // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
     NODE_BINARY,    
-    NODE_PROP,      // foo.bar
+    NODE_DOT,       // foo.bar
     NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
@@ -64,13 +64,13 @@ struct BinaryNode {
     enum TokenTag op_tag;
 }; 
 
-struct PropNode {
+struct DotNode {
     // span is `.`
     struct Node base;
     struct Node *lhs;
     //      foo.bar
-    //          ^~~ prop
-    struct Span prop;
+    //          ^~~ sym
+    struct Span sym;
 };
 
 struct CallNode {

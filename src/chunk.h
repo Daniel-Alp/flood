@@ -72,12 +72,15 @@ enum OpCode {
     OP_SET_GLOBAL,    // args: 0..=255 idx into global arr
     OP_GET_SUBSCR,    
     OP_SET_SUBSCR,    
-    // TODO optimize OP_GET_SELF with these opcodes
-    // OP_GET_SELF_PROP, // args: 0..=255 idx into constant arr  
-    // OP_SET_SELF_PROP, // args: 0..=255 idx into constant arr
+    
     // TODO OP_INVOKE optimization
+
+    // NOTE:
+    // a prop is either an instance field or a method.
+    // we can get fields or methods but we can only set fields and
+    // trying to set a method will be a runtime error
     OP_GET_PROP,      // args: 0..=255 idx into constant arr
-    OP_SET_PROPERTY,  // args: 0..=255 idx into constant arr
+    OP_SET_FIELD,     // args: 0..=255 idx into constant arr
 
     OP_JUMP,
     OP_JUMP_IF_FALSE, 
