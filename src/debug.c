@@ -59,12 +59,12 @@ static void print_binary(struct BinaryNode *node, i32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_prop(struct PropNode *node, i32 offset)
+static void print_dot(struct DotNode *node, i32 offset)
 {
-    printf("Prop");
+    printf("Dot");
     print_node(node->lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
-    printf("%.*s", node->prop.len, node->prop.start);
+    printf("%.*s", node->sym.len, node->sym.start);
 }
 
 static void print_call(struct CallNode *node, i32 offset) 
@@ -178,7 +178,7 @@ void print_node(struct Node *node, i32 offset)
     case NODE_IDENT:       print_ident((struct IdentNode*)node, offset); break;
     case NODE_UNARY:       print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:      print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_PROP:        print_prop((struct PropNode*)node, offset); break;
+    case NODE_DOT:        print_dot((struct DotNode*)node, offset); break;
     case NODE_CALL:        print_call((struct CallNode*)node, offset); break;
     case NODE_BLOCK:       print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:          print_if((struct IfNode*)node, offset); break;
@@ -230,6 +230,7 @@ const char *opcode_str[] = {
     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
     [OP_GET_PROP]      = "OP_GET_PROP",
+    [OP_SET_FIELD]     = "OP_SET_FIELD",  
     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
     [OP_JUMP]          = "OP_JUMP",
@@ -270,6 +271,7 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
             break;
         case OP_GET_PROP:
+        case OP_SET_FIELD:
         case OP_GET_CONST: {
             print_val(chunk->constants.vals[chunk->code[++i]]);
             printf("\n");

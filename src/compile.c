@@ -1,33 +1,10 @@
 #include <string.h>
 #include <stdlib.h>
+#include "debug.h"
 #include "memory.h"
 #include "compile.h"
 #include "symbol.h"
 #include "parse.h"
-
-// TODO add proper comments
-
-// TODO this isn't important right now but it's weird 
-// that the compiler takes some arguments such as sym arr upon initialization 
-// and others like VM each time you call compile_file
-// later I'll probably have it so that the compiler owns its errlist but everything else 
-// is passed in as args. This way you can use a single compiler struct for however many VMs you like.
-void init_compiler(struct Compiler *compiler, struct SymArr *arr) 
-{
-    init_errlist(&compiler->errlist);
-    compiler->main_fn_idx = -1;
-    compiler->sym_arr = arr;
-    compiler->vm = NULL;
-}
-
-void release_compiler(struct Compiler *compiler)
-{
-    release_errlist(&compiler->errlist);
-    compiler->main_fn_idx = -1;
-    // compiler does not own these
-    compiler->sym_arr = NULL;
-    compiler->vm = NULL;
-}
 
 static struct Chunk *cur_chunk(struct Compiler *compiler) 
 {
@@ -64,6 +41,12 @@ static void patch_jump(struct Compiler *compiler, i32 offset)
     cur_chunk(compiler)->code[offset+2] = jump & 0xff; 
 }
 
+static void emit_constant(struct Compiler *compiler, Value val, i32 line)
+{
+    emit_byte(cur_chunk(compiler), OP_GET_CONST, line);
+    emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), val), line);
+}
+
 static void compile_node(struct Compiler *compiler, struct Node *node);
 
 static void compile_atom(struct Compiler *compiler, struct AtomNode *node) 
@@ -77,9 +60,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
         emit_byte(cur_chunk(compiler), OP_FALSE, line);
         break;
     case TOKEN_NUMBER:
-        emit_byte(cur_chunk(compiler), OP_GET_CONST, line);
-        Value val = MK_NUM(strtod(node->base.span.start, NULL));
-        emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), val), line);
+        emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line);
         break;
     case TOKEN_STRING:
         push_errlist(&compiler->errlist, node->base.span, "TODO");
@@ -173,8 +154,12 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->rhs);
             compile_node(compiler, node->rhs);
             emit_byte(cur_chunk(compiler), OP_SET_SUBSCR, line);
-        } else if (node->lhs->tag == NODE_PROP) {
-            push_errlist(&compiler->errlist, node->lhs->span, "TODO");
+        } else if (node->lhs->tag == NODE_DOT) {
+            compile_node(compiler, ((struct DotNode*)node->lhs)->lhs);
+            compile_node(compiler, node->rhs);
+            emit_byte(cur_chunk(compiler), OP_SET_FIELD, line);
+            struct StringObj *str = string_from_span(compiler->vm, ((struct DotNode*)node->lhs)->sym);
+            emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
         }
     } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
         compile_node(compiler, node->lhs);
@@ -203,19 +188,11 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
     }
 }
 
-static void compile_get_prop(struct Compiler *compiler, struct PropNode *node)
+static void compile_get_prop(struct Compiler *compiler, struct DotNode *node)
 {
     i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
-
-    i32 len = node->prop.len;
-    char *chars = allocate((len+1)*sizeof(char));
-    memcpy(chars, node->prop.start, len);
-    chars[len] = '\0';
-    
-    struct StringObj *str = (struct StringObj*)alloc_vm_obj(compiler->vm, sizeof(struct StringObj));
-    init_string_obj(str, hash_string(chars, len), len, chars);
-
+    struct StringObj *str = string_from_span(compiler->vm, node->sym);
     emit_byte(cur_chunk(compiler), OP_GET_PROP, line);    
     emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
 }
@@ -322,22 +299,14 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         compiler->fn_local_cnt++;
     }
 
-    struct Span span = node->base.span;
-
-    char *chars = allocate((span.len+1)*sizeof(char));
-    strncpy(chars, span.start, span.len);
-    chars[span.len] = '\0';
-    struct StringObj *name = (struct StringObj*)alloc_vm_obj(compiler->vm, sizeof(struct StringObj));
-    init_string_obj(name, hash_string(chars, span.len), span.len, chars);
-
     struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
-    init_fn_obj(fn, name, node->arity);
+    init_fn_obj(fn, string_from_span(compiler->vm, node->base.span), node->arity);
 
     // push state and enter the fn
     i32 parent_local_cnt = compiler->fn_local_cnt;
     struct FnObj* parent = compiler->fn; 
     struct FnDeclNode *parent_node = compiler->fn_node;
-    compiler->fn_local_cnt = 1;
+    compiler->fn_local_cnt = (sym->flags & FLAG_METHOD) ? 2 : 1;
     compiler->fn = fn;
     compiler->fn_node = node;
     for (i32 i = 0; i < node->arity; i++) {
@@ -354,14 +323,13 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     emit_byte(cur_chunk(compiler), OP_NIL, line);
     emit_byte(cur_chunk(compiler), OP_RETURN, line);
 
-    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name);
+    // disassemble_chunk(cur_chunk(compiler), compiler->fn->name->chars);
 
     // pop state and exit the fn
     compiler->fn_local_cnt = parent_local_cnt;
     compiler->fn = parent;
     compiler->fn_node = parent_node;
-    emit_byte(cur_chunk(compiler), OP_GET_CONST, line);
-    emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)fn)), line);
+    emit_constant(compiler, MK_OBJ((struct Obj*)fn), line);
     // wrap the fn in a closure
     emit_byte(cur_chunk(compiler), OP_CLOSURE, line);
     emit_byte(cur_chunk(compiler), node->stack_capture_cnt, line);
@@ -382,25 +350,61 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     }
 }
 
+static void compile_class_decl(struct Compiler *compiler, struct ClassDeclNode *node)
+{
+    i32 line = node->base.span.line;
+    emit_byte(cur_chunk(compiler), OP_CLASS, line);
+    struct StringObj *str = string_from_span(compiler->vm, node->base.span);
+    emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
+
+    for (i32 i = 0; i < node->cnt; i++) {
+        compile_fn_decl(compiler, node->methods[i]);
+        emit_byte(cur_chunk(compiler), OP_METHOD, line);
+    }
+}
+
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {
     switch (node->tag) {
-    case NODE_ATOM:      compile_atom(compiler, (struct AtomNode*)node); break;
-    case NODE_LIST:      compile_list(compiler, (struct ListNode*)node); break;
-    case NODE_IDENT:     compile_ident(compiler, (struct IdentNode*)node); break;
-    case NODE_UNARY:     compile_unary(compiler, (struct UnaryNode*)node); break;
-    case NODE_BINARY:    compile_binary(compiler, (struct BinaryNode*)node); break;
-    case NODE_PROP:      compile_get_prop(compiler, (struct PropNode*)node); break;
-    case NODE_CALL:   compile_fn_call(compiler, (struct CallNode*)node); break;
-    case NODE_BLOCK:     compile_block(compiler, (struct BlockNode*)node); break;
-    case NODE_IF:        compile_if(compiler, (struct IfNode*)node); break;
-    case NODE_EXPR_STMT: compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
-    case NODE_RETURN:    compile_return(compiler, (struct ReturnNode*)node); break;
+    case NODE_ATOM:       compile_atom(compiler, (struct AtomNode*)node); break;
+    case NODE_LIST:       compile_list(compiler, (struct ListNode*)node); break;
+    case NODE_IDENT:      compile_ident(compiler, (struct IdentNode*)node); break;
+    case NODE_UNARY:      compile_unary(compiler, (struct UnaryNode*)node); break;
+    case NODE_BINARY:     compile_binary(compiler, (struct BinaryNode*)node); break;
+    case NODE_DOT:        compile_get_prop(compiler, (struct DotNode*)node); break;
+    case NODE_CALL:       compile_fn_call(compiler, (struct CallNode*)node); break;
+    case NODE_BLOCK:      compile_block(compiler, (struct BlockNode*)node); break;
+    case NODE_IF:         compile_if(compiler, (struct IfNode*)node); break;
+    case NODE_EXPR_STMT:  compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
+    case NODE_RETURN:     compile_return(compiler, (struct ReturnNode*)node); break;
     // TEMP remove when we add functions
-    case NODE_PRINT:     compile_print(compiler, (struct PrintNode*)node); break; 
-    case NODE_VAR_DECL:  compile_var_decl(compiler, (struct VarDeclNode*)node); break;
-    case NODE_FN_DECL:   compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
+    case NODE_PRINT:      compile_print(compiler, (struct PrintNode*)node); break; 
+    case NODE_VAR_DECL:   compile_var_decl(compiler, (struct VarDeclNode*)node); break;
+    case NODE_FN_DECL:    compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
+    case NODE_CLASS_DECL: compile_class_decl(compiler, (struct ClassDeclNode*)node); break;
     }
+}
+
+// TODO this isn't important right now but it's weird 
+// that the compiler takes some arguments such as sym arr upon initialization 
+// and others like VM each time you call compile_file
+// later I'll probably have it so that the compiler owns its errlist but everything else 
+// is passed in as args. This way you can use a single compiler struct for however many VMs you like.
+void init_compiler(struct Compiler *compiler, struct SymArr *arr) 
+{
+    init_errlist(&compiler->errlist);
+    compiler->main_fn_idx = -1;
+    compiler->sym_arr = arr;
+    compiler->vm = NULL;
+}
+
+void release_compiler(struct Compiler *compiler)
+{
+    release_errlist(&compiler->errlist);
+    compiler->main_fn_idx = -1;
+    // compiler does not own these
+    compiler->sym_arr = NULL;
+    compiler->vm = NULL;
 }
 
 struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct FnDeclNode *node) 
@@ -424,18 +428,26 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
     compiler->fn_local_cnt = 0;
 
     for (i32 i = 0; i < node->body->cnt; i++) {
-        struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
-        // for top-level functions we set their index before we compile them, hosting them up
-        symbols(compiler)[fn_node->id].idx = compiler->fn_local_cnt;
-        struct Span fn_span = fn_node->base.span;
-        if (fn_span.len == 4 && strncmp(fn_span.start, "main", 4) == 0)
-            compiler->main_fn_idx = compiler->fn_local_cnt;
+        // for top-level functions and classes we set their index before we compile them, hosting them up
+        if (node->body->stmts[i]->tag == NODE_FN_DECL) {
+            struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
+            symbols(compiler)[fn_node->id].idx = compiler->fn_local_cnt;
+            struct Span fn_span = fn_node->base.span;
+            if (fn_span.len == 4 && strncmp(fn_span.start, "main", 4) == 0)
+                compiler->main_fn_idx = compiler->fn_local_cnt;
+        } else {
+            struct ClassDeclNode *class_node = (struct ClassDeclNode*)node->body->stmts[i];
+            symbols(compiler)[class_node->id].idx = compiler->fn_local_cnt;   
+        }
         compiler->fn_local_cnt++;
     }
     for (i32 i = 0; i < node->body->cnt; i++) {
-        struct FnDeclNode *fn_node = (struct FnDeclNode*)node->body->stmts[i];
-        i32 line = fn_node->base.span.line;
-        compile_fn_decl(compiler, fn_node);
+        struct Node *stmt = node->body->stmts[i];
+        if (stmt->tag == NODE_FN_DECL)
+            compile_fn_decl(compiler, (struct FnDeclNode*)stmt);
+        else
+            compile_class_decl(compiler, (struct ClassDeclNode*)stmt);
+        i32 line = stmt->span.line;
         emit_byte(cur_chunk(compiler), OP_SET_GLOBAL, line);
         emit_byte(cur_chunk(compiler), i, line);
         emit_byte(cur_chunk(compiler), OP_POP, line);

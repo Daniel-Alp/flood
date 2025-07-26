@@ -51,7 +51,7 @@ static i32 declare_ident(struct SemaState *sema, struct Span span, u32 flags)
         .span  = span,
         .flags = flags,
         .depth = sema->depth,
-        .idx   = -1
+        .idx   = (flags & FLAG_SELF) ? 1 : -1 // `self` is always bp[1]
     };
     id = push_symbol_arr(sema->sym_arr, sym);
     // TODO error if more than 256 locals or 256 globals
@@ -142,16 +142,16 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
 {
     if (node->op_tag == TOKEN_EQ) {
         bool ident = node->lhs->tag == NODE_IDENT;
-        bool prop = node->lhs->tag == NODE_PROP;
+        bool dot = node->lhs->tag == NODE_DOT;
         bool list_elem = node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE;
-        if (!ident && !prop && !list_elem)
+        if (!ident && !dot && !list_elem)
             push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
     }
     analyze_node(sema, node->lhs);
     analyze_node(sema, node->rhs);
 }
 
-static void analyze_get_prop(struct SemaState *sema, struct PropNode *node)
+static void analyze_dot(struct SemaState *sema, struct DotNode *node)
 {
     analyze_node(sema, node->lhs);
 }
@@ -217,7 +217,7 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
     sema->depth++;
     if (sema->sym_arr->symbols[node->id].flags & FLAG_METHOD)
         // TODO will need FLAG_SELF at some point
-        declare_ident(sema, (struct Span){.len = 4, .start = "self", .line = node->base.span.line}, FLAG_NONE);
+        declare_ident(sema, (struct Span){.len = 4, .start = "self", .line = node->base.span.line}, FLAG_SELF);
 
     for (i32 i = 0; i < node->arity; i++)
         node->params[i].id = declare_ident(sema, node->params[i].base.span, FLAG_NONE);
@@ -253,7 +253,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
-    case NODE_PROP:      analyze_get_prop(sema, (struct PropNode*)node); break;
+    case NODE_DOT:       analyze_dot(sema, (struct DotNode*)node); break;
     case NODE_CALL:      analyze_fn_call(sema, (struct CallNode*)node); break;
     case NODE_BLOCK:     analyze_block(sema, (struct BlockNode*)node); break;
     case NODE_IF:        analyze_if(sema, (struct IfNode*)node); break;

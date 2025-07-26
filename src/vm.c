@@ -73,6 +73,8 @@ void init_vm(struct VM *vm)
     vm->gray_cnt = 0;
     vm->gray_cap = 8;
     vm->gray = allocate(vm->gray_cap * sizeof(struct Obj*));
+
+    define_list_methods(vm);
 }
 
 void release_vm(struct VM *vm) 
@@ -277,8 +279,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             Value *vals = sp;
             struct Obj *list = alloc_vm_obj(vm, sizeof(struct ListObj));
             // TODO benchmark, maybe inline
+            list->class = vm->list_class;
             init_list_obj((struct ListObj*)list, vals, cnt);
-            bind_list_methods(vm, (struct ListObj*)list); // TODO consider moving this call to init_list_obj
             sp[0] = MK_OBJ(list);
             sp++;
             break;
@@ -400,35 +402,86 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
             vm->globals.vals[idx] = sp[-1];
             break;
         }
-        // TODO implement OP_GET_PROP for class members
         // TODO implement OP_INVOKE optimization
-        // TODO string interning to optimize method lookup
+        // TODO string interning (and later symbols) to optimize method lookup
         case OP_GET_PROP: {
             u8 idx = *ip++;
             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
             Value val = sp[-1];
-            if (IS_LIST(val)) {
-                struct ListObj *list = AS_LIST(val);
+        
+            // attempt to lookup field
+            if (IS_INSTANCE(val)) {
+                struct InstanceObj *instance = AS_INSTANCE(val);
+
                 struct ValTableEntry *entry = get_val_table_slot(
-                    list->methods.entries, 
-                    list->methods.cap,
+                    instance->fields.entries, 
+                    instance->fields.cap,
                     prop->hash,
                     prop->len,
                     prop->chars
                 );
                 if (entry->chars != NULL) {
                     sp[-1] = entry->val;
-                } else {
-                    runtime_err(ip, vm, "property does not exist");
-                    return INTERP_RUNTIME_ERR;
+                    break;
                 }
-            } else {
-                runtime_err(ip, vm, "attempt to get property of non-object");
+            } 
+            // attempt to lookup method
+            if (IS_OBJ(val)) {
+                struct ClassObj *class = AS_OBJ(val)->class;
+                struct ValTableEntry *entry = get_val_table_slot(
+                    class->methods.entries,
+                    class->methods.cap,
+                    prop->hash,
+                    prop->len,
+                    prop->chars
+                );
+                if (entry->chars != NULL) {
+                    if (AS_OBJ(entry->val)->tag == OBJ_CLOSURE) { 
+                         // user-defined method, bind function to instance
+                        struct MethodObj *method = alloc_vm_obj(vm, sizeof(struct MethodObj));
+                        init_method_obj(method, AS_CLOSURE(entry->val), AS_INSTANCE(val));
+                        sp[-1] = MK_OBJ((struct Obj*)method); 
+                    } else { 
+                        // foreign method, bind function to instance
+                        struct ForeignMethodObj *f_method = alloc_vm_obj(vm, sizeof(struct ForeignMethodObj));
+                        init_foreign_method_obj(f_method, AS_FOREIGN_FN(entry->val), AS_INSTANCE(val));
+                        sp[-1] = MK_OBJ((struct Obj*)f_method);
+                    }
+                    break;
+                }
+                runtime_err(ip, vm, "property does not exist");
                 return INTERP_RUNTIME_ERR;
             }
-            break;
+            runtime_err(ip, vm, "attempt to get property of non-object");
+            return INTERP_RUNTIME_ERR;
         }
-        // TODO OP_SET_PROP
+        // TODO should distinguish between setting prop outside or within the instance
+        case OP_SET_FIELD: {
+            u8 idx = *ip++;
+            struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+            Value container = sp[-2];
+            Value val = sp[-1];
+
+            if (IS_INSTANCE(container)) {
+                struct InstanceObj *instance = AS_INSTANCE(container);
+                struct ValTableEntry *entry = get_val_table_slot(
+                    instance->fields.entries, 
+                    instance->fields.cap,
+                    prop->hash,
+                    prop->len,
+                    prop->chars
+                );
+                if (entry->chars != NULL) {
+                    entry->val = val;
+                    break;
+                }
+                runtime_err(ip, vm, "field does not exist");
+                return INTERP_RUNTIME_ERR;
+            }
+
+            runtime_err(ip, vm, "attempt to set field of non-user-object");
+            return INTERP_RUNTIME_ERR;
+        }
         case OP_JUMP: {
             ip += ((*ip++) << 8) + (*ip++);
             break;
@@ -478,7 +531,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 ip = closure->fn->chunk.code;
             } else if (IS_FOREIGN_METHOD(val)) {
                 struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
-                if (f_method->arity != arg_count) {
+                if (f_method->fn->arity != arg_count) {
                     runtime_err(ip, vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
                 }
@@ -488,7 +541,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure)
                 }
                 frame->ip = ip;
                 vm->sp = sp;
-                if (!f_method->code(vm, f_method->self)) {
+                if (!f_method->fn->code(vm, f_method->self)) {
                     return INTERP_RUNTIME_ERR;
                 }
             } else {

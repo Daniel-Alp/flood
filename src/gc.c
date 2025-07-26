@@ -54,6 +54,8 @@ void collect_garbage(struct VM *vm)
     for (struct CallFrame *frame = frame_lo; frame < frame_hi; frame++)
         push_gray_stack(vm, (struct Obj*)frame->closure);
 
+    push_gray_stack(vm, (struct Obj*)vm->list_class);
+
     // mark rest
     // TODO add heap val marking
     while (vm->gray_cnt > 0) {
@@ -98,10 +100,6 @@ void collect_garbage(struct VM *vm)
                 if (IS_OBJ(val))
                     push_gray_stack(vm, AS_OBJ(val));
             }
-            for (i32 i = 0; i < list->methods.cap; i++) {
-                if (list->methods.entries[i].chars)
-                    push_gray_stack(vm, AS_OBJ(list->methods.entries[i].val));
-            }
             break;
         }
         case OBJ_HEAP_VAL: {
@@ -118,8 +116,8 @@ void collect_garbage(struct VM *vm)
         }
         case OBJ_INSTANCE: {
             struct InstanceObj *instance = (struct InstanceObj*)obj;
-            push_gray_stack(vm, (struct Obj*)instance->class);
-            mark_table(vm, &instance->props);
+            push_gray_stack(vm, (struct Obj*)instance->base.class);
+            mark_table(vm, &instance->fields);
             break;
         }
         case OBJ_METHOD: {

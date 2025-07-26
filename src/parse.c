@@ -163,13 +163,13 @@ static struct CallNode *mk_call(struct Arena *arena, struct Span span, struct No
     return node;
 }
 
-static struct PropNode *mk_prop(struct Arena *arena, struct Span span, struct Node *lhs, struct Span prop)
+static struct DotNode *mk_dot(struct Arena *arena, struct Span span, struct Node *lhs, struct Span sym)
 {
-    struct PropNode *node = push_arena(arena, sizeof(struct PropNode));
+    struct DotNode *node = push_arena(arena, sizeof(struct DotNode));
     node->base.span = span;
-    node->base.tag = NODE_PROP;
+    node->base.tag = NODE_DOT;
     node->lhs = lhs;
-    node->prop = prop;
+    node->sym = sym;
     return node;
 }
 
@@ -460,7 +460,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         if (eat(parser, TOKEN_DOT)) {
             struct Span span = prev(parser).span;
             expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-            lhs = (struct Node*)mk_prop(&parser->arena, span, lhs, prev(parser).span);
+            lhs = (struct Node*)mk_dot(&parser->arena, span, lhs, prev(parser).span);
             continue;
         }
         // parse fn_call

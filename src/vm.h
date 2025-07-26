@@ -18,6 +18,8 @@ enum InterpResult {
 };
 
 struct VM {
+    struct ClassObj *list_class;
+
     struct CallFrame call_stack[MAX_CALL_FRAMES];
     u16 call_cnt;
 
