@@ -51,7 +51,7 @@ static i32 declare_ident(struct SemaState *sema, struct Span span, u32 flags)
         .span  = span,
         .flags = flags,
         .depth = sema->depth,
-        .idx   = (flags & FLAG_SELF) ? 1 : -1 // `self` is always bp[1]
+        .idx   = (flags & FLAG_SELF) ? sema->fn->arity+1 : -1 // `self` is always bp[fn_arity+1]
     };
     id = push_symbol_arr(sema->sym_arr, sym);
     // TODO error if more than 256 locals or 256 globals
