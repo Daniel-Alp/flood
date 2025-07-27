@@ -311,19 +311,22 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     i32 parent_local_cnt = compiler->fn_local_cnt;
     struct FnObj* parent = compiler->fn; 
     struct FnDeclNode *parent_node = compiler->fn_node;
-    compiler->fn_local_cnt = (sym->flags & FLAG_METHOD) ? 2 : 1;
+    compiler->fn_local_cnt = 1;
     compiler->fn = fn;
     compiler->fn_node = node;
     for (i32 i = 0; i < node->arity; i++) {
-        struct Symbol *sym = &symbols(compiler)[node->params[i].id];
-        sym->idx = compiler->fn_local_cnt;
+        struct Symbol *param_sym = &symbols(compiler)[node->params[i].id];
+        param_sym->idx = compiler->fn_local_cnt;
         compiler->fn_local_cnt++;
         // move param on heap if it is captured
-        if (sym->flags & FLAG_CAPTURED) {
+        if (param_sym->flags & FLAG_CAPTURED) {
             emit_byte(cur_chunk(compiler), OP_HEAPVAL, line);
-            emit_byte(cur_chunk(compiler), sym->idx, line);
+            emit_byte(cur_chunk(compiler), param_sym->idx, line);
         }
     }
+    // reserve stack slot for `self`
+    if (sym->flags & FLAG_METHOD)
+        compiler->fn_local_cnt++;
     compile_block(compiler, node->body);
     if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
         // `init` method implicitly returns `self` which is at bp[arity+1]
