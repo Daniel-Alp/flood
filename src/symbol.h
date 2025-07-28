@@ -2,9 +2,7 @@
 #include "scan.h"
 #define FLAG_NONE     (0)
 #define FLAG_CAPTURED (1 << 1) // variable that a function closes over
-#define FLAG_METHOD   (1 << 2) // identifier is a method
 #define FLAG_INIT     (1 << 3) // identifier is a constructor
-#define FLAG_SELF     (1 << 4) // identifier is `self`
 
 struct Symbol {
     struct Span span; // identifier

@@ -1,6 +1,12 @@
 1  | fn main( {
-   |          ^ expected identifier
+   |          ^ expected `)`
 
 10 |     1 + @
+   |         ^ expected expression
+
+13 | bar
+   | ^~~ expected declaration
+
+16 |     1 + @
    |         ^ expected expression
 

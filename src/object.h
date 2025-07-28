@@ -31,7 +31,7 @@ struct Obj {
 //      - sp stored into vm->sp
 //      - ip stored into frame->ip (top frame of call stack)
 //      - correct number of arguments given
-typedef bool(*ForeignFn)(struct VM *vm, struct Obj* self);
+typedef bool(*ForeignFn)(struct VM *vm);
 
 struct StringObj;
 

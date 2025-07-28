@@ -373,7 +373,8 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
 static bool expr_first(enum TokenTag tag)
 {
     // TODO add strings
-    return tag == TOKEN_TRUE 
+    return tag == TOKEN_NULL
+        || tag == TOKEN_TRUE 
         || tag == TOKEN_FALSE
         || tag == TOKEN_NUMBER
         || tag == TOKEN_STRING
@@ -424,6 +425,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
     struct Node *lhs = NULL;
     // TODO add strings
     switch (token.tag) {
+    case TOKEN_NULL:
     case TOKEN_TRUE:
     case TOKEN_FALSE:
     case TOKEN_NUMBER:
@@ -533,7 +535,7 @@ static struct VarDeclNode *parse_var_decl(struct Parser *parser)
 }
 
 // precondition: `fn` token consumed
-static struct FnDeclNode *parse_fn_decl(struct Parser *parser) 
+static struct FnDeclNode *parse_fn_decl(struct Parser *parser, bool method) 
 {
     struct Span span = at(parser).span;
     expect(parser, TOKEN_IDENTIFIER, "expected identifier");
@@ -543,7 +545,7 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
     while(at(parser).tag != TOKEN_R_PAREN && at(parser).tag != TOKEN_EOF) {
         if (eat(parser, TOKEN_IDENTIFIER)) {
             struct IdentNode ident = {
-                .base.span = prev(parser).span,
+                .base = { .tag = NODE_IDENT, .span = prev(parser).span, },
                 .id = -1,
             };
             push_ident_array(&tmp_params, ident);
@@ -558,6 +560,14 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser)
         } else {
             advance_with_err(parser, "expected identifier");
         }
+    }
+    if (method) {
+        struct IdentNode self = {
+            // we should never need the line of `self`
+            .base = { .tag = NODE_IDENT, .span = { .len = 4, .start = "self", .line = 0, }, },
+            .id = -1,
+        };
+        push_ident_array(&tmp_params, self);
     }
     expect(parser, TOKEN_R_PAREN, "expected `)`");
     i32 arity = tmp_params.cnt;
@@ -578,7 +588,7 @@ static struct ClassDeclNode *parse_class_decl(struct Parser *parser)
     while (at(parser).tag != TOKEN_R_BRACE && at(parser).tag != TOKEN_EOF) {
         if (eat(parser, TOKEN_FN)) {
             parser->panic = false;
-            push_ptr_array(&tmp, parse_fn_decl(parser));
+            push_ptr_array(&tmp, parse_fn_decl(parser, true));
         } else {
             advance_with_err(parser, "expected method declaration");
         }    
@@ -636,7 +646,7 @@ static struct BlockNode *parse_block(struct Parser *parser)
         } else if (eat(parser, TOKEN_RETURN)) {
             node = (struct Node*)parse_return(parser);  
         } else if (eat(parser, TOKEN_FN)) {
-            node = (struct Node*)parse_fn_decl(parser);
+            node = (struct Node*)parse_fn_decl(parser, false);
         } else if (eat(parser, TOKEN_CLASS)) {
             node = (struct Node*)parse_class_decl(parser);
         } else if (eat(parser, TOKEN_PRINT)) {
@@ -682,7 +692,7 @@ static struct FnDeclNode *parse_file(struct Parser *parser)
     while (at(parser).tag != TOKEN_EOF) {
         if (eat(parser, TOKEN_FN)) {
             parser->panic = false;
-            push_ptr_array(&tmp, parse_fn_decl(parser));
+            push_ptr_array(&tmp, parse_fn_decl(parser, false));
         } else if (eat(parser, TOKEN_CLASS)) {
             parser->panic = false;
             push_ptr_array(&tmp, parse_class_decl(parser));

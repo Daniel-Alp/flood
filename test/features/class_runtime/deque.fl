@@ -1,0 +1,134 @@
+class Node {
+    fn init(l, r, data) {
+        self.l = l;
+        self.r = r;
+        self.data = data;
+    }
+}
+
+class Deque {
+    fn init() {
+        self.l = null; # front
+        self.r = null; # back
+    }
+
+    fn peek_back() {
+        # peek empty returns null
+        if (self.r == null) {
+            return null;
+        }
+        return self.r.data;
+    }
+
+    fn push_back(data) {
+        if (self.r == null) {
+            self.r = Node(null, null, data);
+            self.l = self.r;
+        } else {
+            self.r.r = Node(self.r, null, data);
+            self.r = self.r.r;
+        }
+    }
+
+    fn pop_back() {
+        # pop empty returns null
+        if (self.r == null) {
+            return null;
+        } else {
+            var data = self.r.data;
+            self.r = self.r.l;
+            if (self.r == null) {
+                # list empty after pop
+                self.l = null;
+            } else {
+                self.r.r = null;
+            }
+            return data;
+        }
+    }
+
+    fn peek_front() {
+        if (self.l == null) {
+            return null;
+        }
+        return self.l.data;
+    }
+
+    fn push_front(data) {
+        if (self.l == null) {
+            self.l = Node(null, null, data);
+            self.r = self.l;
+        } else {
+            self.l.l = Node(null, self.l, data);
+            self.l = self.l.l;
+        }
+    }
+
+    fn pop_front() {
+        if (self.l == null) {
+            return null;
+        } else {
+            var data = self.l.data;
+            self.l = self.l.r;
+            if (self.l == null) {
+                # list empty after pop
+                self.r = null;
+            } else {
+                self.l.l = null;
+            }
+            return data;
+        }
+    }
+
+    fn to_list() {
+        fn to_list_inner(node) {
+            if (node == null) {
+                return [];
+            }
+            var rest = to_list_inner(node.l);
+            rest.push(node.data);
+            return rest;
+        }
+        return to_list_inner(self.r);
+    }
+}
+
+fn main() {
+    var deque = Deque();
+    deque.push_back(4);
+    print deque.peek_front(); # 4
+    print deque.peek_back();  # 4
+
+    deque.push_back(3);
+    deque.push_back(2);
+    deque.push_front(5);
+    print deque.peek_front(); # 5
+    print deque.peek_back();  # 2
+
+    print deque.to_list();    # [5, 4, 3, 2]
+
+    print deque.pop_front();  # 5
+    print deque.to_list();    # [4, 3, 2]
+
+    print deque.pop_back();   # 2
+    print deque.to_list();    # [4, 3]
+
+    print deque.pop_front();  # 4
+    print deque.to_list();    # [3]
+
+    print deque.pop_front();  # 3
+    print deque.to_list();    # []
+
+    print deque.pop_front();  # null
+    print deque.to_list();    # []
+
+    print deque.pop_back();   # null
+    print deque.to_list();    # []
+
+    deque.push_back(5);       
+    print deque.to_list();    # [5]
+
+    print deque.peek_front(); # 5
+    print deque.pop_front();  # 5
+    print deque.to_list();    # []
+}

@@ -85,11 +85,11 @@ struct ValTableEntry *get_val_table_slot(
 void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value val)
 {
     // TODO consider passing in the hash here so that we don't recompute it when we don't need to
-    if (tab->cnt * TABLE_LOAD_FACTOR >= tab->cap) {
+    if (tab->cnt >= tab->cap * TABLE_LOAD_FACTOR) {
         i32 new_cap = tab->cap * 2;
         struct ValTableEntry *new_entries = allocate(new_cap * sizeof(struct ValTableEntry));
         for (i32 i = 0; i < new_cap; i++) 
-            tab->entries[i].chars = NULL;
+            new_entries[i].chars = NULL;
         for (i32 i = 0; i < tab->cap; i++) {
             struct ValTableEntry entry = tab->entries[i];
             struct ValTableEntry *new_entry 
@@ -115,8 +115,8 @@ bool val_eq(Value val1, Value val2)
         return false;
     switch (val1.tag) {
         case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
-        case VAL_NUM: return AS_NUM(val1) == AS_NUM(val2);
-        case VAL_NIL: return true;
+        case VAL_NUM:  return AS_NUM(val1) == AS_NUM(val2);
+        case VAL_NULL: return true;
     }
 }
 
@@ -125,7 +125,7 @@ void print_val(Value val)
     switch (val.tag) {
     case VAL_NUM:  printf("%.14g", AS_NUM(val)); break;
     case VAL_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
-    case VAL_NIL:  printf("null"); break; 
+    case VAL_NULL:  printf("null"); break; 
     case VAL_OBJ: 
         if (AS_OBJ(val)->printed) {
             printf("...");
@@ -141,6 +141,7 @@ void print_val(Value val)
             break;   
         }
         case OBJ_FOREIGN_METHOD: {
+            // FIXME this is doing print_null
             const char *name = AS_FOREIGN_METHOD(val)->fn->name->chars;
             printf("<foreign method %s>", name);
             break;

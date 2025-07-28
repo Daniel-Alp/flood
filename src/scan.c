@@ -197,6 +197,7 @@ struct Token next_token(struct Scanner *scanner)
                     return check_keyword(scanner, "f", 2, TOKEN_IF);
                 else
                     return check_keyword(scanner, "mport", 6, TOKEN_IMPORT);
+            case 'n': return check_keyword(scanner, "ull", 4, TOKEN_NULL);
             case 'o': return check_keyword(scanner, "r", 2, TOKEN_OR);
             // TEMP remove when we add functions
             case 'p': return check_keyword(scanner, "rint", 5, TOKEN_PRINT);

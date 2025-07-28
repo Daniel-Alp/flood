@@ -5,7 +5,7 @@
 #define MAX_LOCALS (256)
 
 enum NodeTag {
-    NODE_ATOM,      // nil, true, false, TODO strings
+    NODE_ATOM,      // null, true, false, TODO strings
     NODE_LIST,      // [foo, bar, baz]
     NODE_IDENT,
     NODE_UNARY,

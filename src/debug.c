@@ -197,7 +197,7 @@ void print_node(struct Node *node, i32 offset)
 }
 
 const char *opcode_str[] = {
-    [OP_NIL]           = "OP_NIL",
+    [OP_NULL]          = "OP_NULL",
     [OP_TRUE]          = "OP_TRUE",
     [OP_FALSE]         = "OP_FALSE",
     [OP_ADD]           = "OP_ADD",

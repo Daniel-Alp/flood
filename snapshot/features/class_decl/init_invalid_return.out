@@ -1,0 +1,6 @@
+4 |             return 3;
+  |             ^~~~~~ init implicitly returns `self` so return cannot have expression
+
+6 |         return self;
+  |         ^~~~~~ init implicitly returns `self` so return cannot have expression
+

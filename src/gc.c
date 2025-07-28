@@ -63,10 +63,17 @@ void collect_garbage(struct VM *vm)
         obj->color = GC_BLACK;
         vm->gray_cnt--;
 
+        // TODO order same as obj->tag because the inconsistent ordering is >_<
         switch (obj->tag) {
+        case OBJ_FOREIGN_FN: {
+            struct ForeignFnObj *f_fn = (struct ForeignFnObj*)obj;
+            push_gray_stack(vm, (struct Obj*)f_fn->name);
+            break;
+        }
         case OBJ_FOREIGN_METHOD: {
             struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)obj;
             push_gray_stack(vm, f_method->self);
+            push_gray_stack(vm, (struct Obj*)f_method->fn);
             break;
         }
         case OBJ_FN: {

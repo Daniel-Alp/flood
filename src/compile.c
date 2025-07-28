@@ -53,6 +53,9 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
 {
     i32 line = node->base.span.line;
     switch(node->atom_tag) {
+    case TOKEN_NULL:
+        emit_byte(cur_chunk(compiler), OP_NULL, line);
+        break;
     case TOKEN_TRUE:
         emit_byte(cur_chunk(compiler), OP_TRUE, line);
         break;
@@ -261,11 +264,11 @@ static void compile_return(struct Compiler *compiler, struct ReturnNode *node)
     if (node->expr) {
         compile_node(compiler, node->expr);
     } else if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
-        // `init` method implicitly returns `self` which is at bp[arity+1]
+        // `init` method implicitly returns `self` which is at bp[arity]
         emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
-        emit_byte(cur_chunk(compiler), compiler->fn_node->arity+1, node->base.span.line);
+        emit_byte(cur_chunk(compiler), compiler->fn_node->arity, node->base.span.line);
     } else {
-        emit_byte(cur_chunk(compiler), OP_NIL, node->base.span.line);
+        emit_byte(cur_chunk(compiler), OP_NULL, node->base.span.line);
     }
     emit_byte(cur_chunk(compiler), OP_RETURN, node->base.span.line);
 }
@@ -286,7 +289,7 @@ static void compile_var_decl(struct Compiler *compiler, struct VarDeclNode *node
     if (node->init)
         compile_node(compiler, node->init);
     else 
-        emit_byte(cur_chunk(compiler), OP_NIL, line);
+        emit_byte(cur_chunk(compiler), OP_NULL, line);
     // move variable on heap if it is captured
     if (sym->flags & FLAG_CAPTURED) {
         emit_byte(cur_chunk(compiler), OP_HEAPVAL, line);
@@ -324,16 +327,13 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
             emit_byte(cur_chunk(compiler), param_sym->idx, line);
         }
     }
-    // reserve stack slot for `self`
-    if (sym->flags & FLAG_METHOD)
-        compiler->fn_local_cnt++;
     compile_block(compiler, node->body);
     if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
-        // `init` method implicitly returns `self` which is at bp[arity+1]
+        // `init` method implicitly returns `self` which is at bp[arity]
         emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
-        emit_byte(cur_chunk(compiler), compiler->fn_node->arity+1, node->base.span.line);
+        emit_byte(cur_chunk(compiler), compiler->fn_node->arity, node->base.span.line);
     } else {
-        emit_byte(cur_chunk(compiler), OP_NIL, line);
+        emit_byte(cur_chunk(compiler), OP_NULL, line);
     }
     emit_byte(cur_chunk(compiler), OP_RETURN, line);
     // disassemble_chunk(cur_chunk(compiler), compiler->fn->name->chars);
@@ -472,7 +472,7 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
         emit_byte(cur_chunk(compiler), i, line);
         emit_byte(cur_chunk(compiler), OP_POP, line);
     }
-    
+
     // disassemble_chunk(cur_chunk(compiler), compiler->fn->name->chars);
 
     return top_closure;

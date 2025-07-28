@@ -174,7 +174,7 @@ struct StringObj *string_from_c_str(struct VM *vm, const char *c_str)
 {
     i32 len = strlen(c_str);
     char *chars = allocate((len+1)*sizeof(char));
-    memcpy(chars, c_str, len+1);
+    strcpy(chars, c_str);
     struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL);
     init_string_obj(str, hash_string(chars, len), len, chars);
     return str;

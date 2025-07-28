@@ -36,6 +36,7 @@ enum TokenTag {
     TOKEN_L_SQUARE,
     TOKEN_R_SQUARE,
 
+    TOKEN_NULL,
     TOKEN_NUMBER,
     TOKEN_TRUE,
     TOKEN_FALSE,

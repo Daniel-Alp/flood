@@ -1,6 +1,8 @@
 fn main() {
     class Foo {
-
+        fn init() {
+            
+        }
     }
     var foo = Foo();
     print foo;

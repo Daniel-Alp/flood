@@ -106,8 +106,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         u8 op = *ip;
         ip++;
         switch (op) {
-        case OP_NIL: {
-            sp[0] = MK_NIL;
+        case OP_NULL: {
+            sp[0] = MK_NULL;
             sp++;
             break;
         }
@@ -537,75 +537,11 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         case OP_CALL: {
             u8 arg_count = *ip++;
             Value val = sp[-1-arg_count];
-            // TODO consider switching on the tag of obj
-            // TODO avoid copy pasting code here, this is just to get it working :P
-            // (I can probably just do fallthrough class->method->closure and foreign functions separately)
-            if (IS_CLOSURE(val)) {
-                struct ClosureObj *closure = AS_CLOSURE(val);
-                if (closure->fn->arity != arg_count) {
-                    runtime_err(ip, vm, "incorrect number of arguments provided");
-                    return INTERP_RUNTIME_ERR;
-                }
-                if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
-                    runtime_err(ip, vm, "stack overflow");
-                    return INTERP_RUNTIME_ERR;
-                }
-                frame->ip = ip; 
-                vm->call_cnt++;
-                frame++;
-                frame->bp = sp-1-arg_count;
-                frame->closure = closure;
-                ip = closure->fn->chunk.code;
-            } else if (IS_METHOD(val)) {
-                struct MethodObj *method = AS_METHOD(val);
-                if (method->closure->fn->arity != arg_count) {
-                    runtime_err(ip, vm, "incorrect number of arguments provided");
-                    return INTERP_RUNTIME_ERR;
-                }
-                if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
-                    runtime_err(ip, vm, "stack overflow");
-                    return INTERP_RUNTIME_ERR;
-                }
-                // `self` is the last argument to methods
-                sp[0] = MK_OBJ((struct Obj*)method->self);
-                sp++;
-                frame->ip = ip; 
-                vm->call_cnt++;
-                frame++;
-                frame->bp = sp-1-(arg_count+1); // arg_count+1 because arg_count does not include `self`
-                frame->closure = method->closure;
-                ip = method->closure->fn->chunk.code;
-            } else if (IS_CLASS(val)) {
-                struct ClassObj *class = AS_CLASS(val);
-                struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj), class);
-                init_instance_obj(instance);
-
-                struct ValTableEntry *entry = get_val_table_slot(
-                    class->methods.entries,
-                    class->methods.cap,
-                    hash_string("init", 4),
-                    4,
-                    "init"
-                );
-                struct MethodObj *init = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
-                init_method_obj(init, AS_CLOSURE(entry->val), instance);
-                // replace <class obj> with `init` method and invoke it
-                //      <class obj>
-                //      <arg>
-                //      ...
-                //      <arg>
-                sp[-1-arg_count] = MK_OBJ((struct Obj*)init);
-                // `self` is the last argument to methods
-                sp[0] = MK_OBJ((struct Obj*)instance);
-                sp++;
-                frame->ip = ip; 
-                vm->call_cnt++;
-                frame++;
-                frame->bp = sp-1-(arg_count+1); // arg_count+1 because arg_count does not include `self`
-                frame->closure = init->closure;
-                ip = init->closure->fn->chunk.code; 
-            } else if (IS_FOREIGN_METHOD(val)) {
+            if (IS_FOREIGN_METHOD(val)) {
                 struct ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
+                sp[0] = MK_OBJ((struct Obj*)f_method->self);
+                sp++;
+                arg_count++;
                 if (f_method->fn->arity != arg_count) {
                     runtime_err(ip, vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
@@ -616,13 +552,62 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                 }
                 frame->ip = ip;
                 vm->sp = sp;
-                if (!f_method->fn->code(vm, f_method->self)) {
+                if (!f_method->fn->code(vm)) {
                     return INTERP_RUNTIME_ERR;
                 }
+                sp -= arg_count;
+                break; // breaks out of case
+            } 
+            struct ClosureObj *closure;
+            if (IS_CLASS(val)) {
+                struct ClassObj *class = AS_CLASS(val);
+                struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj), class);
+                init_instance_obj(instance);
+                struct ValTableEntry *entry = get_val_table_slot(
+                    class->methods.entries,
+                    class->methods.cap,
+                    hash_string("init", 4),
+                    4,
+                    "init"
+                );
+                struct MethodObj *init = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
+                init_method_obj(init, AS_CLOSURE(entry->val), instance);
+                // replace <class obj> with <method init>
+                //      <class obj>
+                //      <arg>
+                //      ...
+                //      <arg>
+                sp[-1-arg_count] = MK_OBJ((struct Obj*)init);
+                closure = init->closure;
+                sp[0] = MK_OBJ((struct Obj*)instance);
+                sp++;
+                arg_count++;
+            } else if (IS_METHOD(val)) {
+                struct MethodObj *method = AS_METHOD(val);
+                closure = method->closure;
+                sp[0] = MK_OBJ((struct Obj*)method->self);
+                sp++;
+                arg_count++;
+            } else if (IS_CLOSURE(val)) {
+                closure = AS_CLOSURE(val);
             } else {
                 runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;
             }
+            if (closure->fn->arity != arg_count) {
+                runtime_err(ip, vm, "incorrect number of arguments provided");
+                return INTERP_RUNTIME_ERR;
+            }
+            if (vm->call_cnt+1 >= MAX_CALL_FRAMES) {
+                runtime_err(ip, vm, "stack overflow");
+                return INTERP_RUNTIME_ERR;
+            }
+            frame->ip = ip;
+            vm->call_cnt++;
+            frame++;
+            frame->bp = sp-1-arg_count;
+            frame->closure = closure;
+            ip = closure->fn->chunk.code;
             break;
         }
         case OP_RETURN: {

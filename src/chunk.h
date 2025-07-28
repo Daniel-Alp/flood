@@ -11,7 +11,7 @@ struct Chunk {
     //      var x;
     //      x = 1 + 2;
     // the bytecode would be
-    //      OP_NIL
+    //      OP_NULL
     //      OP_CONST
     //      <const table idx for 1>
     //      OP_CONST
@@ -32,7 +32,7 @@ struct Chunk {
 };
 
 enum OpCode {
-    OP_NIL,
+    OP_NULL,
     OP_TRUE,
     OP_FALSE,
 

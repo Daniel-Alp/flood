@@ -50,9 +50,6 @@ int main(int argc, const char **argv)
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
-
-    // print_node(ast, 0);
-    // printf("\n");
     
     struct Compiler compiler;
     init_compiler(&compiler, &sym_arr);
@@ -75,11 +72,11 @@ int main(int argc, const char **argv)
         emit_byte(&closure->fn->chunk, OP_CALL, 1);
         emit_byte(&closure->fn->chunk, 0, 1);
     }
-    emit_byte(&closure->fn->chunk, OP_NIL, 1);
+    emit_byte(&closure->fn->chunk, OP_NULL, 1);
     emit_byte(&closure->fn->chunk, OP_RETURN, 1);
     // push globals
     for (i32 i = 0; i < compiler.fn_node->body->cnt; i++)
-        push_val_array(&vm.globals, MK_NIL);
+        push_val_array(&vm.globals, MK_NULL);
 
     release_symbol_arr(&sym_arr);
     release_compiler(&compiler);

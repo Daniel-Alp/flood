@@ -1,0 +1,3 @@
+2 |     print self;
+  |           ^~~~ not found in this scope
+

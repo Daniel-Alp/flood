@@ -1,3 +1,2 @@
-3 |     foo.x = 3;
-  |           ^ cannot assign to left-hand expression
-
+attempt to set field of non-user-object
+[line 3] in main

@@ -6,7 +6,7 @@ struct Obj;
 struct StringObj;
 
 enum ValTag {
-    VAL_NIL,
+    VAL_NULL,
     VAL_BOOL,
     VAL_NUM,
     VAL_OBJ
@@ -44,7 +44,7 @@ struct ValTable {
     struct ValTableEntry *entries;
 };
 
-#define MK_NIL            ((Value){VAL_NIL, {.number = 0}})
+#define MK_NULL           ((Value){VAL_NULL, {.number = 0}})
 #define MK_BOOL(val)      ((Value){VAL_BOOL, {.boolean = val}})
 #define MK_NUM(val)       ((Value){VAL_NUM, {.number = val}})
 #define MK_OBJ(val)       ((Value){VAL_OBJ, {.obj = val}})
@@ -53,7 +53,7 @@ struct ValTable {
 #define AS_NUM(val)       ((val).as.number)
 #define AS_OBJ(val)       ((val).as.obj)
 
-#define IS_NIL(val)       ((val).tag == VAL_NIL)
+#define IS_NULL(val)      ((val).tag == VAL_NULL)
 #define IS_BOOL(val)      ((val).tag == VAL_BOOL)
 #define IS_NUM(val)       ((val).tag == VAL_NUM)
 #define IS_OBJ(val)       ((val).tag == VAL_OBJ)
