@@ -1,4 +1,3 @@
-#include <stdio.h> //DELETEME!!!
 #include <string.h>
 #include <stdlib.h>
 #include "sema.h"
@@ -11,7 +10,7 @@ void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr)
     sema->local_cnt = 0;
     sema->global_cnt = 0;
     sema->sym_arr = sym_arr;
-    sema->fn = NULL;
+    sema->fn_node = NULL;
     init_errlist(&sema->errlist);
 }
 
@@ -87,7 +86,7 @@ static i32 declare_ident(struct SemaState *sema, struct Span span, u32 flags)
 static void update_captures(struct SemaState *sema, i32 id)
 {
     struct Symbol *sym = &sema->sym_arr->symbols[id];
-    struct FnDeclNode *fn = sema->fn;
+    struct FnDeclNode *fn = sema->fn_node;
     struct FnDeclNode *parent = fn->parent;
     // NOTE: 
     // special cases. 
@@ -195,7 +194,7 @@ static void analyze_print(struct SemaState *sema, struct PrintNode *node)
 static void analyze_return(struct SemaState *sema, struct ReturnNode *node) 
 {
     if (node->expr) {
-        if (sema->sym_arr->symbols[sema->fn->id].flags & FLAG_INIT)
+        if (sema->sym_arr->symbols[sema->fn_node->id].flags & FLAG_INIT)
             push_errlist(&sema->errlist, node->base.span, "init implicitly returns `self` so return cannot have expression");
         analyze_node(sema, node->expr);
     }
@@ -211,8 +210,8 @@ static void analyze_var_decl(struct SemaState *sema, struct VarDeclNode *node)
 static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
 {
     // push state and enter the fn
-    node->parent = sema->fn;
-    sema->fn = node;
+    node->parent = sema->fn_node;
+    sema->fn_node = node;
     i32 local_cnt = sema->local_cnt;
 
     sema->depth++;
@@ -223,7 +222,7 @@ static void analyze_fn_body(struct SemaState *sema, struct FnDeclNode *node)
 
     // pop state and leave the fn
     sema->local_cnt = local_cnt;
-    sema->fn = node->parent;
+    sema->fn_node = node->parent;
     
     for (i32 i = 0; i < node->parent_capture_cnt; i++)
         update_captures(sema, node->parent_captures[i]);
@@ -281,6 +280,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
         struct ClassDeclNode *class_decl = (struct ClassDeclNode*)node;
         class_decl->id = declare_ident(sema, class_decl->base.span, FLAG_NONE);        
         analyze_class_body(sema, class_decl);
+        break;
     }
     }
 }

@@ -38,13 +38,13 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg)
     }
 }
 
-struct Obj *alloc_vm_obj(struct VM *vm, u64 size, struct ClassObj *class)
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
 {
     struct Obj *obj = allocate(size);
+    obj->class = NULL;
     obj->next = vm->obj_list;
     obj->color = GC_WHITE;
     obj->printed = 0;
-    obj->class = class;
     vm->obj_list = obj;
     return obj;
 }
@@ -74,6 +74,14 @@ void init_vm(struct VM *vm)
     vm->gray_cnt = 0;
     vm->gray_cap = 8;
     vm->gray = allocate(vm->gray_cap * sizeof(struct Obj*));
+
+    vm->list_class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+    vm->string_class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+    vm->class_class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+
+    init_class_obj(vm->list_class, string_from_c_str(vm, "List"), vm);
+    init_class_obj(vm->string_class, string_from_c_str(vm, "String"), vm);
+    init_class_obj(vm->class_class, string_from_c_str(vm, "Class"), vm);
 
     define_list_methods(vm);
 }
@@ -279,8 +287,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             u8 cnt = *ip++;
             sp -= cnt;
             Value *vals = sp;
-            struct ListObj *list = (struct ListObj*)alloc_vm_obj(vm, sizeof(struct ListObj), vm->list_class);
-            init_list_obj(list, vals, cnt);
+            struct ListObj *list = (struct ListObj*)alloc_vm_obj(vm, sizeof(struct ListObj));
+            init_list_obj(list, vals, cnt, vm);
             sp[0] = MK_OBJ((struct Obj*)list);
             sp++;
             break;
@@ -288,8 +296,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         case OP_CLASS: {
             u8 idx = *ip++;
             struct StringObj *name = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
-            struct ClassObj *class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj), NULL);
-            init_class_obj(class, name);
+            struct ClassObj *class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+            init_class_obj(class, name, vm);
             sp[0] = MK_OBJ((struct Obj*)class);
             sp++;
             break;
@@ -305,7 +313,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         }
         case OP_HEAPVAL: {
             u8 idx = *ip++;
-            struct HeapValObj *heap_val = (struct HeapValObj*)alloc_vm_obj(vm, sizeof(struct HeapValObj), NULL);
+            struct HeapValObj *heap_val = (struct HeapValObj*)alloc_vm_obj(vm, sizeof(struct HeapValObj));
             init_heap_val_obj(heap_val, frame->bp[idx]);
             frame->bp[idx] = MK_OBJ((struct Obj*)heap_val);
             break;
@@ -313,7 +321,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         case OP_CLOSURE: {
             u8 stack_captures = *ip++;
             u8 parent_captures = *ip++;
-            struct ClosureObj *closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj), NULL);
+            struct ClosureObj *closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
             init_closure_obj(closure, AS_FN(sp[-1]), stack_captures + parent_captures);
             for (i32 i = 0; i < stack_captures; i++)
                 closure->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
@@ -456,12 +464,12 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                 if (entry->chars != NULL) {
                     if (AS_OBJ(entry->val)->tag == OBJ_CLOSURE) { 
                          // user-defined method, bind function to instance
-                        struct MethodObj *method = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
+                        struct MethodObj *method = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj));
                         init_method_obj(method, AS_CLOSURE(entry->val), AS_INSTANCE(val));
                         sp[-1] = MK_OBJ((struct Obj*)method); 
                     } else { 
                         // foreign method, bind function to instance
-                        struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)alloc_vm_obj(vm, sizeof(struct ForeignMethodObj), NULL);
+                        struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)alloc_vm_obj(vm, sizeof(struct ForeignMethodObj));
                         init_foreign_method_obj(f_method, AS_FOREIGN_FN(entry->val), AS_INSTANCE(val));
                         sp[-1] = MK_OBJ((struct Obj*)f_method);
                     }
@@ -561,8 +569,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             struct ClosureObj *closure;
             if (IS_CLASS(val)) {
                 struct ClassObj *class = AS_CLASS(val);
-                struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj), class);
-                init_instance_obj(instance);
+                struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj));
+                init_instance_obj(instance, class);
                 struct ValTableEntry *entry = get_val_table_slot(
                     class->methods.entries,
                     class->methods.cap,
@@ -570,7 +578,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     4,
                     "init"
                 );
-                struct MethodObj *init = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj), NULL);
+                struct MethodObj *init = (struct MethodObj*)alloc_vm_obj(vm, sizeof(struct MethodObj));
                 init_method_obj(init, AS_CLOSURE(entry->val), instance);
                 // replace <class obj> with <method init>
                 //      <class obj>

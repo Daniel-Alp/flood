@@ -82,9 +82,10 @@ void release_closure_obj(struct ClosureObj *closure)
     closure->captures = NULL;
 }
 
-void init_class_obj(struct ClassObj *class, struct StringObj *name)
+void init_class_obj(struct ClassObj *class, struct StringObj *name, struct VM *vm)
 {
     class->base.tag = OBJ_CLASS;
+    class->base.class = vm->class_class;
     class->name = name;
     init_val_table(&class->methods);
 }
@@ -96,9 +97,10 @@ void release_class_obj(struct ClassObj *class)
 }
 
 // NOTE: vals is the methods defined on the class
-void init_instance_obj(struct InstanceObj *instance)
+void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class)
 {
     instance->base.tag = OBJ_INSTANCE;
+    instance->base.class = class;
     init_val_table(&instance->fields);
 }
 
@@ -123,9 +125,10 @@ void release_method_obj(struct MethodObj *method)
 }
 
 // NOTE: vals points to the start of the list's elements in the stack 
-void init_list_obj(struct ListObj *list, Value *vals, i32 cnt)
+void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm)
 {
     list->base.tag = OBJ_LIST;
+    list->base.class = vm->list_class;
     i32 cap = 8;
     while (cnt > cap)
         cap *= 2;
@@ -144,9 +147,10 @@ void release_list_obj(struct ListObj *list)
     list->vals = NULL;
 }
 
-void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars)
+void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars, struct VM *vm)
 {
     str->base.tag = OBJ_STRING;
+    str->base.class = vm->string_class;
     str->hash = hash;
     str->len = len;
     str->chars = chars;
@@ -165,8 +169,8 @@ struct StringObj *string_from_span(struct VM *vm, struct Span span)
     char *chars = allocate((span.len+1)*sizeof(char));
     memcpy(chars, span.start, span.len);
     chars[span.len] = '\0';
-    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL);
-    init_string_obj(str, hash_string(chars, span.len), span.len, chars);
+    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj));
+    init_string_obj(str, hash_string(chars, span.len), span.len, chars, vm);
     return str;
 }
 
@@ -175,7 +179,7 @@ struct StringObj *string_from_c_str(struct VM *vm, const char *c_str)
     i32 len = strlen(c_str);
     char *chars = allocate((len+1)*sizeof(char));
     strcpy(chars, c_str);
-    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL);
-    init_string_obj(str, hash_string(chars, len), len, chars);
+    struct StringObj *str = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj));
+    init_string_obj(str, hash_string(chars, len), len, chars, vm);
     return str;
 }

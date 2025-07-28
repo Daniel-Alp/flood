@@ -55,6 +55,8 @@ void collect_garbage(struct VM *vm)
         push_gray_stack(vm, (struct Obj*)frame->closure);
 
     push_gray_stack(vm, (struct Obj*)vm->list_class);
+    push_gray_stack(vm, (struct Obj*)vm->string_class);
+    push_gray_stack(vm, (struct Obj*)vm->class_class);
 
     // mark rest
     // TODO add heap val marking

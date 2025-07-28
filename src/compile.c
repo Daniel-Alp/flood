@@ -29,13 +29,11 @@ static i32 emit_jump(struct Compiler *compiler, enum OpCode op, i32 line)
     return offset;
 }
 
-// TODO is the comment below still relevant?
-// make jump instr jump to the instr that will be emitted next
 static void patch_jump(struct Compiler *compiler, i32 offset) 
 {
-    // offset points to the OP_JUMP instr
-    // compiler->chunk.count points to the to-be-executed instr
-    i32 jump =  cur_chunk(compiler)->cnt - (offset+3);
+    // offset idx of the OP_JUMP instr
+    // cnt is idx of to-be-executed instr
+    i32 jump = cur_chunk(compiler)->cnt - (offset+3);
     // TODO error if jump > max u16
     cur_chunk(compiler)->code[offset+1] = (jump >> 8) & 0xff;
     cur_chunk(compiler)->code[offset+2] = jump & 0xff; 
@@ -53,27 +51,17 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
 {
     i32 line = node->base.span.line;
     switch(node->atom_tag) {
-    case TOKEN_NULL:
-        emit_byte(cur_chunk(compiler), OP_NULL, line);
-        break;
-    case TOKEN_TRUE:
-        emit_byte(cur_chunk(compiler), OP_TRUE, line);
-        break;
-    case TOKEN_FALSE:
-        emit_byte(cur_chunk(compiler), OP_FALSE, line);
-        break;
-    case TOKEN_NUMBER:
-        emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line);
-        break;
-    case TOKEN_STRING:
-        push_errlist(&compiler->errlist, node->base.span, "TODO");
-        break;
+    case TOKEN_NULL:   emit_byte(cur_chunk(compiler), OP_NULL, line); break;
+    case TOKEN_TRUE:   emit_byte(cur_chunk(compiler), OP_TRUE, line); break;
+    case TOKEN_FALSE:  emit_byte(cur_chunk(compiler), OP_FALSE, line); break;
+    case TOKEN_NUMBER: emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line); break;
+    case TOKEN_STRING: emit_constant(compiler, MK_OBJ(string_from_span(compiler->vm, node->base.span)), line); break;    
     }
 }
 
 // given an identifier that is captured return what it's idx will be 
 // in the fn's capture array, or -1 if this fn does not capture it
-static i32 resolve_captured(struct FnDeclNode *node, i32 id)
+static i32 resolve_capture(struct FnDeclNode *node, i32 id)
 {
     // capture count cannot exceed MAX_LOCALS
     for (i32 j = 0; j < MAX_LOCALS; j++) {
@@ -88,8 +76,7 @@ static i32 resolve_captured(struct FnDeclNode *node, i32 id)
 static void compile_ident_get_or_set(struct Compiler *compiler, i32 id, bool get, i32 line)
 {
     struct Symbol sym = symbols(compiler)[id];
-    // special case, if a function is referencing itself we can do OP_GET_LOCAL 0
-    // we assume this is always done if we can do it, so this rule takes precedence
+    // special case if a function is referencing itself we can do OP_GET_LOCAL 0 or OP_SET_LOCAL 0
     if (id == compiler->fn_node->id) {
         emit_byte(cur_chunk(compiler), get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
         emit_byte(cur_chunk(compiler), 0, line);
@@ -101,7 +88,7 @@ static void compile_ident_get_or_set(struct Compiler *compiler, i32 id, bool get
         return;
     }
     if (sym.flags & FLAG_CAPTURED) {
-        i32 captures_arr_idx = resolve_captured(compiler->fn_node, id);
+        i32 captures_arr_idx = resolve_capture(compiler->fn_node, id);
         // ptr to the value lives on the stack
         if (captures_arr_idx == -1) {
             emit_byte(cur_chunk(compiler), get ? OP_GET_HEAPVAL : OP_SET_HEAPVAL, line);
@@ -261,16 +248,17 @@ static void compile_expr_stmt(struct Compiler *compiler, struct ExprStmtNode *no
 
 static void compile_return(struct Compiler *compiler, struct ReturnNode *node) 
 {
+    i32 line = node->base.span.line;
     if (node->expr) {
         compile_node(compiler, node->expr);
     } else if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
         // `init` method implicitly returns `self` which is at bp[arity]
-        emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
-        emit_byte(cur_chunk(compiler), compiler->fn_node->arity, node->base.span.line);
+        emit_byte(cur_chunk(compiler), OP_GET_LOCAL, line);
+        emit_byte(cur_chunk(compiler), compiler->fn_node->arity, line);
     } else {
-        emit_byte(cur_chunk(compiler), OP_NULL, node->base.span.line);
+        emit_byte(cur_chunk(compiler), OP_NULL, line);
     }
-    emit_byte(cur_chunk(compiler), OP_RETURN, node->base.span.line);
+    emit_byte(cur_chunk(compiler), OP_RETURN, line);
 }
 
 static void compile_print(struct Compiler *compiler, struct PrintNode *node) 
@@ -307,7 +295,7 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         compiler->fn_local_cnt++;
     }
 
-    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj), NULL);
+    struct FnObj* fn = (struct FnObj*)alloc_vm_obj(compiler->vm, sizeof(struct FnObj));
     init_fn_obj(fn, string_from_span(compiler->vm, node->base.span), node->arity);
 
     // push state and enter the fn
@@ -328,7 +316,7 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
         }
     }
     compile_block(compiler, node->body);
-    if (symbols(compiler)[compiler->fn_node->id].flags & FLAG_INIT) {
+    if (sym->flags & FLAG_INIT) {
         // `init` method implicitly returns `self` which is at bp[arity]
         emit_byte(cur_chunk(compiler), OP_GET_LOCAL, node->base.span.line);
         emit_byte(cur_chunk(compiler), compiler->fn_node->arity, node->base.span.line);
@@ -354,7 +342,7 @@ static void compile_fn_decl(struct Compiler *compiler, struct FnDeclNode *node)
     for (i32 i = 0; i < node->parent_capture_cnt; i++) {
         i32 id = node->parent_captures[i];
         // node->parent can't be NULL
-        emit_byte(cur_chunk(compiler), resolve_captured(node->parent, id), line);
+        emit_byte(cur_chunk(compiler), resolve_capture(node->parent, id), line);
     }
     // move closure on heap if it is captured
     if (sym->flags & FLAG_CAPTURED) {
@@ -383,6 +371,7 @@ static void compile_class_decl(struct Compiler *compiler, struct ClassDeclNode *
     }
 }
 
+// TODO check ordering is consistent
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {
     switch (node->tag) {
@@ -433,14 +422,10 @@ struct ClosureObj *compile_file(struct VM *vm, struct Compiler *compiler, struct
     // have to clear other things in the compiler as well each time we compile
     compiler->vm = vm;
 
-    struct StringObj *top_fn_name = (struct StringObj*)alloc_vm_obj(vm, sizeof(struct StringObj), NULL); 
-    init_string_obj(top_fn_name, hash_string("script", 6), 6, strcpy(allocate(7*sizeof(char)), "script"));
-    strcpy(top_fn_name->chars, "script");
+    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj));
+    init_fn_obj(top_fn, string_from_c_str(vm, "script"), 0);
 
-    struct FnObj *top_fn = (struct FnObj*)alloc_vm_obj(vm, sizeof(struct FnObj), NULL);
-    init_fn_obj(top_fn, top_fn_name, 0);
-
-    struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj), NULL);
+    struct ClosureObj *top_closure = (struct ClosureObj*)alloc_vm_obj(vm, sizeof(struct ClosureObj));
     init_closure_obj(top_closure, top_fn, 0);
 
     compiler->fn_node = node;

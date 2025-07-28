@@ -156,21 +156,21 @@ void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 cnt);
 
 void release_closure_obj(struct ClosureObj *closure);
 
-void init_class_obj(struct ClassObj *class, struct StringObj *name);
+void init_class_obj(struct ClassObj *class, struct StringObj *name, struct VM *vm);
 
 void release_class_obj(struct ClassObj *class);
 
-void init_instance_obj(struct InstanceObj *instance);
+void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class);
 
 void release_instance_obj(struct InstanceObj *instance);
 
 void init_method_obj(struct MethodObj *method, struct ClosureObj *closure, struct InstanceObj *self);
 
-void init_list_obj(struct ListObj *list, Value *vals, i32 cnt);
+void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm);
 
 void release_list_obj(struct ListObj *list);
 
-void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars);
+void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars, struct VM *vm);
 
 void release_string_obj(struct StringObj *str);
 

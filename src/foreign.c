@@ -11,7 +11,7 @@ static void define_foreign_method(
     i32 arity,                  // arity of fn (includes `self`)
     ForeignFn code
 ) {
-    struct ForeignFnObj *f_fn = (struct ForeignFnObj*)alloc_vm_obj(vm, sizeof(struct ForeignFnObj), NULL);
+    struct ForeignFnObj *f_fn = (struct ForeignFnObj*)alloc_vm_obj(vm, sizeof(struct ForeignFnObj));
     init_foreign_fn_obj(f_fn, string_from_c_str(vm, c_str), arity, code);
     Value val = MK_OBJ((struct Obj*)f_fn);
     // we're recalculating strlen here but it should be fine
@@ -65,9 +65,6 @@ static bool list_length(struct VM *vm)
 
 void define_list_methods(struct VM *vm)
 {
-    vm->list_class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj), NULL);
-    init_class_obj(vm->list_class, string_from_c_str(vm, "List"));
-
     define_foreign_method(vm, &vm->list_class->methods, "push", 2, list_push);
     define_foreign_method(vm, &vm->list_class->methods, "pop", 1, list_pop);
     define_foreign_method(vm, &vm->list_class->methods, "len", 1, list_length);

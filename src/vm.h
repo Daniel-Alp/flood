@@ -19,6 +19,8 @@ enum InterpResult {
 
 struct VM {
     struct ClassObj *list_class;
+    struct ClassObj *string_class;
+    struct ClassObj *class_class;
 
     struct CallFrame call_stack[MAX_CALL_FRAMES];
     u16 call_cnt;
@@ -43,4 +45,4 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg);
 
 enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure);
 
-struct Obj *alloc_vm_obj(struct VM *vm, u64 size, struct ClassObj *class);
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size);
