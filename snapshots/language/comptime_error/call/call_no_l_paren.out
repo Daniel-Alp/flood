@@ -1,0 +1,6 @@
+2 |     foo 1 + 2, true and false);
+  |         ^ expected `;`
+
+5 | }
+  | ^ expected expression
+

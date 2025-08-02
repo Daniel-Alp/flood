@@ -1,0 +1,7 @@
+# this is a commment
+# this is another commment
+fn main() {
+    print 4 + 5; # comment on same line
+}
+
+# comment on the last line

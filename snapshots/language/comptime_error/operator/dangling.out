@@ -1,0 +1,42 @@
+2  |     x += ;
+   |          ^ expected expression
+
+3  |     x -= ;
+   |          ^ expected expression
+
+4  |     x *= ;
+   |          ^ expected expression
+
+5  |     x /= ;
+   |          ^ expected expression
+
+7  |     1 + ;
+   |         ^ expected expression
+
+8  |     1 - ;
+   |         ^ expected expression
+
+9  |     1 * ;
+   |         ^ expected expression
+
+10 |     1 / ;
+   |         ^ expected expression
+
+11 |     1 // ;
+   |          ^ expected expression
+
+12 |     1 % ;
+   |         ^ expected expression
+
+14 |     ! ; 
+   |       ^ expected expression
+
+15 |     - ;
+   |       ^ expected expression
+
+17 |     true and ;
+   |              ^ expected expression
+
+18 |     false or ;
+   |              ^ expected expression
+

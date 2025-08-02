@@ -1,6 +1,0 @@
-fn main() {
-    var x;
-    x = 3;
-    var y;
-    y = true;
-}

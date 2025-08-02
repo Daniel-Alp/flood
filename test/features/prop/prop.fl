@@ -1,4 +1,0 @@
-fn main() {
-    foo.bar.baz;
-    foo.bling()[0].blong.blang[3];
-}

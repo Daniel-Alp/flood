@@ -1,45 +1,80 @@
-import tempfile
+import argparse
 import filecmp
-import os
 import subprocess
-import sys
+import tempfile
 
-def diff(testpath: str, snappath: str) -> None:
-    if not os.path.isfile(snappath):
-        print(f"\033[31msnapshot does not exist: {snappath}\033[0m")
+from pathlib import Path    
+
+def to_snap_path(test_path: Path) -> Path:
+    return Path("snapshots") / test_path.relative_to("tests").with_suffix(".out")
+
+def clean_all() -> None:
+    snap_paths_keep = set([to_snap_path(path) for path in Path("tests").glob("**/*") if path.is_file()])
+    snap_paths_all = set([path for path in Path("snapshots").glob("**/*") if path.is_file()])
+    snap_paths_clean = snap_paths_all - snap_paths_keep
+    for snap_path in snap_paths_clean:  
+        print(f"\033[32mcleaned: {snap_path}\033[0m")  
+        snap_path.unlink()
+
+def diff(test_path: Path) -> None:
+    snap_path = to_snap_path(test_path)
+    if not snap_path.is_file():
+        print(f"\033[31msnapshot `{snap_path}` does not exist.\033[0m")
         return
-    with tempfile.NamedTemporaryFile("w+") as tmp, open(snappath, "r") as snapshot:
-        subprocess.run(["./build/flood", testpath], stdout=tmp)
+    with tempfile.NamedTemporaryFile("w+") as tmp, open(snap_path, "r") as snapshot:
+        subprocess.run(["./build/flood", snap_path], stdout=tmp)
         tmp.flush()
         tmp.seek(0)
-        if filecmp.cmp(tmp.name, snappath):
-            print(f"\033[32m{testpath}\033[0m")
+        if filecmp.cmp(tmp.name, snap_path):
+            print(f"\033[32m{test_path}\033[0m")
         else:
-            print(f"\033[31m{testpath}\033[0m\n")
+            print(f"\033[31m{test_path}\033[0m\n")
             print("old:")
             print(snapshot.read())
             print("new:")
             print(tmp.read())
 
-def upgrade(testpath: str, snappath: str) -> None:
-    snapdir = snappath[:snappath.rfind("/")]
-    os.makedirs(snapdir, exist_ok=True)
-    with open(snappath, "w") as snapshot:
-        subprocess.run(["./build/flood", testpath], stdout=snapshot)
-        print(f"\033[32mupgraded: {snappath}\033[0m")
+def upgrade(test_path: Path) -> None:
+    snap_path = to_snap_path(test_path)
+    snap_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(snap_path, "w") as snapshot:
+        subprocess.run(["./build/flood", test_path], stdout=snapshot)
+        print(f"\033[32mupgraded: {snap_path}\033[0m")
 
-def run() -> None:
-    argv = sys.argv
-    if len(argv) != 2 or (argv[1] != "--diff" and argv[1] != "--upgrade"):
-        print("usage: python3 test.py [--diff | --upgrade]") 
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--diff", action='store_true')
+    group.add_argument("--upgrade", action='store_true')
+    group.add_argument("--clean", action='store_true')
+    args = parser.parse_args()
+
+    Path("tests").mkdir(exist_ok=True)
+    Path("snapshots").mkdir(exist_ok=True)
+
+    if args.clean:
+        clean_all()
         return
-    for dirpath, _, filenames in os.walk("test/features"):
-        for name in filenames:
-            testpath = os.path.join(dirpath, name)
-            snappath = testpath.replace("test", "snapshot", 1).replace(".fl", ".out")
-            if argv[1] == "--diff": 
-                diff(testpath, snappath)
-            else:
-                upgrade(testpath, snappath)
 
-run()
+    test_dirs = [
+        "language/comptime_error", 
+        "language/runtime_error", 
+        "language/runtime",
+        "misc"
+    ]
+
+    for dir in test_dirs:
+        dir_path = Path("tests") / Path(dir)
+        if not dir_path.is_dir():
+            print(f"`{dir_path}` does not exist or is not a directory.")
+            continue
+        for test_path in dir_path.glob("**/*"):
+            if not test_path.is_file():
+                continue
+            if args.diff:
+                diff(test_path)
+            else:       
+                upgrade(test_path) 
+
+if __name__ == "__main__":
+    main()

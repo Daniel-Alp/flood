@@ -473,7 +473,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
             parse_arg_list(parser, &tmp, TOKEN_R_PAREN);
             expect(parser, TOKEN_R_PAREN, "expected `)`");
             i32 cnt = tmp.cnt;
-            struct Node **args = (struct Node **)mv_ptr_array_to_arena(&parser->arena, &tmp);
+            struct Node **args = (struct Node**)mv_ptr_array_to_arena(&parser->arena, &tmp);
             lhs = (struct Node*)mk_call(&parser->arena, fn_call_span, lhs, args, cnt);
             continue;
         }

@@ -1,4 +1,0 @@
-fn main() {
-    var foo;
-    var y = foo.x;
-}

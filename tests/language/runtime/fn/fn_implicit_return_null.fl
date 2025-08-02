@@ -1,0 +1,12 @@
+fn main() {
+    print foo();
+    print bar();
+}
+
+fn foo() {
+    return;
+}
+
+fn bar() {
+
+}

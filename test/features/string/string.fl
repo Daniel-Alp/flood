@@ -1,4 +1,0 @@
-fn main() {
-    var x = "hello, world!";
-    print x;
-}

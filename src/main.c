@@ -1,6 +1,7 @@
 #include <unistd.h> // for isatty()
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "memory.h"
 #include "parse.h"
 #include "sema.h"
@@ -9,15 +10,11 @@
 #include "debug.h"
 
 int main(int argc, const char **argv) 
-{
-    if (argc != 2) {
-        printf("Usage: ./build/flood [script]\n");
-        return 1;
-    }
+{ 
     FILE *fp = fopen(argv[1], "rb");
     if (!fp) {
-        printf("File `%s` does not exist\n", argv[1]);
-        return 1;
+        printf("file `%s` does not exist\n", argv[1]);
+        return 0;
     }
     fseek(fp, 0, SEEK_END);
     u64 length = ftell(fp); 
@@ -28,13 +25,13 @@ int main(int argc, const char **argv)
     char *source = buf+1;
     // TODO check for null bytes
     fread(source, 1, length, fp);
-    bool color = isatty(1);
+    bool flag_color = isatty(1);
 
     struct Parser parser;
     init_parser(&parser);
     struct FnDeclNode *ast = parse(&parser, source);
     if (parser.errlist.cnt > 0) {
-        print_errlist(&parser.errlist, color);
+        print_errlist(&parser.errlist, flag_color);
         goto err_release_parser;
     }
 
@@ -46,7 +43,7 @@ int main(int argc, const char **argv)
     init_sema_state(&sema, &sym_arr);
     analyze(&sema, ast);
     if (sema.errlist.cnt > 0) {
-        print_errlist(&sema.errlist, color);
+        print_errlist(&sema.errlist, flag_color);
         release_symbol_arr(&sym_arr);
         goto err_release_sema_state;
     }
@@ -58,7 +55,7 @@ int main(int argc, const char **argv)
 
     struct ClosureObj *closure = compile_file(&vm, &compiler, ast);
     if (compiler.errlist.cnt > 0) {
-        print_errlist(&compiler.errlist, color);
+        print_errlist(&compiler.errlist, flag_color);
         release_symbol_arr(&sym_arr);
         goto err_release_compiler;
     }
