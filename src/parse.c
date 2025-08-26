@@ -361,7 +361,7 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
     // the old precedence is high because the operator binds tightly
     //      e.g. x * y[0] is parsed as x * (y[0])
     // but the expression within the [ ] should be parsed from the starting 
-    // precedence level, similar to show ( ) resets the precedence level
+    // precedence level, similar to how ( ) resets the precedence level
     case TOKEN_L_SQUARE:
         return (struct PrecLvl){.old = 15, .new = 1};
     default:
@@ -372,7 +372,6 @@ static struct PrecLvl infix_prec(enum TokenTag tag)
 // returns whether this token can start an expression
 static bool expr_first(enum TokenTag tag)
 {
-    // TODO add strings
     return tag == TOKEN_NULL
         || tag == TOKEN_TRUE 
         || tag == TOKEN_FALSE
@@ -423,7 +422,6 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
     if (expr_first(token.tag)) // we could bump in each arm of the switch but this is simpler
         bump(parser);
     struct Node *lhs = NULL;
-    // TODO add strings
     switch (token.tag) {
     case TOKEN_NULL:
     case TOKEN_TRUE:
@@ -563,6 +561,7 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser, bool method)
     }
     if (method) {
         struct IdentNode self = {
+            // TODO 
             // we should never need the line of `self`
             .base = { .tag = NODE_IDENT, .span = { .len = 4, .start = "self", .line = 0, }, },
             .id = -1,
@@ -576,7 +575,6 @@ static struct FnDeclNode *parse_fn_decl(struct Parser *parser, bool method)
     return mk_fn_decl(&parser->arena, span, param_spans, arity,  body);
 }
 
-// precondition: `class` token consumed
 static struct ClassDeclNode *parse_class_decl(struct Parser *parser)
 {
     struct Span span = at(parser).span;

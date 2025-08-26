@@ -10,7 +10,6 @@ struct SemaState {
     i32 global_cnt;
     i32 globals[MAX_GLOBALS];
     struct SymArr *sym_arr;
-    // TODO consider renaming this to fn_node to distinguish from fn
     struct FnDeclNode *fn_node;    // fn we are inside of while traversing AST
     struct ErrList errlist;
 };
