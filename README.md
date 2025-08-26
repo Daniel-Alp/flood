@@ -1,5 +1,18 @@
 # Flood
-Multi-paradign programming language, similar to Lua.
+Multi-paradign programming language, similar to Lua. To build the language
+```
+git clone https://github.com/Daniel-Alp/flood
+cd flood
+mkdir build
+cd build
+cmake ..
+cd ..
+cmake --build build
+```
+then do 
+```
+./build/flood my_script.fl
+```
 Below is a small tour of my language, for more complex examples see `tests/misc`
 
 ## Functions
