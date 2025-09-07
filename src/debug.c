@@ -152,7 +152,7 @@ static void print_class_decl(struct ClassDeclNode *node, i32 offset)
     printf("%.*s", node->base.span.len, node->base.span.start);
     printf(" id: %d", node->id);
     for (i32 i = 0; i < node->cnt; i++)
-        print_node(node->methods[i], offset + 2);
+        print_node((struct Node*)node->methods[i], offset + 2);
 }
 
 static void print_import(struct ImportNode *node, i32 offset)

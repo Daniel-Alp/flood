@@ -22,7 +22,7 @@ def diff(test_path: Path) -> None:
         print(f"\033[31msnapshot `{snap_path}` does not exist.\033[0m")
         return
     with tempfile.NamedTemporaryFile("w+") as tmp, open(snap_path, "r") as snapshot:
-        subprocess.run(["./build/flood", snap_path], stdout=tmp)
+        subprocess.run(["./build/flood", test_path], stdout=tmp)
         tmp.flush()
         tmp.seek(0)
         if filecmp.cmp(tmp.name, snap_path):

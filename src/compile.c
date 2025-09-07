@@ -55,7 +55,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
     case TOKEN_TRUE:   emit_byte(cur_chunk(compiler), OP_TRUE, line); break;
     case TOKEN_FALSE:  emit_byte(cur_chunk(compiler), OP_FALSE, line); break;
     case TOKEN_NUMBER: emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line); break;
-    case TOKEN_STRING: emit_constant(compiler, MK_OBJ(string_from_span(compiler->vm, node->base.span)), line); break;    
+    case TOKEN_STRING: emit_constant(compiler, MK_OBJ((struct Obj*)string_from_span(compiler->vm, node->base.span)), line); break;    
     }
 }
 
