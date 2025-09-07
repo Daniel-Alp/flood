@@ -462,7 +462,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     } else { 
                         // foreign method, bind function to instance
                         struct ForeignMethodObj *f_method = (struct ForeignMethodObj*)alloc_vm_obj(vm, sizeof(struct ForeignMethodObj), NULL);
-                        init_foreign_method_obj(f_method, AS_FOREIGN_FN(entry->val), AS_INSTANCE(val));
+                        init_foreign_method_obj(f_method, AS_FOREIGN_FN(entry->val), (struct Obj*)AS_INSTANCE(val));
                         sp[-1] = MK_OBJ((struct Obj*)f_method);
                     }
                     break;

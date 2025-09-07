@@ -117,7 +117,7 @@ void collect_garbage(struct VM *vm)
         }
         case OBJ_CLASS: {
             struct ClassObj *class = (struct ClassObj*)obj;
-            push_gray_stack(vm, class->name);
+            push_gray_stack(vm, (struct Obj*)class->name);
             mark_table(vm, &class->methods);
             break;
         }
