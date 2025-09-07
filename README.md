@@ -1,5 +1,5 @@
 # Flood
-Multi-paradign programming language, similar to Lua. To build the interpreter
+Multi-paradign programming language, similar to Lua. To build the interpreter (on Linux or MacOS)
 ```
 git clone https://github.com/Daniel-Alp/flood
 cd flood
