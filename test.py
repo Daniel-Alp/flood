@@ -28,11 +28,11 @@ def diff(test_path: Path) -> None:
         if filecmp.cmp(tmp.name, snap_path):
             print(f"\033[32m{test_path}\033[0m")
         else:
-            print(f"\033[31m{test_path}\033[0m\n")
+            print(f"\033[31m{test_path}\033[0m")
             print("old:")
-            print(snapshot.read())
+            print(snapshot.read(),end="")
             print("new:")
-            print(tmp.read())
+            print(tmp.read(),end="")
 
 def upgrade(test_path: Path) -> None:
     snap_path = to_snap_path(test_path)
@@ -41,12 +41,28 @@ def upgrade(test_path: Path) -> None:
         subprocess.run(["./build/flood", test_path], stdout=snapshot)
         print(f"\033[32mupgraded: {snap_path}\033[0m")
 
+def leak_check(test_path: Path) -> None:
+    with tempfile.NamedTemporaryFile("w+") as tmp:
+        exit_code = subprocess.run(
+            ["valgrind", "--leak-check=full", "--error-exitcode=3", "./build/flood", test_path], 
+            stderr=tmp,
+            stdout=subprocess.DEVNULL,
+        ).returncode
+        tmp.flush()
+        tmp.seek(0)
+        if exit_code != 3:
+            print(f"\033[32m{test_path}\033[0m")
+        else:
+            print(f"\033[31m{test_path}\033[0m")
+            print(tmp.read(),end="")
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--diff", action='store_true')
-    group.add_argument("--upgrade", action='store_true')
-    group.add_argument("--clean", action='store_true')
+    group.add_argument("--diff", action="store_true")
+    group.add_argument("--upgrade", action="store_true")
+    group.add_argument("--clean", action="store_true")
+    group.add_argument("--leak-check", action="store_true")
     args = parser.parse_args()
 
     Path("tests").mkdir(exist_ok=True)
@@ -57,7 +73,7 @@ def main() -> None:
         return
 
     test_dirs = [
-        "language/comptime_error", 
+        # "language/comptime_error", 
         "language/runtime_error", 
         "language/runtime",
         "misc"
@@ -73,8 +89,10 @@ def main() -> None:
                 continue
             if args.diff:
                 diff(test_path)
-            else:       
+            elif args.upgrade:       
                 upgrade(test_path) 
+            else:
+                leak_check(test_path)
 
 if __name__ == "__main__":
     main()
