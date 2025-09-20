@@ -117,6 +117,7 @@ bool val_eq(Value val1, Value val2)
         case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
         case VAL_NUM:  return AS_NUM(val1) == AS_NUM(val2);
         case VAL_NULL: return true;
+        case VAL_OBJ:  return AS_OBJ(val1) == AS_OBJ(val2);
     }
 }
 

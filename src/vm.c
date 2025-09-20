@@ -60,6 +60,7 @@ void release_vm_obj(struct VM *vm)
         case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
         case OBJ_HEAP_VAL:       break;
         case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
+        //TODO handle all switch cases
         }
         vm->obj_list = vm->obj_list->next;
         release(obj);

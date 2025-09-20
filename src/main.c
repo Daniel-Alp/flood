@@ -11,6 +11,11 @@
 
 int main(int argc, const char **argv) 
 { 
+    if (argc != 2) {
+        printf("usage: flood script.fl\n");
+        return 0;
+    }
+
     FILE *fp = fopen(argv[1], "rb");
     if (!fp) {
         printf("file `%s` does not exist\n", argv[1]);
