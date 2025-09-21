@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -22,8 +23,7 @@ static i32 get_opcode_line(i32 *lines, i32 tgt_opcode_idx)
     }
 }
 
-// TODO varargs for runtime error messages
-void runtime_err(u8 *ip, struct VM *vm, const char *msg) 
+void runtime_err(u8 *ip, struct VM *vm, const char *format, ...) 
 {
     // NOTE: 
     // we put ip in a local variable for performance
@@ -31,7 +31,11 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg)
     // however, a foreign method can also call run_time err, in which case there is nothing to save.
     if (ip)
         vm->call_stack[vm->call_cnt-1].ip = ip;
-    printf("%s\n", msg);
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    printf("\n");
     for (i32 i = vm->call_cnt-1; i >= 1; i--) {
         struct CallFrame frame = vm->call_stack[i];
         i32 line = get_opcode_line(frame.closure->fn->chunk.lines, frame.ip-1 - frame.closure->fn->chunk.code);
@@ -357,7 +361,12 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                         sp[-2] = AS_LIST(container)->vals[(u32)AS_NUM(idx)];
                         sp--;
                     } else {
-                        runtime_err(ip, vm, "list index out of bounds");
+                        runtime_err(ip, 
+                            vm, 
+                            "index %d out of bounds for list of size %d", 
+                            (i32)AS_NUM(idx), 
+                            (i32)AS_LIST(container)->cnt
+                        );                       
                         return INTERP_RUNTIME_ERR;
                     }
                 } else {
@@ -377,13 +386,17 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             if (IS_LIST(container)) {
                 if (IS_NUM(idx)) {
                     if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->cnt) {
-                        AS_LIST(container)->vals[(u32)AS_NUM(idx)] = val;
+                        AS_LIST(container)->vals[(i32)AS_NUM(idx)] = val;
                         // TODO consider making assignment a statement rather than an expression
                         sp[-3] = sp[-1];
                         sp -= 2;
                     } else {
-                        // TODO let runtime_err take var args
-                        runtime_err(ip, vm, "list index out of bounds");
+                        runtime_err(ip, 
+                            vm, 
+                            "index %d out of bounds for list of size %d", 
+                            (i32)AS_NUM(idx), 
+                            (i32)AS_LIST(container)->cnt
+                        );
                         return INTERP_RUNTIME_ERR;
                     }
                 } else {
@@ -454,7 +467,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     }
                     break;
                 }
-                runtime_err(ip, vm, "property does not exist");
+                runtime_err(ip, vm, "`%s` instance does not have property `%s`", class->name->chars, prop->chars);
                 return INTERP_RUNTIME_ERR;
             }
             runtime_err(ip, vm, "attempt to get property of non-object");
@@ -486,7 +499,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                 sp--;
                 break;
                 // FIXME this is unreachable, but we need to only allow creating a field within a method
-                runtime_err(ip, vm, "field does not exist");
+                runtime_err(ip, vm, "field `%s` does not exist", prop->chars);
                 return INTERP_RUNTIME_ERR;
             }
 
