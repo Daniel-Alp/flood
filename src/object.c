@@ -31,7 +31,6 @@ void release_obj(struct Obj *obj)
     case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
     case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
     }
-    release(obj);
 }
 
 void init_foreign_fn_obj(

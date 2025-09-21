@@ -62,7 +62,6 @@ void collect_garbage(struct VM *vm)
 
     // TODO add heap val marking ? is this still relevant
     while (vm->gray_cnt > 0) {
-        // TODO should be pushing the obj class
         struct Obj *obj = vm->gray[vm->gray_cnt-1];
         obj->color = GC_BLACK;
         vm->gray_cnt--;
@@ -153,7 +152,8 @@ void collect_garbage(struct VM *vm)
     while ((obj = *indirect) != NULL) {
         if (obj->color == GC_WHITE) {
             *indirect = obj->next;
-            release_obj(obj);      
+            release_obj(obj);    
+            release(obj);
         } else {
             obj->color = GC_WHITE;
             indirect = &obj->next;

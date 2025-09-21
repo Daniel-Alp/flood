@@ -73,7 +73,7 @@ def main() -> None:
         return
 
     test_dirs = [
-        # "language/comptime_error", 
+        "language/comptime_error", 
         "language/runtime_error", 
         "language/runtime",
         "misc"

@@ -39,8 +39,7 @@ void init_val_table(struct ValTable *tab)
     tab->cnt = 0;
     tab->cap = 8;
     tab->entries = allocate(tab->cap * sizeof(struct ValTableEntry));
-    for (i32 i = 0; i < tab->cap; i++)
-        tab->entries[i].chars = NULL;
+    memset(tab->entries, 0, tab->cap * sizeof(struct ValTableEntry));
 }
 
 void release_val_table(struct ValTable *tab)
@@ -88,8 +87,7 @@ void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value va
     if (tab->cnt >= tab->cap * TABLE_LOAD_FACTOR) {
         i32 new_cap = tab->cap * 2;
         struct ValTableEntry *new_entries = allocate(new_cap * sizeof(struct ValTableEntry));
-        for (i32 i = 0; i < new_cap; i++) 
-            new_entries[i].chars = NULL;
+        memset(new_entries, 0, new_cap * sizeof(struct ValTableEntry));
         for (i32 i = 0; i < tab->cap; i++) {
             struct ValTableEntry entry = tab->entries[i];
             if (entry.chars == NULL)

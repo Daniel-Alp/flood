@@ -66,7 +66,9 @@ void release_vm(struct VM *vm)
         struct Obj *obj = vm->obj_list;
         vm->obj_list = vm->obj_list->next;
         release_obj(obj);
+        release(obj);
     }
+    vm->obj_list = NULL;
     release_val_array(&vm->globals);
     vm->gray_cnt = 0;
     vm->gray_cap = 0;

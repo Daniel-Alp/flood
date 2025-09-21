@@ -53,8 +53,10 @@ static void skip_comment(struct Scanner *scanner)
 {
     while (at(scanner) != '\n' && !is_at_end(scanner))
         bump(scanner);
-    bump(scanner);
-    scanner->line++;
+    if (at(scanner) == '\n') {
+        bump(scanner);
+        scanner->line++;
+    }
 }
 
 static bool is_digit(char c) 
