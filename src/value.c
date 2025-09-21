@@ -126,7 +126,7 @@ void print_val(Value val)
     switch (val.tag) {
     case VAL_NUM:  printf("%.14g", AS_NUM(val)); break;
     case VAL_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
-    case VAL_NULL:  printf("null"); break; 
+    case VAL_NULL: printf("null"); break; 
     case VAL_OBJ: 
         if (AS_OBJ(val)->printed) {
             printf("...");

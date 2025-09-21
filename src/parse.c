@@ -274,7 +274,7 @@ static bool eat(struct Parser *parser, enum TokenTag tag)
     return false;
 }
 
-static void emit_err(struct Parser *parser, struct Span span, const char *msg)
+static void emit_err(struct Parser *parser, const char *msg)
 {
     if (!parser->panic)
         push_errlist(&parser->errlist, at(parser).span, msg);
@@ -285,13 +285,13 @@ static bool expect(struct Parser *parser, enum TokenTag tag, const char *msg)
 {
     if (eat(parser, tag))
         return true;
-    emit_err(parser, at(parser).span, msg);
+    emit_err(parser, msg);
     return false;
 }
 
 static void advance_with_err(struct Parser *parser, const char *msg) 
 {
-    emit_err(parser, at(parser).span, msg);
+    emit_err(parser, msg);
     bump(parser);
 }
 
@@ -406,7 +406,7 @@ static void parse_arg_list(struct Parser *parser, struct PtrArray *tmp, enum Tok
     while(at(parser).tag != tag_right && at(parser).tag != TOKEN_EOF) {
         // breaking early helps when the right token is missing
         if (!expr_first(at(parser).tag)) {
-            emit_err(parser, at(parser).span, "expected expression");
+            emit_err(parser, "expected expression");
             break;
         }
         struct Node *arg = parse_expr(parser, 1);
@@ -453,7 +453,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
         break;
     default:
-        emit_err(parser, token.span, "expected expression");
+        emit_err(parser, "expected expression");
         return NULL;
     }
     while(true) {
@@ -490,7 +490,7 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         
         enum TokenTag tag = token.tag;
         // desugar +=, -=, *=, /=, //=, and %=
-        enum TokenTag desugared = desugar(tag);
+        i32 desugared = desugar(tag);
         if (desugared != -1) {
             rhs = (struct Node*) mk_binary(&parser->arena, token.span, desugared, lhs, rhs);
             tag = TOKEN_EQ;
@@ -634,7 +634,7 @@ static struct BlockNode *parse_block(struct Parser *parser)
     struct PtrArray tmp;
     init_ptr_array(&tmp);
     while(at(parser).tag != TOKEN_R_BRACE && at(parser).tag != TOKEN_EOF) {
-        struct Node *node;
+        struct Node *node = NULL;
         if (at(parser).tag == TOKEN_L_BRACE) {
             node = (struct Node*)parse_block(parser);
         } else if (eat(parser, TOKEN_IF)) {

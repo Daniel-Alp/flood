@@ -57,6 +57,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
     case TOKEN_FALSE:  emit_byte(cur_chunk(compiler), OP_FALSE, line); break;
     case TOKEN_NUMBER: emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line); break;
     case TOKEN_STRING: emit_constant(compiler, MK_OBJ((struct Obj*)string_from_span(compiler->vm, node->base.span)), line); break; 
+    default:           push_errlist(&compiler->errlist, node->base.span, "default case of compile_atom reached");
     }
 }
 
@@ -175,6 +176,7 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         case TOKEN_EQEQ:        emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
         case TOKEN_NEQ:         emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
         case TOKEN_L_SQUARE:    emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
+        default:                push_errlist(&compiler->errlist, node->base.span, "default case of compile_binary reached");
         }
     }
 }
@@ -383,15 +385,16 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_BINARY:     compile_binary(compiler, (struct BinaryNode*)node); break;
     case NODE_DOT:        compile_get_prop(compiler, (struct DotNode*)node); break;
     case NODE_CALL:       compile_call(compiler, (struct CallNode*)node); break;
-    case NODE_BLOCK:      compile_block(compiler, (struct BlockNode*)node); break;
-    case NODE_IF:         compile_if(compiler, (struct IfNode*)node); break;
-    case NODE_EXPR_STMT:  compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
-    case NODE_RETURN:     compile_return(compiler, (struct ReturnNode*)node); break;
-    // TEMP remove when we add functions
-    case NODE_PRINT:      compile_print(compiler, (struct PrintNode*)node); break; 
     case NODE_VAR_DECL:   compile_var_decl(compiler, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL:    compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
     case NODE_CLASS_DECL: compile_class_decl(compiler, (struct ClassDeclNode*)node); break;
+    case NODE_IMPORT:     push_errlist(&compiler->errlist, node->span, "TODO"); break;
+    case NODE_EXPR_STMT:  compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
+    case NODE_BLOCK:      compile_block(compiler, (struct BlockNode*)node); break;
+    case NODE_IF:         compile_if(compiler, (struct IfNode*)node); break;
+    case NODE_RETURN:     compile_return(compiler, (struct ReturnNode*)node); break;
+    // TEMP remove when we add functions
+    case NODE_PRINT:      compile_print(compiler, (struct PrintNode*)node); break; 
     }
 }
 

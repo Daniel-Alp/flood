@@ -18,7 +18,7 @@ static inline void push_gray_stack(struct VM *vm, struct Obj *obj)
 }
 
 // TODO move other mark methods into separate fns
-void mark_table(struct VM *vm, struct ValTable *tab)
+static void mark_table(struct VM *vm, struct ValTable *tab)
 {
     for (i32 i = 0; i < tab->cap; i++) {
         struct ValTableEntry entry = tab->entries[i];
@@ -121,8 +121,6 @@ void collect_garbage(struct VM *vm)
         case OBJ_CLASS: {
             struct ClassObj *class = (struct ClassObj*)obj;
             push_gray_stack(vm, (struct Obj*)class->name);
-            printf("CLASS: %s\n", class->name->chars);
-            printf("table cnt %d cap %d\n", class->methods.cnt, class->methods.cap);
             mark_table(vm, &class->methods);
             break;
         }
@@ -151,16 +149,7 @@ void collect_garbage(struct VM *vm)
     while ((obj = *indirect) != NULL) {
         if (obj->color == GC_WHITE) {
             *indirect = obj->next;
-            // TODO move releases into a separate method
-            switch(obj->tag) {
-            case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
-            case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
-            case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
-            case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
-            case OBJ_HEAP_VAL:       break;
-            case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
-            }
-            release(obj);      
+            release_obj(obj);      
         } else {
             obj->color = GC_WHITE;
             indirect = &obj->next;

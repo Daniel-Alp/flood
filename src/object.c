@@ -1,9 +1,38 @@
 #include <string.h>
 #include <stdlib.h>
 #include "object.h"
+#include "gc.h"
 #include "memory.h"
 
 // TODO proper comments
+
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
+{
+    struct Obj *obj = allocate(size);
+    obj->class = NULL;
+    obj->next = vm->obj_list;
+    obj->color = GC_WHITE;
+    obj->printed = 0;
+    vm->obj_list = obj;
+    return obj;
+}
+
+void release_obj(struct Obj *obj)
+{
+    switch(obj->tag) {
+    case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
+    case OBJ_FOREIGN_FN:     release_foreign_fn_obj((struct ForeignFnObj*)obj); break;
+    case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
+    case OBJ_HEAP_VAL:       break;
+    case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
+    case OBJ_CLASS:          release_class_obj((struct ClassObj*)obj); break;
+    case OBJ_INSTANCE:       release_instance_obj((struct InstanceObj*)obj); break;
+    case OBJ_METHOD:         release_method_obj((struct MethodObj*)obj); break;
+    case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
+    case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
+    }
+    release(obj);
+}
 
 void init_foreign_fn_obj(
     struct ForeignFnObj *f_fn,

@@ -270,7 +270,8 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
         case OP_JUMP_IF_FALSE: 
         case OP_JUMP_IF_TRUE:
         case OP_JUMP:          
-            printf("%d\n", (chunk->code[++i] << 8) + chunk->code[++i]);
+            u16 offset = (i += 2, (chunk->code[i-2] << 8) | chunk->code[i-1]);
+            printf("%d\n", offset);
             break;
         case OP_GET_PROP:
         case OP_SET_FIELD:

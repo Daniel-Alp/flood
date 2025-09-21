@@ -38,6 +38,7 @@ static void skip_whitespace(struct Scanner *scanner)
         switch (at(scanner)) {
         case '\n':
             scanner->line++;
+            // fall through
         case ' ':
         case '\t':
             bump(scanner);
@@ -63,7 +64,7 @@ static bool is_digit(char c)
 
 static bool is_alpha(char c) 
 {
-    return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_';
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
 }
 
 static bool is_alpha_digit(char c) 
@@ -94,6 +95,7 @@ static struct Token number(struct Scanner *scanner)
         while (is_digit(at(scanner)))
             bump(scanner);
     } 
+    return mk_token(scanner, TOKEN_NUMBER);
 }
 
 static struct Token string(struct Scanner *scanner)
@@ -175,8 +177,7 @@ struct Token next_token(struct Scanner *scanner)
     case '"': return string(scanner);
     default:
         if (is_digit(c)) {
-            number(scanner);
-            return mk_token(scanner, TOKEN_NUMBER);
+            return number(scanner);
         } else if (is_alpha(c)) {
             identifier(scanner);
             switch (c) {

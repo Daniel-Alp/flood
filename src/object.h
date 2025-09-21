@@ -135,6 +135,10 @@ void init_foreign_fn_obj(
     ForeignFn code
 );
 
+struct Obj *alloc_vm_obj(struct VM *vm, u64 size);
+
+void release_obj(struct Obj *obj);
+
 void release_foreign_fn_obj(struct ForeignFnObj *f_fn);
 
 void init_foreign_method_obj(
@@ -165,6 +169,8 @@ void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class);
 void release_instance_obj(struct InstanceObj *instance);
 
 void init_method_obj(struct MethodObj *method, struct ClosureObj *closure, struct InstanceObj *self);
+
+void release_method_obj(struct MethodObj *method);
 
 void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm);
 

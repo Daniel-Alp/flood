@@ -39,34 +39,6 @@ void runtime_err(u8 *ip, struct VM *vm, const char *msg)
     }
 }
 
-struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
-{
-    struct Obj *obj = allocate(size);
-    obj->class = NULL;
-    obj->next = vm->obj_list;
-    obj->color = GC_WHITE;
-    obj->printed = 0;
-    vm->obj_list = obj;
-    return obj;
-}
-
-void release_vm_obj(struct VM *vm)
-{
-    while (vm->obj_list) {
-        struct Obj *obj = vm->obj_list;
-        switch(obj->tag) {
-        case OBJ_FOREIGN_METHOD: release_foreign_method_obj((struct ForeignMethodObj*)obj); break;
-        case OBJ_FN:             release_fn_obj((struct FnObj*)obj); break;
-        case OBJ_CLOSURE:        release_closure_obj((struct ClosureObj*)obj); break;
-        case OBJ_LIST:           release_list_obj((struct ListObj*)obj); break;
-        case OBJ_HEAP_VAL:       break;
-        case OBJ_STRING:         release_string_obj((struct StringObj*)obj); break;
-        }
-        vm->obj_list = vm->obj_list->next;
-        release(obj);
-    }
-}
-
 void init_vm(struct VM *vm)
 {
     vm->sp = vm->val_stack;
@@ -90,7 +62,11 @@ void init_vm(struct VM *vm)
 void release_vm(struct VM *vm) 
 {
     vm->sp = NULL;
-    release_vm_obj(vm);
+    while (vm->obj_list) {
+        struct Obj *obj = vm->obj_list;
+        vm->obj_list = vm->obj_list->next;
+        release_obj(obj);
+    }
     release_val_array(&vm->globals);
     vm->gray_cnt = 0;
     vm->gray_cap = 0;
@@ -516,11 +492,12 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             return INTERP_RUNTIME_ERR;
         }
         case OP_JUMP: {
-            ip += ((*ip++) << 8) + (*ip++);
+            u16 offset = (ip += 2, (ip[-2] << 8) | ip[-1]);
+            ip += offset;
             break;
         }
         case OP_JUMP_IF_FALSE: {
-            u16 offset = ((*ip++) << 8) + (*ip++);
+            u16 offset = (ip += 2, (ip[-2] << 8) | ip[-1]);
             Value val = sp[-1];
             if (IS_BOOL(val)) {
                 if (!AS_BOOL(val))
@@ -532,7 +509,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             break;
         }
         case OP_JUMP_IF_TRUE: {
-            u16 offset = ((*ip++) << 8) + (*ip++);
+            u16 offset = (ip += 2, (ip[-2] << 8) | ip[-1]);
             Value val = sp[-1];
             if (IS_BOOL(val)) {
                 if (AS_BOOL(val))
