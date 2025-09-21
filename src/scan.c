@@ -111,7 +111,15 @@ static struct Token string(struct Scanner *scanner)
         }
     }
     bump(scanner);
-    return mk_token(scanner, TOKEN_STRING);
+    struct Token token = {
+        .span = {
+            .start = scanner->start+1, 
+            .len = (scanner->current - scanner->start - 2),
+            .line = scanner->line
+        },
+        .tag = TOKEN_STRING,
+    };
+    return token;
 }
 
 static void identifier(struct Scanner *scanner) 

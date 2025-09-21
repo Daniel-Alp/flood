@@ -60,13 +60,11 @@ void collect_garbage(struct VM *vm)
     push_gray_stack(vm, (struct Obj*)vm->string_class);
     push_gray_stack(vm, (struct Obj*)vm->class_class);
 
-    // TODO add heap val marking ? is this still relevant
     while (vm->gray_cnt > 0) {
         struct Obj *obj = vm->gray[vm->gray_cnt-1];
         obj->color = GC_BLACK;
         vm->gray_cnt--;
 
-        // TODO order same as obj->tag because the inconsistent ordering is >_<
         switch (obj->tag) {
         case OBJ_FOREIGN_FN: {
             struct ForeignFnObj *f_fn = (struct ForeignFnObj*)obj;
@@ -92,6 +90,12 @@ void collect_garbage(struct VM *vm)
             }
             break;
         }
+        case OBJ_HEAP_VAL: {
+            struct HeapValObj *heap_val = (struct HeapValObj*)obj;
+            if (IS_OBJ(heap_val->val))
+                push_gray_stack(vm, AS_OBJ(heap_val->val));
+            break;
+        }
         case OBJ_CLOSURE: {
             struct ClosureObj *closure = (struct ClosureObj*)obj;
             push_gray_stack(vm, (struct Obj*)closure->fn);
@@ -101,24 +105,6 @@ void collect_garbage(struct VM *vm)
             struct HeapValObj **hi = lo + closure->capture_cnt;
             for (struct HeapValObj **ptr = lo; ptr < hi; ptr++)
                 push_gray_stack(vm, (struct Obj*)(*ptr));
-            break;
-        }
-        case OBJ_LIST: {
-            struct ListObj *list = (struct ListObj*)obj;
-            // lo != NULL because list.cap >= 8
-            Value *val_lo = list->vals;
-            Value *val_hi = val_lo + list->cnt;
-            for (Value *ptr = val_lo; ptr < val_hi; ptr++) {
-                Value val = *ptr;
-                if (IS_OBJ(val))
-                    push_gray_stack(vm, AS_OBJ(val));
-            }
-            break;
-        }
-        case OBJ_HEAP_VAL: {
-            struct HeapValObj *heap_val = (struct HeapValObj*)obj;
-            if (IS_OBJ(heap_val->val))
-                push_gray_stack(vm, AS_OBJ(heap_val->val));
             break;
         }
         case OBJ_CLASS: {
@@ -139,13 +125,24 @@ void collect_garbage(struct VM *vm)
             push_gray_stack(vm, (struct Obj*)method->self);
             break;
         }
+        case OBJ_LIST: {
+            struct ListObj *list = (struct ListObj*)obj;
+            // lo != NULL because list.cap >= 8
+            Value *val_lo = list->vals;
+            Value *val_hi = val_lo + list->cnt;
+            for (Value *ptr = val_lo; ptr < val_hi; ptr++) {
+                Value val = *ptr;
+                if (IS_OBJ(val))
+                    push_gray_stack(vm, AS_OBJ(val));
+            }
+            break;
+        }
         case OBJ_STRING: {
             break;
         }
         }
     }
 
-    // TODO add heap val sweeping
     // sweep (free white objects, reset every color to white)
     struct Obj **indirect = &vm->obj_list;
     struct Obj *obj;

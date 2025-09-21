@@ -375,7 +375,6 @@ static void compile_class_decl(struct Compiler *compiler, struct ClassDeclNode *
     }
 }
 
-// TODO check ordering is consistent
 static void compile_node(struct Compiler *compiler, struct Node *node) 
 {
     switch (node->tag) {
