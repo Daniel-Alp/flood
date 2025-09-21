@@ -92,8 +92,9 @@ void insert_val_table(struct ValTable *tab, const char *chars, i32 len, Value va
             new_entries[i].chars = NULL;
         for (i32 i = 0; i < tab->cap; i++) {
             struct ValTableEntry entry = tab->entries[i];
-            struct ValTableEntry *new_entry 
-                = get_val_table_slot(new_entries, new_cap, entry.hash, entry.len, entry.chars);
+            if (entry.chars == NULL)
+                continue;
+            struct ValTableEntry *new_entry = get_val_table_slot(new_entries, new_cap, entry.hash, entry.len, entry.chars);
             memcpy(new_entry, &entry, sizeof(struct ValTableEntry));
         }
         release(tab->entries);

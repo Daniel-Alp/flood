@@ -39,6 +39,7 @@ void collect_garbage(struct VM *vm)
             push_gray_stack(vm, AS_OBJ(val));
     }
     // TEMP remove globals when we added user-defined classes
+    // lo != NULL because vm->globals.cap >= 8
     Value *globals_lo = vm->globals.vals;
     Value *globals_hi = globals_lo + vm->globals.cnt;
     for (Value *ptr = globals_lo; ptr < globals_hi; ptr++) {
@@ -59,9 +60,9 @@ void collect_garbage(struct VM *vm)
     push_gray_stack(vm, (struct Obj*)vm->string_class);
     push_gray_stack(vm, (struct Obj*)vm->class_class);
 
-    // mark rest
-    // TODO add heap val marking
+    // TODO add heap val marking ? is this still relevant
     while (vm->gray_cnt > 0) {
+        // TODO should be pushing the obj class
         struct Obj *obj = vm->gray[vm->gray_cnt-1];
         obj->color = GC_BLACK;
         vm->gray_cnt--;
@@ -82,6 +83,7 @@ void collect_garbage(struct VM *vm)
         case OBJ_FN: {
             struct FnObj *fn = (struct FnObj*)obj;
             push_gray_stack(vm, (struct Obj*)fn->name);
+            // lo != NULL because chunk.constants.cap >= 8
             Value *lo = fn->chunk.constants.vals;
             Value *hi = lo + fn->chunk.constants.cnt;
             for (Value *ptr = lo; ptr < hi; ptr++) {
@@ -94,7 +96,8 @@ void collect_garbage(struct VM *vm)
         case OBJ_CLOSURE: {
             struct ClosureObj *closure = (struct ClosureObj*)obj;
             push_gray_stack(vm, (struct Obj*)closure->fn);
-            // LOOKATME this code is very suspicious and probably buggy
+            if (closure->capture_cnt == 0)
+                break; 
             struct HeapValObj **lo = closure->captures;
             struct HeapValObj **hi = lo + closure->capture_cnt;
             for (struct HeapValObj **ptr = lo; ptr < hi; ptr++)
@@ -103,6 +106,7 @@ void collect_garbage(struct VM *vm)
         }
         case OBJ_LIST: {
             struct ListObj *list = (struct ListObj*)obj;
+            // lo != NULL because list.cap >= 8
             Value *val_lo = list->vals;
             Value *val_hi = val_lo + list->cnt;
             for (Value *ptr = val_lo; ptr < val_hi; ptr++) {
