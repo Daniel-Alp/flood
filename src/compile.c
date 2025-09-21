@@ -57,7 +57,6 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
     case TOKEN_FALSE:  emit_byte(cur_chunk(compiler), OP_FALSE, line); break;
     case TOKEN_NUMBER: emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line); break;
     case TOKEN_STRING: emit_constant(compiler, MK_OBJ((struct Obj*)string_from_span(compiler->vm, node->base.span)), line); break; 
-    default:           assert(false && "default case of switch in compile_atom reached");   
     }
 }
 
@@ -176,7 +175,6 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         case TOKEN_EQEQ:        emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
         case TOKEN_NEQ:         emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
         case TOKEN_L_SQUARE:    emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
-        default:                assert(false && "default case of switch in compile_binary reached");   
         }
     }
 }
@@ -394,7 +392,6 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_VAR_DECL:   compile_var_decl(compiler, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL:    compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
     case NODE_CLASS_DECL: compile_class_decl(compiler, (struct ClassDeclNode*)node); break;
-    default:              assert(false && "default case of switch in compile_node reached");   
     }
 }
 

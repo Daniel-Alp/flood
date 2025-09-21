@@ -25,7 +25,7 @@ const char *binop_str[] = {
     [TOKEN_L_SQUARE]    = "[]"
 };
 
-static void print_atom(struct AtomNode *node, i32 offset) 
+static void print_atom(struct AtomNode *node) 
 {
     printf("Atom %.*s", node->base.span.len, node->base.span.start);
 }
@@ -37,7 +37,7 @@ static void print_list(struct ListNode *node, i32 offset)
         print_node(node->items[i], offset + 2);
 }
 
-static void print_ident(struct IdentNode *node, i32 offset) 
+static void print_ident(struct IdentNode *node) 
 {
     printf("Ident %.*s id: %d", node->base.span.len, node->base.span.start, node->id);
 }
@@ -155,7 +155,7 @@ static void print_class_decl(struct ClassDeclNode *node, i32 offset)
         print_node((struct Node*)node->methods[i], offset + 2);
 }
 
-static void print_import(struct ImportNode *node, i32 offset)
+static void print_import(struct ImportNode *node)
 {
     printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
 }
@@ -173,12 +173,12 @@ void print_node(struct Node *node, i32 offset)
         printf("\n");
     printf("%*s(", offset, "");
     switch (node->tag) {
-    case NODE_ATOM:        print_atom((struct AtomNode*)node, offset); break;
+    case NODE_ATOM:        print_atom((struct AtomNode*)node); break;
     case NODE_LIST:        print_list((struct ListNode*)node, offset); break;
-    case NODE_IDENT:       print_ident((struct IdentNode*)node, offset); break;
+    case NODE_IDENT:       print_ident((struct IdentNode*)node); break;
     case NODE_UNARY:       print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:      print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_DOT:        print_dot((struct DotNode*)node, offset); break;
+    case NODE_DOT:         print_dot((struct DotNode*)node, offset); break;
     case NODE_CALL:        print_call((struct CallNode*)node, offset); break;
     case NODE_BLOCK:       print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:          print_if((struct IfNode*)node, offset); break;
@@ -186,7 +186,7 @@ void print_node(struct Node *node, i32 offset)
     case NODE_VAR_DECL:    print_var_decl((struct VarDeclNode*)node, offset); break;
     case NODE_FN_DECL:     print_fn_decl((struct FnDeclNode*)node, offset); break;
     case NODE_CLASS_DECL:  print_class_decl((struct ClassDeclNode*)node, offset); break;
-    case NODE_IMPORT:      print_import((struct ImportNode*)node, offset); break;
+    case NODE_IMPORT:      print_import((struct ImportNode*)node); break;
     case NODE_RETURN:      print_return((struct ReturnNode*)node, offset); break;
     // TEMP remove when we add functions
     case NODE_PRINT:       print_print((struct PrintNode*)node, offset); break; 

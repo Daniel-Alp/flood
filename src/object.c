@@ -141,8 +141,8 @@ void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm)
 
 void release_list_obj(struct ListObj *list)
 {
-    i32 cap = 0;
-    i32 cnt = 0;
+    list->cnt = 0;
+    list->cap = 0;
     release(list->vals);
     list->vals = NULL;
 }

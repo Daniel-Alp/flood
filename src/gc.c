@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include "gc.h"
 #include "object.h"
@@ -120,6 +121,8 @@ void collect_garbage(struct VM *vm)
         case OBJ_CLASS: {
             struct ClassObj *class = (struct ClassObj*)obj;
             push_gray_stack(vm, (struct Obj*)class->name);
+            printf("CLASS: %s\n", class->name->chars);
+            printf("table cnt %d cap %d\n", class->methods.cnt, class->methods.cap);
             mark_table(vm, &class->methods);
             break;
         }
