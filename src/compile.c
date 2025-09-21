@@ -30,12 +30,13 @@ static i32 emit_jump(struct Compiler *compiler, enum OpCode op, i32 line)
     return offset;
 }
 
-static void patch_jump(struct Compiler *compiler, i32 offset) 
+static void patch_jump(struct Compiler *compiler, struct Span span, i32 offset) 
 {
     // offset idx of the OP_JUMP instr
     // cnt is idx of to-be-executed instr
     i32 jump = cur_chunk(compiler)->cnt - (offset+3);
-    // TODO error if jump > max u16
+    if (jump > ((1 << 16) - 1))
+        push_errlist(&compiler->errlist, span, "jump too far");
     cur_chunk(compiler)->code[offset+1] = (jump >> 8) & 0xff;
     cur_chunk(compiler)->code[offset+2] = jump & 0xff; 
 }
@@ -158,7 +159,7 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         i32 offset = emit_jump(compiler, op_tag == TOKEN_AND ? OP_JUMP_IF_FALSE : OP_JUMP_IF_TRUE, line);
         emit_byte(cur_chunk(compiler), OP_POP, line);
         compile_node(compiler, node->rhs);
-        patch_jump(compiler, offset);
+        patch_jump(compiler, node->base.span, offset);
     } else {
         compile_node(compiler, node->lhs);
         compile_node(compiler, node->rhs);
@@ -235,12 +236,12 @@ static void compile_if(struct Compiler *compiler, struct IfNode *node)
 
     compile_block(compiler, node->thn);
     i32 offset2 = emit_jump(compiler, OP_JUMP, line);
-    patch_jump(compiler, offset1);
+    patch_jump(compiler, node->base.span, offset1);
     
     emit_byte(cur_chunk(compiler), OP_POP, line);
     if (node->els)
         compile_block(compiler, node->els);
-    patch_jump(compiler, offset2);
+    patch_jump(compiler, node->base.span, offset2);
 }
 
 static void compile_expr_stmt(struct Compiler *compiler, struct ExprStmtNode *node) 
