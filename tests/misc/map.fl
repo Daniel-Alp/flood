@@ -1,6 +1,6 @@
 fn map(list, func) {
     fn map_inner(i) {
-        if (i < list.len()) {
+        if (i < list:len()) {
             list[i] = func(list[i]);
             map_inner(i+1);
         }

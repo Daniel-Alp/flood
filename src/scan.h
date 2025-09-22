@@ -56,6 +56,7 @@ enum TokenTag {
     TOKEN_SEMI,
     TOKEN_COMMA,
     TOKEN_DOT,
+    TOKEN_COLON,
 
     TOKEN_EOF,
     TOKEN_ERR,

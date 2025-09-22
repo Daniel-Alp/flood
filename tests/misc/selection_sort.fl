@@ -2,7 +2,7 @@ fn sort(list, comp) {
     # i is idx cur
     # j is idx min
     fn select(i, j) {
-        if (i == list.len()) {
+        if (i == list:len()) {
             return j;
         }
         if (comp(list[i], list[j])) {
@@ -11,7 +11,7 @@ fn sort(list, comp) {
         return select(i+1, j);
     }
     fn sort_inner(i) {
-        if (i < list.len()) {
+        if (i < list:len()) {
             var j = select(i, i);
             var tmp = list[i];
             list[i] = list[j];

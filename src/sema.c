@@ -142,7 +142,7 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
 {
     if (node->op_tag == TOKEN_EQ) {
         bool ident = node->lhs->tag == NODE_IDENT;
-        bool dot = node->lhs->tag == NODE_DOT;
+        bool dot = node->lhs->tag == NODE_PROPERTY && ((struct PropertyNode*)node->lhs)->op_tag == TOKEN_DOT;
         bool list_elem = node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE;
         if (!ident && !dot && !list_elem)
             push_errlist(&sema->errlist, node->base.span, "cannot assign to left-hand expression");
@@ -151,7 +151,7 @@ static void analyze_binary(struct SemaState *sema, struct BinaryNode *node)
     analyze_node(sema, node->rhs);
 }
 
-static void analyze_dot(struct SemaState *sema, struct DotNode *node)
+static void analyze_property(struct SemaState *sema, struct PropertyNode *node)
 {
     analyze_node(sema, node->lhs);
 }
@@ -261,7 +261,7 @@ static void analyze_node(struct SemaState *sema, struct Node *node)
     case NODE_IDENT:     analyze_ident(sema, (struct IdentNode*)node); break;
     case NODE_UNARY:     analyze_unary(sema, (struct UnaryNode*)node); break;
     case NODE_BINARY:    analyze_binary(sema, (struct BinaryNode*)node); break;
-    case NODE_DOT:       analyze_dot(sema, (struct DotNode*)node); break;
+    case NODE_PROPERTY:  analyze_property(sema, (struct PropertyNode*)node); break;
     case NODE_CALL:      analyze_fn_call(sema, (struct CallNode*)node); break;
     case NODE_VAR_DECL:  analyze_var_decl(sema, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL: {

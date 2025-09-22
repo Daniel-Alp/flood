@@ -2,7 +2,7 @@ fn push10(list, idx) {
     if (idx == 10) {
         return;
     }
-    list.push(idx);
+    list:push(idx);
     push10(list, idx + 1);
 }
 

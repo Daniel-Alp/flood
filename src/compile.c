@@ -143,15 +143,17 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
             // ident set
             compile_ident_get_or_set(compiler, ((struct IdentNode*)node->lhs)->id, false, node->lhs->span.line);
         } else if (node->lhs->tag == NODE_BINARY && ((struct BinaryNode*)node->lhs)->op_tag == TOKEN_L_SQUARE) {
+            // list set
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->lhs);
             compile_node(compiler, ((struct BinaryNode*)node->lhs)->rhs);
             compile_node(compiler, node->rhs);
             emit_byte(cur_chunk(compiler), OP_SET_SUBSCR, line);
-        } else if (node->lhs->tag == NODE_DOT) {
-            compile_node(compiler, ((struct DotNode*)node->lhs)->lhs);
+        } else if (node->lhs->tag == NODE_PROPERTY && ((struct PropertyNode*)node->lhs)->op_tag == TOKEN_DOT) {
+            // field set
+            compile_node(compiler, ((struct PropertyNode*)node->lhs)->lhs);
             compile_node(compiler, node->rhs);
             emit_byte(cur_chunk(compiler), OP_SET_FIELD, line);
-            struct StringObj *str = string_from_span(compiler->vm, ((struct DotNode*)node->lhs)->sym);
+            struct StringObj *str = string_from_span(compiler->vm, ((struct PropertyNode*)node->lhs)->sym);
             emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
         }
     } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
@@ -182,12 +184,12 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
     }
 }
 
-static void compile_get_prop(struct Compiler *compiler, struct DotNode *node)
+static void compile_get_property(struct Compiler *compiler, struct PropertyNode *node)
 {
     i32 line = node->base.span.line;
     compile_node(compiler, node->lhs);
     struct StringObj *str = string_from_span(compiler->vm, node->sym);
-    emit_byte(cur_chunk(compiler), OP_GET_PROP, line);    
+    emit_byte(cur_chunk(compiler), node->op_tag == TOKEN_DOT ? OP_GET_FIELD : OP_GET_METHOD, line);    
     emit_byte(cur_chunk(compiler), add_constant(cur_chunk(compiler), MK_OBJ((struct Obj*)str)), line);
 }
 
@@ -383,7 +385,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_IDENT:      compile_ident(compiler, (struct IdentNode*)node); break;
     case NODE_UNARY:      compile_unary(compiler, (struct UnaryNode*)node); break;
     case NODE_BINARY:     compile_binary(compiler, (struct BinaryNode*)node); break;
-    case NODE_DOT:        compile_get_prop(compiler, (struct DotNode*)node); break;
+    case NODE_PROPERTY:   compile_get_property(compiler, (struct PropertyNode*)node); break;
     case NODE_CALL:       compile_call(compiler, (struct CallNode*)node); break;
     case NODE_VAR_DECL:   compile_var_decl(compiler, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL:    compile_fn_decl(compiler, (struct FnDeclNode*)node); break;

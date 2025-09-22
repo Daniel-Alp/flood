@@ -59,9 +59,9 @@ static void print_binary(struct BinaryNode *node, i32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_dot(struct DotNode *node, i32 offset)
+static void print_dot(struct PropertyNode *node, i32 offset)
 {
-    printf("Dot");
+    printf("Property");
     print_node(node->lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
     printf("%.*s", node->sym.len, node->sym.start);
@@ -178,7 +178,7 @@ void print_node(struct Node *node, i32 offset)
     case NODE_IDENT:       print_ident((struct IdentNode*)node); break;
     case NODE_UNARY:       print_unary((struct UnaryNode*)node, offset); break;
     case NODE_BINARY:      print_binary((struct BinaryNode*)node, offset); break;
-    case NODE_DOT:         print_dot((struct DotNode*)node, offset); break;
+    case NODE_PROPERTY:    print_dot((struct PropertyNode*)node, offset); break;
     case NODE_CALL:        print_call((struct CallNode*)node, offset); break;
     case NODE_BLOCK:       print_block((struct BlockNode*)node, offset); break;
     case NODE_IF:          print_if((struct IfNode*)node, offset); break;
@@ -231,8 +231,9 @@ const char *opcode_str[] = {
     [OP_SET_GLOBAL]    = "OP_SET_GLOBAL",
     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
-    [OP_GET_PROP]      = "OP_GET_PROP",
-    [OP_SET_FIELD]     = "OP_SET_FIELD",  
+    [OP_GET_FIELD]     = "OP_GET_FIELD",
+    [OP_SET_FIELD]     = "OP_SET_FIELD",
+    [OP_GET_METHOD]    = "OP_GET_METHOD",
     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
     [OP_JUMP]          = "OP_JUMP",
@@ -273,8 +274,9 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             u16 offset = (i += 2, (chunk->code[i-2] << 8) | chunk->code[i-1]);
             printf("%d\n", offset);
             break;
-        case OP_GET_PROP:
+        case OP_GET_FIELD:
         case OP_SET_FIELD:
+        case OP_GET_METHOD:
         case OP_GET_CONST: {
             print_val(chunk->constants.vals[chunk->code[++i]]);
             printf("\n");

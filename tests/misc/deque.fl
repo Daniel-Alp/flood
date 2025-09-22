@@ -86,7 +86,7 @@ class Deque {
                 return [];
             }
             var rest = to_list_inner(node.l);
-            rest.push(node.data);
+            rest:push(node.data);
             return rest;
         }
         return to_list_inner(self.r);
@@ -95,40 +95,40 @@ class Deque {
 
 fn main() {
     var deque = Deque();
-    deque.push_back(4);
-    print deque.peek_front(); # 4
-    print deque.peek_back();  # 4
+    deque:push_back(4);
+    print deque:peek_front(); # 4
+    print deque:peek_back();  # 4
 
-    deque.push_back(3);
-    deque.push_back(2);
-    deque.push_front(5);
-    print deque.peek_front(); # 5
-    print deque.peek_back();  # 2
+    deque:push_back(3);
+    deque:push_back(2);
+    deque:push_front(5);
+    print deque:peek_front(); # 5
+    print deque:peek_back();  # 2
 
-    print deque.to_list();    # [5, 4, 3, 2]
+    print deque:to_list();    # [5, 4, 3, 2]
 
-    print deque.pop_front();  # 5
-    print deque.to_list();    # [4, 3, 2]
+    print deque:pop_front();  # 5
+    print deque:to_list();    # [4, 3, 2]
 
-    print deque.pop_back();   # 2
-    print deque.to_list();    # [4, 3]
+    print deque:pop_back();   # 2
+    print deque:to_list();    # [4, 3]
 
-    print deque.pop_front();  # 4
-    print deque.to_list();    # [3]
+    print deque:pop_front();  # 4
+    print deque:to_list();    # [3]
 
-    print deque.pop_front();  # 3
-    print deque.to_list();    # []
+    print deque:pop_front();  # 3
+    print deque:to_list();    # []
 
-    print deque.pop_front();  # null
-    print deque.to_list();    # []
+    print deque:pop_front();  # null
+    print deque:to_list();    # []
 
-    print deque.pop_back();   # null
-    print deque.to_list();    # []
+    print deque:pop_back();   # null
+    print deque:to_list();    # []
 
-    deque.push_back(5);       
-    print deque.to_list();    # [5]
+    deque:push_back(5);       
+    print deque:to_list();    # [5]
 
-    print deque.peek_front(); # 5
-    print deque.pop_front();  # 5
-    print deque.to_list();    # []
+    print deque:peek_front(); # 5
+    print deque:pop_front();  # 5
+    print deque:to_list();    # []
 }

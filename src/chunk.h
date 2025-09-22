@@ -31,6 +31,7 @@ struct Chunk {
     struct ValArray constants;
 };
 
+// TODO add LONG equivalents for GET/SET bytecodes
 enum OpCode {
     OP_NULL,
     OP_TRUE,
@@ -73,14 +74,10 @@ enum OpCode {
     OP_GET_SUBSCR,    
     OP_SET_SUBSCR,    
     
-    // TODO OP_INVOKE optimization
-
-    // NOTE:
-    // a prop is either an instance field or a method.
-    // we can get fields or methods but we can only set fields and
-    // trying to set a method will be a runtime error
-    OP_GET_PROP,      // args: 0..=255 idx into constant arr
+    OP_GET_FIELD,     // args: 0..=255 idx into constant arr
     OP_SET_FIELD,     // args: 0..=255 idx into constant arr
+
+    OP_GET_METHOD,    // args: 0..=255 idx into constant arr
 
     OP_JUMP,
     OP_JUMP_IF_FALSE, 

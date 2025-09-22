@@ -184,6 +184,7 @@ struct Token next_token(struct Scanner *scanner)
     case ';': return mk_token(scanner, TOKEN_SEMI);
     case ',': return mk_token(scanner, TOKEN_COMMA);
     case '.': return mk_token(scanner, TOKEN_DOT);
+    case ':': return mk_token(scanner, TOKEN_COLON);
     case '"': return string(scanner);
     default:
         if (is_digit(c)) {

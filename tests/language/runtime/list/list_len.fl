@@ -1,9 +1,9 @@
 fn main() {
     var list = [];
-    print list.len();
-    list.push(1);
-    list.push(2);
-    print list.len();
-    list.pop();
-    print list.len();
+    print list:len();
+    list:push(1);
+    list:push(2);
+    print list:len();
+    list:pop();
+    print list:len();
 }

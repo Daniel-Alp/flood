@@ -1,12 +1,12 @@
 fn filter(list, pred) {
     var res = [];
     fn filter_inner(i) {
-        if (i == list.len()) {
+        if (i == list:len()) {
             return res;
         }
         var elem = list[i];
         if (pred(elem)) {
-            res.push(elem);
+            res:push(elem);
         }
         return filter_inner(i+1);
     }

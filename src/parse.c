@@ -138,22 +138,27 @@ static struct UnaryNode *mk_unary(struct Arena *arena, struct Token token, struc
 
 static struct BinaryNode *mk_binary(
     struct Arena *arena, 
-    struct Span span, 
-    enum TokenTag tag, 
+    struct Span span,
+    enum TokenTag op_tag,
     struct Node *lhs, 
     struct Node *rhs
 ) {
     struct BinaryNode *node = push_arena(arena, sizeof(struct BinaryNode));
     node->base.tag = NODE_BINARY;
     node->base.span = span;
-    node->op_tag = tag;
+    node->op_tag = op_tag;
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
 }
 
-static struct CallNode *mk_call(struct Arena *arena, struct Span span, struct Node *lhs, struct Node **args, i32 arity) 
-{
+static struct CallNode *mk_call(
+    struct Arena *arena, 
+    struct Span span, 
+    struct Node *lhs, 
+    struct Node **args, i32 
+    arity
+) {
     struct CallNode *node = push_arena(arena, sizeof(struct CallNode));
     node->base.tag = NODE_CALL;
     node->base.span = span;
@@ -163,11 +168,16 @@ static struct CallNode *mk_call(struct Arena *arena, struct Span span, struct No
     return node;
 }
 
-static struct DotNode *mk_dot(struct Arena *arena, struct Span span, struct Node *lhs, struct Span sym)
-{
-    struct DotNode *node = push_arena(arena, sizeof(struct DotNode));
-    node->base.span = span;
-    node->base.tag = NODE_DOT;
+static struct PropertyNode *mk_property(
+    struct Arena *arena, 
+    struct Token token, 
+    struct Node *lhs, 
+    struct Span sym
+) {
+    struct PropertyNode *node = push_arena(arena, sizeof(struct PropertyNode));
+    node->base.tag = NODE_PROPERTY;
+    node->base.span = token.span;
+    node->op_tag = token.tag;
     node->lhs = lhs;
     node->sym = sym;
     return node;
@@ -457,10 +467,10 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         return NULL;
     }
     while(true) {
-        if (eat(parser, TOKEN_DOT)) {
-            struct Span span = prev(parser).span;
+        if (eat(parser, TOKEN_DOT) || eat(parser, TOKEN_COLON)) {
+            struct Token token = prev(parser);
             expect(parser, TOKEN_IDENTIFIER, "expected identifier");
-            lhs = (struct Node*)mk_dot(&parser->arena, span, lhs, prev(parser).span);
+            lhs = (struct Node*)mk_property(&parser->arena, token, lhs, prev(parser).span);
             continue;
         }
         // parse fn_call

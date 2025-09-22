@@ -420,9 +420,8 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             vm->globals.vals[idx] = sp[-1];
             break;
         }
-        // TODO implement OP_INVOKE optimization
         // TODO string interning (and later symbols) to optimize method lookup
-        case OP_GET_PROP: {
+        case OP_GET_FIELD: {
             u8 idx = *ip++;
             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
             Value val = sp[-1];
@@ -442,9 +441,48 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     sp[-1] = entry->val;
                     break;
                 }
+                runtime_err(ip, vm, "`%s` instance does not have field `%s`", instance->base.class->name->chars, prop->chars);
+                return INTERP_RUNTIME_ERR;
             } 
-            // attempt to lookup method
-            if (IS_OBJ(val)) {
+            runtime_err(ip, vm, "cannot get field of non-user-instance");
+            return INTERP_RUNTIME_ERR;
+        }
+        // TODO should distinguish between setting prop outside or within the instance
+        case OP_SET_FIELD: {
+            u8 idx = *ip++;
+            struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+            Value container = sp[-2];
+            Value val = sp[-1];
+
+            if (IS_INSTANCE(container)) {
+                struct InstanceObj *instance = AS_INSTANCE(container);
+                struct ValTableEntry *entry = get_val_table_slot(
+                    instance->fields.entries, 
+                    instance->fields.cap,
+                    prop->hash,
+                    prop->len,
+                    prop->chars
+                );
+                if (entry->chars != NULL) {
+                    entry->val = val;
+                } else {
+                    // TODO check if field exists. do not want to create field from outside
+                    // TODO make insert_val_table take hash to avoid recomputing it
+                    insert_val_table(&instance->fields, prop->chars, prop->len, val);
+                }
+                sp[-2] = sp[-1];
+                sp--;
+                break;
+            }
+            runtime_err(ip, vm, "cannot set field of non-user-instance");
+            return INTERP_RUNTIME_ERR;
+        }
+        // TODO implement OP_INVOKE optimization
+        case OP_GET_METHOD: {
+            u8 idx = *ip++;
+            struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+            Value val = sp[-1];
+            if(IS_OBJ(val)) {
                 struct ClassObj *class = AS_OBJ(val)->class;
                 struct ValTableEntry *entry = get_val_table_slot(
                     class->methods.entries,
@@ -467,43 +505,10 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     }
                     break;
                 }
-                runtime_err(ip, vm, "`%s` instance does not have property `%s`", class->name->chars, prop->chars);
+                runtime_err(ip, vm, "`%s` instance does not have method `%s`", class->name->chars, prop->chars);
                 return INTERP_RUNTIME_ERR;
             }
-            runtime_err(ip, vm, "attempt to get property of non-object");
-            return INTERP_RUNTIME_ERR;
-        }
-        // TODO should distinguish between setting prop outside or within the instance
-        case OP_SET_FIELD: {
-            u8 idx = *ip++;
-            struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
-            Value container = sp[-2];
-            Value val = sp[-1];
-
-            if (IS_INSTANCE(container)) {
-                struct InstanceObj *instance = AS_INSTANCE(container);
-                struct ValTableEntry *entry = get_val_table_slot(
-                    instance->fields.entries, 
-                    instance->fields.cap,
-                    prop->hash,
-                    prop->len,
-                    prop->chars
-                );
-                if (entry->chars != NULL) {
-                    entry->val = val;
-                } else {
-                    // TODO make insert_val_table take hash to avoid recomputing it
-                    insert_val_table(&instance->fields, prop->chars, prop->len, val);
-                }
-                sp[-2] = sp[-1];
-                sp--;
-                break;
-                // FIXME this is unreachable, but we need to only allow creating a field within a method
-                runtime_err(ip, vm, "field `%s` does not exist", prop->chars);
-                return INTERP_RUNTIME_ERR;
-            }
-
-            runtime_err(ip, vm, "attempt to set field of non-user-object");
+            runtime_err(ip, vm, "cannot get method of non-instance");
             return INTERP_RUNTIME_ERR;
         }
         case OP_JUMP: {

@@ -1,2 +1,2 @@
-`List` instance does not have property `length`
+`List` instance does not have method `length`
 [line 3] in main
