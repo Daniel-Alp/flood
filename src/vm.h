@@ -26,7 +26,7 @@ struct VM {
     u16 call_cnt;
 
     Value *sp;
-    Value val_stack[MAX_STACK];
+    Value *val_stack;
 
     struct ValArray globals;
     
