@@ -22,7 +22,7 @@ struct VM {
     struct ClassObj *string_class;
     struct ClassObj *class_class;
 
-    struct CallFrame call_stack[MAX_CALL_FRAMES];
+    struct CallFrame *call_stack;
     u16 call_cnt;
 
     Value *sp;

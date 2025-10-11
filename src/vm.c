@@ -45,6 +45,7 @@ void runtime_err(u8 *ip, struct VM *vm, const char *format, ...)
 
 void init_vm(struct VM *vm)
 {
+    vm->call_stack = allocate(sizeof(struct CallFrame) * MAX_CALL_FRAMES);
     vm->sp = vm->val_stack;
     vm->obj_list = NULL;
     init_val_array(&vm->globals);
@@ -65,6 +66,8 @@ void init_vm(struct VM *vm)
 
 void release_vm(struct VM *vm) 
 {
+    release(vm->call_stack);
+    vm->call_stack = NULL;
     vm->sp = NULL;
     while (vm->obj_list) {
         struct Obj *obj = vm->obj_list;

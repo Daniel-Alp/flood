@@ -4,7 +4,7 @@
 #include "object.h"
 #include "memory.h"
 
-static inline void push_gray_stack(struct VM *vm, struct Obj *obj)
+static void push_gray_stack(struct VM *vm, struct Obj *obj)
 {
     if (obj->color != GC_WHITE)
         return;
