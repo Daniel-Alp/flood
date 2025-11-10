@@ -53,15 +53,17 @@ static i32 line_num(const char *ptr)
     return line;
 }
 
-static i32 line_indent(const char *ptr) 
+static i32 print_indent(const char *ptr) 
 {
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
         start--;
-    return ptr - start;
+    i32 indent = ptr - start;
+    printf("%*s", indent, "");
+    return indent;
 }
 
-static void print_line(const char *ptr) 
+static i32 print_line(const char *ptr) 
 {
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
@@ -71,6 +73,7 @@ static void print_line(const char *ptr)
         end++;
     i32 length = end-start;
     printf("%.*s\n", length, start);
+    return length;
 }
 
 #define ANSI_COLOR_BLUE  "\x1b[34m"
@@ -96,18 +99,18 @@ void print_errlist(struct ErrList *errlist, bool color)
         printf( "%d%*s | ", line, max_pad - pad, "");
         if (color)
             printf(ANSI_COLOR_RESET ANSI_BOLD_RESET);
-        print_line(err.span.start);
+        i32 length = print_line(err.span.start);
 
         if (color)
             printf(ANSI_COLOR_BLUE ANSI_BOLD);
         printf("%*s | ", max_pad, "");
         if (color)
             printf(ANSI_COLOR_RESET ANSI_BOLD_RESET);
-        // TODO handle multi-line spans properly
         if (color)
             printf(ANSI_COLOR_RED ANSI_BOLD);
-        printf("%*s^", line_indent(err.span.start), "");
-        for (i32 i = 0; i < err.span.len - 1; i++)
+        i32 indent = print_indent(err.span.start);
+        printf("^");
+        for (i32 i = 0; i < err.span.len-1 && i < length-1 - indent; i++)
             printf("~");
         printf(" %s\n\n", err.msg);
         if (color)

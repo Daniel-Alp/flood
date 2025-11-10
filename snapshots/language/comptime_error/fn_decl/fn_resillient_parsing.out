@@ -2,11 +2,11 @@
    |          ^ expected `)`
 
 10 |     1 + @
-   |         ^ expected expression
+   |         ^ unexpected token
 
 13 | bar
    | ^~~ expected declaration
 
 16 |     1 + @
-   |         ^ expected expression
+   |         ^ unexpected token
 

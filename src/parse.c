@@ -1,6 +1,6 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include "memory.h"
+#include "scan.h"
 #include "parse.h"
 
 void init_parser(struct Parser *parser) 
@@ -272,7 +272,7 @@ static struct Token prev(struct Parser *parser)
 static void bump(struct Parser *parser)
 {
     parser->prev = parser->at;
-    parser->at = next_token(&parser->scanner);
+    parser->at = next_token(parser);
 }
 
 static bool eat(struct Parser *parser, enum TokenTag tag) 
@@ -462,6 +462,10 @@ static struct Node *parse_expr(struct Parser *parser, i32 prec_lvl)
         lhs = parse_expr(parser, 15);
         lhs = (struct Node*)mk_unary(&parser->arena, token, lhs);
         break;
+    case TOKEN_ERR:
+        // we already emitted an error for TOKEN_ERR tokens
+        parser->panic = true;
+        return NULL;
     default:
         emit_err(parser, "expected expression");
         return NULL;
@@ -719,12 +723,14 @@ static struct FnDeclNode *parse_file(struct Parser *parser)
     return mk_fn_decl(&parser->arena, span, NULL, 0, body);
 }
 
-// TODO maybe disallow trailing comma in function declarations and calls
 struct FnDeclNode *parse(struct Parser *parser, const char *source) 
 {
-    // TODO I should probably be clearing the errorlist each time
-    init_scanner(&parser->scanner, source);
-    parser->at = next_token(&parser->scanner);
+    // TODO I should probably be clearing the errorlist each time (?)
+    parser->source = source;
+    parser->start = source;
+    parser->current = source;
+    parser->line = 1;
+    parser->at = next_token(parser);
     parser->panic = false;
     return parse_file(parser);
 }

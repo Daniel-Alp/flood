@@ -159,15 +159,6 @@ struct ImportNode {
     i32 id;
 };
 
-struct Parser {
-    struct ErrList errlist;
-    struct Arena arena;
-    struct Scanner scanner;
-    struct Token at;
-    struct Token prev;
-    bool panic;
-};
-
 void init_parser(struct Parser *parser);
 
 void release_parser(struct Parser *parser);
