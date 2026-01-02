@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "arena.h"
 
 enum TokenTag {
     TOKEN_PLUS,
@@ -65,13 +66,6 @@ enum TokenTag {
     TOKEN_PRINT
 };
 
-struct Scanner {
-    const char *source;
-    const char *start;
-    const char *current;
-    i32 line;
-};
-
 struct Span {
     const char *start;
     i32 len;
@@ -83,6 +77,27 @@ struct Token {
     enum TokenTag tag;
 };
 
-void init_scanner(struct Scanner *scanner, const char *source);
+struct ErrMsg {
+    struct Span span;
+    const char *msg;
+};
 
-struct Token next_token(struct Scanner *scanner);
+struct ErrList {
+    i32 cnt;
+    i32 cap;
+    struct ErrMsg *errs;
+};
+
+struct Parser {
+    struct ErrList errlist;
+    struct Arena arena;
+    const char *source;
+    const char *start;
+    const char *current;
+    i32 line;
+    struct Token at;
+    struct Token prev;
+    bool panic;
+};
+
+struct Token next_token(struct Parser *parser);

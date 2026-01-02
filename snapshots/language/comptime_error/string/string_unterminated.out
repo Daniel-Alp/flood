@@ -1,5 +1,5 @@
 2 |     var x = "hello, world!;
-  |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ expected expression
+  |             ^~~~~~~~~~~~~~~ unterminated string
 
 4 | }
   |  ^ expected `}`
