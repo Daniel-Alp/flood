@@ -9,7 +9,7 @@
 struct Obj *alloc_vm_obj(struct VM *vm, u64 size)
 {
     struct Obj *obj = allocate(size);
-    obj->class = NULL;
+    obj->klass = NULL;
     obj->next = vm->obj_list;
     obj->color = GC_WHITE;
     obj->printed = 0;
@@ -113,7 +113,7 @@ void release_closure_obj(struct ClosureObj *closure)
 void init_class_obj(struct ClassObj *class, struct StringObj *name, struct VM *vm)
 {
     class->base.tag = OBJ_CLASS;
-    class->base.class = vm->class_class;
+    class->base.klass = vm->class_class;
     class->name = name;
     init_val_table(&class->methods);
 }
@@ -125,10 +125,10 @@ void release_class_obj(struct ClassObj *class)
 }
 
 // NOTE: vals is the methods defined on the class
-void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class)
+void init_instance_obj(struct InstanceObj *instance, struct ClassObj *klass)
 {
     instance->base.tag = OBJ_INSTANCE;
-    instance->base.class = class;
+    instance->base.klass = klass;
     init_val_table(&instance->fields);
 }
 
@@ -156,7 +156,7 @@ void release_method_obj(struct MethodObj *method)
 void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm)
 {
     list->base.tag = OBJ_LIST;
-    list->base.class = vm->list_class;
+    list->base.klass = vm->list_class;
     i32 cap = 8;
     while (cnt > cap)
         cap *= 2;
@@ -178,7 +178,7 @@ void release_list_obj(struct ListObj *list)
 void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars, struct VM *vm)
 {
     str->base.tag = OBJ_STRING;
-    str->base.class = vm->string_class;
+    str->base.klass = vm->string_class;
     str->hash = hash;
     str->len = len;
     str->chars = chars;

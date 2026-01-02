@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.17)
 project(flood)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_COMPILER "clang")
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 if (NOT MSVC)

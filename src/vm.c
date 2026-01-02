@@ -1,13 +1,11 @@
 #include <assert.h>
 #include <stdarg.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include "vm.h"
 #include "memory.h"
 #include "gc.h"
 #include "object.h"
-#include "debug.h"
 #include "foreign.h"
 
 static i32 get_opcode_line(i32 *lines, i32 tgt_opcode_idx)
@@ -285,18 +283,18 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
         case OP_CLASS: {
             u8 idx = *ip++;
             struct StringObj *name = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
-            struct ClassObj *class = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
-            init_class_obj(class, name, vm);
-            sp[0] = MK_OBJ((struct Obj*)class);
+            struct ClassObj *klass = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
+            init_class_obj(klass, name, vm);
+            sp[0] = MK_OBJ((struct Obj*)klass);
             sp++;
             break;
         }
         // TODO will need something for allowing user-defined foreign methods later
         case OP_METHOD: {
-            struct ClassObj *class = AS_CLASS(sp[-2]);
+            struct ClassObj *klass = AS_CLASS(sp[-2]);
             struct StringObj *name = AS_CLOSURE(sp[-1])->fn->name;
             // TODO optimize, avoid recomputing hash each time
-            insert_val_table(&class->methods, name->chars, name->len, sp[-1]);
+            insert_val_table(&klass->methods, name->chars, name->len, sp[-1]);
             sp--;
             break;
         }
@@ -447,7 +445,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     sp[-1] = entry->val;
                     break;
                 }
-                runtime_err(ip, vm, "`%s` instance does not have field `%s`", instance->base.class->name->chars, prop->chars);
+                runtime_err(ip, vm, "`%s` instance does not have field `%s`", instance->base.klass->name->chars, prop->chars);
                 return INTERP_RUNTIME_ERR;
             } 
             runtime_err(ip, vm, "cannot get field of non-user-instance");
@@ -489,10 +487,10 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
             Value val = sp[-1];
             if(IS_OBJ(val)) {
-                struct ClassObj *class = AS_OBJ(val)->class;
+                struct ClassObj *klass = AS_OBJ(val)->klass;
                 struct ValTableEntry *entry = get_val_table_slot(
-                    class->methods.entries,
-                    class->methods.cap,
+                    klass->methods.entries,
+                    klass->methods.cap,
                     prop->hash,
                     prop->len,
                     prop->chars
@@ -511,7 +509,7 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
                     }
                     break;
                 }
-                runtime_err(ip, vm, "`%s` instance does not have method `%s`", class->name->chars, prop->chars);
+                runtime_err(ip, vm, "`%s` instance does not have method `%s`", klass->name->chars, prop->chars);
                 return INTERP_RUNTIME_ERR;
             }
             runtime_err(ip, vm, "cannot get method of non-instance");
@@ -572,12 +570,12 @@ enum InterpResult run_vm(struct VM *vm, struct ClosureObj *script)
             } 
             struct ClosureObj *closure;
             if (IS_CLASS(val)) {
-                struct ClassObj *class = AS_CLASS(val);
+                struct ClassObj *klass = AS_CLASS(val);
                 struct InstanceObj *instance = (struct InstanceObj*)alloc_vm_obj(vm, sizeof(struct InstanceObj));
-                init_instance_obj(instance, class);
+                init_instance_obj(instance, klass);
                 struct ValTableEntry *entry = get_val_table_slot(
-                    class->methods.entries,
-                    class->methods.cap,
+                    klass->methods.entries,
+                    klass->methods.cap,
                     hash_string("init", 4),
                     4,
                     "init"

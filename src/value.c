@@ -1,7 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "scan.h"
 #include "object.h"
 #include "value.h"
 #include "memory.h"
@@ -113,11 +111,12 @@ bool val_eq(Value val1, Value val2)
     if (val1.tag != val2.tag)
         return false;
     switch (val1.tag) {
-        case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
-        case VAL_NUM:  return AS_NUM(val1) == AS_NUM(val2);
-        case VAL_NULL: return true;
-        case VAL_OBJ:  return AS_OBJ(val1) == AS_OBJ(val2);
+    case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
+    case VAL_NUM:  return AS_NUM(val1) == AS_NUM(val2);
+    case VAL_NULL: return true;
+    case VAL_OBJ:  return AS_OBJ(val1) == AS_OBJ(val2); // TODO proper string comparison (?)
     }
+    // should never reach this case
 }
 
 void print_val(Value val) 
@@ -162,7 +161,7 @@ void print_val(Value val)
             break;
         }
         case OBJ_INSTANCE: {
-            const char *name = AS_OBJ(val)->class->name->chars;
+            const char *name = AS_OBJ(val)->klass->name->chars;
             printf("<instance %s>", name);
             break;
         }

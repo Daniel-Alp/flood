@@ -1,13 +1,10 @@
 #include <unistd.h> // for isatty()
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "memory.h"
 #include "parse.h"
 #include "sema.h"
 #include "compile.h" 
 #include "vm.h"
-#include "debug.h"
 
 int main(int argc, const char **argv) 
 { 

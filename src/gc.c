@@ -108,14 +108,14 @@ void collect_garbage(struct VM *vm)
             break;
         }
         case OBJ_CLASS: {
-            struct ClassObj *class = (struct ClassObj*)obj;
-            push_gray_stack(vm, (struct Obj*)class->name);
-            mark_table(vm, &class->methods);
+            struct ClassObj *klass = (struct ClassObj*)obj;
+            push_gray_stack(vm, (struct Obj*)klass->name);
+            mark_table(vm, &klass->methods);
             break;
         }
         case OBJ_INSTANCE: {
             struct InstanceObj *instance = (struct InstanceObj*)obj;
-            push_gray_stack(vm, (struct Obj*)instance->base.class);
+            push_gray_stack(vm, (struct Obj*)instance->base.klass);
             mark_table(vm, &instance->fields);
             break;
         }

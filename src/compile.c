@@ -1,8 +1,6 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include "debug.h"
-#include "memory.h"
 #include "compile.h"
 #include "symbol.h"
 #include "parse.h"

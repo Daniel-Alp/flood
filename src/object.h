@@ -22,7 +22,7 @@ struct Obj {
     enum ObjTag tag;
     u8 color;         
     u8 printed;
-    struct ClassObj *class;
+    struct ClassObj *klass;
     struct Obj *next;
 };
 
@@ -160,11 +160,11 @@ void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 cnt);
 
 void release_closure_obj(struct ClosureObj *closure);
 
-void init_class_obj(struct ClassObj *class, struct StringObj *name, struct VM *vm);
+void init_class_obj(struct ClassObj *klass, struct StringObj *name, struct VM *vm);
 
-void release_class_obj(struct ClassObj *class);
+void release_class_obj(struct ClassObj *klass);
 
-void init_instance_obj(struct InstanceObj *instance, struct ClassObj *class);
+void init_instance_obj(struct InstanceObj *instance, struct ClassObj *klass);
 
 void release_instance_obj(struct InstanceObj *instance);
 
