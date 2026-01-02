@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "debug.h"
-#include "object.h"
 
 // we cannot use the token span for printing the binary operator because  
 //      x += 3;
@@ -25,24 +24,24 @@ const char *binop_str[] = {
     [TOKEN_L_SQUARE]    = "[]"
 };
 
-static void print_atom(struct AtomNode *node) 
+static void print_atom(const struct AtomNode *node) 
 {
     printf("Atom %.*s", node->base.span.len, node->base.span.start);
 }
 
-static void print_list(struct ListNode *node, i32 offset)
+static void print_list(const struct ListNode *node, const i32 offset)
 {
     printf("List");
     for (i32 i = 0; i < node->cnt; i++)
         print_node(node->items[i], offset + 2);
 }
 
-static void print_ident(struct IdentNode *node) 
+static void print_ident(const struct IdentNode *node) 
 {
     printf("Ident %.*s id: %d", node->base.span.len, node->base.span.start, node->id);
 }
 
-static void print_unary(struct UnaryNode *node, i32 offset) 
+static void print_unary(const struct UnaryNode *node, const i32 offset) 
 {
     printf("Unary\n");
     printf("%*s", offset + 2, "");
@@ -50,7 +49,7 @@ static void print_unary(struct UnaryNode *node, i32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_binary(struct BinaryNode *node, i32 offset) 
+static void print_binary(const struct BinaryNode *node, const i32 offset) 
 {
     printf("Binary\n");
     printf("%*s", offset + 2, "");
@@ -59,7 +58,7 @@ static void print_binary(struct BinaryNode *node, i32 offset)
     print_node(node->rhs, offset + 2);
 }
 
-static void print_dot(struct PropertyNode *node, i32 offset)
+static void print_dot(const struct PropertyNode *node, const i32 offset)
 {
     printf("Property");
     print_node(node->lhs, offset + 2);
@@ -67,7 +66,7 @@ static void print_dot(struct PropertyNode *node, i32 offset)
     printf("%.*s", node->sym.len, node->sym.start);
 }
 
-static void print_call(struct CallNode *node, i32 offset) 
+static void print_call(const struct CallNode *node, const i32 offset) 
 {
     printf("Call");    
     print_node(node->lhs, offset + 2);
@@ -75,14 +74,14 @@ static void print_call(struct CallNode *node, i32 offset)
         print_node(node->args[i], offset + 2);
 }
 
-static void print_block(struct BlockNode *node, i32 offset) 
+static void print_block(const struct BlockNode *node, const i32 offset) 
 {
     printf("Block");
     for (i32 i = 0; i < node->cnt; i++)
         print_node(node->stmts[i], offset + 2);
 }
 
-static void print_if(struct IfNode *node, i32 offset) 
+static void print_if(const struct IfNode *node, const i32 offset) 
 {
     printf("If");
     print_node(node->cond, offset + 2);
@@ -91,20 +90,20 @@ static void print_if(struct IfNode *node, i32 offset)
         print_node((struct Node*)node->els, offset + 2);
 }
 
-static void print_expr_stmt(struct ExprStmtNode *node, i32 offset) 
+static void print_expr_stmt(const struct ExprStmtNode *node, const i32 offset) 
 {
     printf("ExprStmt");
     print_node(node->expr, offset + 2);
 }
 
-static void print_return(struct ReturnNode *node, i32 offset) 
+static void print_return(const struct ReturnNode *node, const i32 offset) 
 {
     printf("Return");
     if (node->expr)
         print_node(node->expr, offset + 2);
 }
 
-static void print_var_decl(struct VarDeclNode *node, i32 offset) 
+static void print_var_decl(const struct VarDeclNode *node, const i32 offset) 
 {
     printf("VarDecl\n");
     printf("%*s", offset + 2, "");
@@ -113,7 +112,7 @@ static void print_var_decl(struct VarDeclNode *node, i32 offset)
         print_node(node->init, offset + 2);
 }
 
-static void print_fn_decl(struct FnDeclNode *node, i32 offset) 
+static void print_fn_decl(const struct FnDeclNode *node, const i32 offset) 
 {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
@@ -145,7 +144,7 @@ static void print_fn_decl(struct FnDeclNode *node, i32 offset)
     print_node((struct Node*)node->body, offset + 2);
 }
 
-static void print_class_decl(struct ClassDeclNode *node, i32 offset)
+static void print_class_decl(const struct ClassDeclNode *node, const i32 offset)
 {
     printf("ClassDeclNode\n");
     printf("%*s", offset + 2, "");
@@ -155,19 +154,19 @@ static void print_class_decl(struct ClassDeclNode *node, i32 offset)
         print_node((struct Node*)node->methods[i], offset + 2);
 }
 
-static void print_import(struct ImportNode *node)
+static void print_import(const struct ImportNode *node)
 {
     printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
 }
 
 // TEMP remove when we add functions
-static void print_print(struct PrintNode *node, i32 offset) 
+static void print_print( const struct PrintNode *node,  const i32 offset) 
 {
     printf("Print");
     print_node(node->expr, offset + 2);
 }
 
-void print_node(struct Node *node, i32 offset) 
+void print_node(const struct Node *node, const i32 offset) 
 {
     if (offset != 0)
         printf("\n");
@@ -246,12 +245,12 @@ const char *opcode_str[] = {
 
 // TODO currently this instruction is a bit confusing because for constants we print their value
 // but for GET/SET we print the index. Would make a bit more sense to print the name of the ident
-void disassemble_chunk(struct Chunk *chunk, const char *name)
+void disassemble_chunk(const struct Chunk *chunk, const char *name)
 {
     printf("     [disassembly for %s]\n", name);
     for (i32 i = 0; i < chunk->cnt; i++) {
         printf("%4d | ", i);
-        u8 op = chunk->code[i];
+        const u8 op = chunk->code[i];
         printf("%-20s", opcode_str[op]);
         switch (op) {
         case OP_GET_LOCAL:     
@@ -284,9 +283,9 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
             break;
         }
         case OP_CLOSURE: {
-            i32 stack_captures = chunk->code[++i];
+            const i32 stack_captures = chunk->code[++i];
             printf("%d\n", stack_captures); 
-            i32 parent_captures = chunk->code[++i];
+            const i32 parent_captures = chunk->code[++i];
             printf("     | %*s%d\n", 20, "", parent_captures);
             for (i32 j = 0; j < stack_captures + parent_captures; j++)
                 printf("     | %*s%d\n", 20, "", chunk->code[++i]);
@@ -299,7 +298,7 @@ void disassemble_chunk(struct Chunk *chunk, const char *name)
     printf("\n");
 }
 
-void print_stack(struct VM *vm, Value *sp, Value *bp) 
+void print_stack(const struct VM *vm, const Value *sp, const Value *bp) 
 {
     printf("    [value stack]\n");
     i32 i = 0;

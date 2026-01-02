@@ -31,19 +31,19 @@ static void mark_table(struct VM *vm, struct ValTable *tab)
 void collect_garbage(struct VM *vm) 
 {
     // mark roots
-    Value *locals_lo = vm->val_stack;
-    Value *locals_hi = vm->sp;
-    for (Value *ptr = locals_lo; ptr < locals_hi; ptr++) {
-        Value val = *ptr;
+    const Value *locals_lo = vm->val_stack;
+    const Value *locals_hi = vm->sp;
+    for (const  Value *ptr = locals_lo; ptr < locals_hi; ptr++) {
+        const Value val = *ptr;
         if (IS_OBJ(val))
             push_gray_stack(vm, AS_OBJ(val));
     }
     // TEMP remove globals when we added user-defined classes
     // lo != NULL because vm->globals.cap >= 8
-    Value *globals_lo = vm->globals.vals;
-    Value *globals_hi = globals_lo + vm->globals.cnt;
-    for (Value *ptr = globals_lo; ptr < globals_hi; ptr++) {
-        Value val = *ptr;
+    const Value *globals_lo = vm->globals.vals;
+    const Value *globals_hi = globals_lo + vm->globals.cnt;
+    for (const Value *ptr = globals_lo; ptr < globals_hi; ptr++) {
+        const Value val = *ptr;
         if (IS_OBJ(val))
             push_gray_stack(vm, AS_OBJ(val));
     }    
@@ -51,9 +51,9 @@ void collect_garbage(struct VM *vm)
     // contains a constant table whose objects are not in scope but cannot be freed
     // furthermore, the closure contains an array of pointers to heap vals which also cannot be freed
     // so we should mark each closure gray
-    struct CallFrame *frame_lo = vm->call_stack;
-    struct CallFrame *frame_hi = frame_lo + vm->call_cnt;
-    for (struct CallFrame *frame = frame_lo; frame < frame_hi; frame++)
+    const struct CallFrame *frame_lo = vm->call_stack;
+    const struct CallFrame *frame_hi = frame_lo + vm->call_cnt;
+    for (const struct CallFrame *frame = frame_lo; frame < frame_hi; frame++)
         push_gray_stack(vm, (struct Obj*)frame->closure);
 
     push_gray_stack(vm, (struct Obj*)vm->list_class);

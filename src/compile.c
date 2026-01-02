@@ -34,7 +34,7 @@ static void patch_jump(struct Compiler *compiler, struct Span span, i32 offset)
     // cnt is idx of to-be-executed instr
     i32 jump = cur_chunk(compiler)->cnt - (offset+3);
     if (jump > ((1 << 16) - 1))
-        push_errlist(&compiler->errlist, span, "jump too far");
+        push_errarr(&compiler->errarr, span, "jump too far");
     cur_chunk(compiler)->code[offset+1] = (jump >> 8) & 0xff;
     cur_chunk(compiler)->code[offset+2] = jump & 0xff; 
 }
@@ -56,7 +56,7 @@ static void compile_atom(struct Compiler *compiler, struct AtomNode *node)
     case TOKEN_FALSE:  emit_byte(cur_chunk(compiler), OP_FALSE, line); break;
     case TOKEN_NUMBER: emit_constant(compiler, MK_NUM(strtod(node->base.span.start, NULL)), line); break;
     case TOKEN_STRING: emit_constant(compiler, MK_OBJ((struct Obj*)string_from_span(compiler->vm, node->base.span)), line); break; 
-    default:           push_errlist(&compiler->errlist, node->base.span, "default case of compile_atom reached");
+    default:           push_errarr(&compiler->errarr, node->base.span, "default case of compile_atom reached");
     }
 }
 
@@ -177,7 +177,7 @@ static void compile_binary(struct Compiler *compiler, struct BinaryNode *node)
         case TOKEN_EQEQ:        emit_byte(cur_chunk(compiler), OP_EQEQ, line); break;
         case TOKEN_NEQ:         emit_byte(cur_chunk(compiler), OP_NEQ, line); break;
         case TOKEN_L_SQUARE:    emit_byte(cur_chunk(compiler), OP_GET_SUBSCR, line); break;
-        default:                push_errlist(&compiler->errlist, node->base.span, "default case of compile_binary reached");
+        default:                push_errarr(&compiler->errarr, node->base.span, "default case of compile_binary reached");
         }
     }
 }
@@ -388,7 +388,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
     case NODE_VAR_DECL:   compile_var_decl(compiler, (struct VarDeclNode*)node); break;
     case NODE_FN_DECL:    compile_fn_decl(compiler, (struct FnDeclNode*)node); break;
     case NODE_CLASS_DECL: compile_class_decl(compiler, (struct ClassDeclNode*)node); break;
-    case NODE_IMPORT:     push_errlist(&compiler->errlist, node->span, "TODO"); break;
+    case NODE_IMPORT:     push_errarr(&compiler->errarr, node->span, "TODO"); break;
     case NODE_EXPR_STMT:  compile_expr_stmt(compiler, (struct ExprStmtNode*)node); break; 
     case NODE_BLOCK:      compile_block(compiler, (struct BlockNode*)node); break;
     case NODE_IF:         compile_if(compiler, (struct IfNode*)node); break;
@@ -405,7 +405,7 @@ static void compile_node(struct Compiler *compiler, struct Node *node)
 // is passed in as args. This way you can use a single compiler struct for however many VMs you like.
 void init_compiler(struct Compiler *compiler, struct SymArr *arr) 
 {
-    init_errlist(&compiler->errlist);
+    init_errarr(&compiler->errarr);
     compiler->main_fn_idx = -1;
     compiler->sym_arr = arr;
     compiler->vm = NULL;
@@ -413,7 +413,7 @@ void init_compiler(struct Compiler *compiler, struct SymArr *arr)
 
 void release_compiler(struct Compiler *compiler)
 {
-    release_errlist(&compiler->errlist);
+    release_errarr(&compiler->errarr);
     compiler->main_fn_idx = -1;
     // compiler does not own these
     compiler->sym_arr = NULL;

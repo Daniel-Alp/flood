@@ -11,7 +11,7 @@ struct SemaState {
     i32 globals[MAX_GLOBALS];
     struct SymArr *sym_arr;
     struct FnDeclNode *fn_node;    // fn we are inside of while traversing AST
-    struct ErrList errlist;
+    struct ErrArr errarr;
 };
 
 void init_sema_state(struct SemaState *sema, struct SymArr *sym_arr);

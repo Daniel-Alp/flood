@@ -82,14 +82,14 @@ struct ErrMsg {
     const char *msg;
 };
 
-struct ErrList {
+struct ErrArr {
     i32 cnt;
     i32 cap;
     struct ErrMsg *errs;
 };
 
 struct Parser {
-    struct ErrList errlist;
+    struct ErrArr errarr;
     struct Arena arena;
     const char *source;
     const char *start;

@@ -95,6 +95,6 @@ void init_chunk(struct Chunk *chunk);
 
 void release_chunk(struct Chunk *chunk);
 
-void emit_byte(struct Chunk *chunk, u8 byte, i32 line);
+void emit_byte(struct Chunk *chunk, const u8 byte, const i32 line);
 
-i32 add_constant(struct Chunk *chunk, Value val);
+i32 add_constant(struct Chunk *chunk, const Value val);

@@ -18,7 +18,7 @@ void release_arena(struct Arena *arena)
     arena->stack_pos = 0;
 }
 
-void *push_arena(struct Arena *arena, u64 size) 
+void *push_arena(struct Arena *arena, const u64 size) 
 {
     if (arena->stack_pos + size > ARENA_SIZE) {
         printf("arena out of memory\n");

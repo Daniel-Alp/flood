@@ -2,17 +2,17 @@
 #include "scan.h"
 #include "error.h"
 
-static char at(struct Parser *parser) 
+static char at(const struct Parser *parser) 
 {
     return parser->current[0];
 }
 
-static bool is_at_end(struct Parser *parser) 
+static bool is_at_end(const struct Parser *parser) 
 {
     return at(parser) == '\0';
 }
 
-static char next(struct Parser *parser) 
+static char next(const struct Parser *parser) 
 {
     if (is_at_end(parser))
         return '\0';
@@ -52,22 +52,22 @@ static void skip_comment(struct Parser *parser)
     }
 }
 
-static bool is_digit(char c) 
+static bool is_digit(const char c) 
 {
     return '0' <= c && c <= '9'; 
 }
 
-static bool is_alpha(char c) 
+static bool is_alpha(const char c) 
 {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
 }
 
-static bool is_alpha_digit(char c) 
+static bool is_alpha_digit(const char c) 
 {
     return is_digit(c) || is_alpha(c);
 }
 
-static struct Token mk_token(struct Parser *parser, enum TokenTag tag) 
+static struct Token mk_token(const struct Parser *parser, const enum TokenTag tag) 
 {
     struct Token token = {
         .span = {
@@ -101,7 +101,7 @@ static struct Token string(struct Parser *parser)
         // TODO meaningful error message during parsing, not just "expected expression"
         if (is_at_end(parser)) {
             struct Token token = mk_token(parser, TOKEN_ERR);
-            push_errlist(&parser->errlist, token.span, "unterminated string");
+            push_errarr(&parser->errarr, token.span, "unterminated string");
             return token;
         }
     }
@@ -152,7 +152,7 @@ struct Token next_token(struct Parser *parser)
     if (is_at_end(parser))
         return mk_token(parser, TOKEN_EOF);
 
-    char c = bump(parser);
+    const char c = bump(parser);
     switch (c) {
     case '+': return check_at(parser, '=', TOKEN_PLUS_EQ, TOKEN_PLUS);
     case '-': return check_at(parser, '=', TOKEN_MINUS_EQ, TOKEN_MINUS);
@@ -215,7 +215,7 @@ struct Token next_token(struct Parser *parser)
             }
         } else {
             struct Token token = mk_token(parser, TOKEN_ERR);
-            push_errlist(&parser->errlist, token.span, "unexpected token");
+            push_errarr(&parser->errarr, token.span, "unexpected token");
             return token;
         }
     };

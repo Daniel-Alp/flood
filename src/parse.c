@@ -5,14 +5,14 @@
 
 void init_parser(struct Parser *parser) 
 {
-    init_errlist(&parser->errlist);
+    init_errarr(&parser->errarr);
     init_arena(&parser->arena);
     parser->panic = false;
 }
 
 void release_parser(struct Parser *parser) 
 {
-    release_errlist(&parser->errlist);
+    release_errarr(&parser->errarr);
     release_arena(&parser->arena);
 }
 
@@ -287,7 +287,7 @@ static bool eat(struct Parser *parser, enum TokenTag tag)
 static void emit_err(struct Parser *parser, const char *msg)
 {
     if (!parser->panic)
-        push_errlist(&parser->errlist, at(parser).span, msg);
+        push_errarr(&parser->errarr, at(parser).span, msg);
     parser->panic = true;
 }
 

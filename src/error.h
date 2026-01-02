@@ -1,10 +1,10 @@
 #pragma once
 #include "scan.h"
 
-void init_errlist(struct ErrList *errlist);
+void init_errarr(struct ErrArr *errarr);
 
-void release_errlist(struct ErrList *errlist);
+void release_errarr(struct ErrArr *errarr);
 
-void push_errlist(struct ErrList *errlist, struct Span span, const char *msg);
+void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg);
 
-void print_errlist(struct ErrList *errlist, bool color);
+void print_errarr(struct ErrArr *errarr, const bool color);

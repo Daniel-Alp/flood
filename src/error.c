@@ -2,30 +2,30 @@
 #include "memory.h"
 #include "error.h"
 
-void init_errlist(struct ErrList *errlist) 
+void init_errarr(struct ErrArr *errarr) 
 {
-    errlist->cnt = 0;
-    errlist->cap = 8;
-    errlist->errs = allocate(errlist->cap * sizeof(struct ErrMsg));
+    errarr->cnt = 0;
+    errarr->cap = 8;
+    errarr->errs = allocate(errarr->cap * sizeof(struct ErrMsg));
 }
 
-void release_errlist(struct ErrList *errlist) 
+void release_errarr(struct ErrArr *errarr) 
 {
-    errlist->cnt = 0;
-    errlist->cap = 0;
-    release(errlist->errs);
-    errlist->errs = NULL;
+    errarr->cnt = 0;
+    errarr->cap = 0;
+    release(errarr->errs);
+    errarr->errs = NULL;
 }
 
-void push_errlist(struct ErrList *errlist, struct Span span, const char *msg) 
+void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg) 
 {
-    struct ErrMsg err = {.span = span, .msg = msg};
-    if (errlist->cnt == errlist->cap) {
-        errlist->cap *= 2;
-        errlist->errs = reallocate(errlist->errs, errlist->cap * sizeof(struct ErrMsg));
+    const struct ErrMsg err = {.span = span, .msg = msg};
+    if (errarr->cnt == errarr->cap) {
+        errarr->cap *= 2;
+        errarr->errs = reallocate(errarr->errs, errarr->cap * sizeof(struct ErrMsg));
     }
-    errlist->errs[errlist->cnt] = err;
-    errlist->cnt++;
+    errarr->errs[errarr->cnt] = err;
+    errarr->cnt++;
 }
 
 // n != 0
@@ -58,7 +58,7 @@ static i32 print_indent(const char *ptr)
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
         start--;
-    i32 indent = ptr - start;
+    const i32 indent = ptr - start;
     printf("%*s", indent, "");
     return indent;
 }
@@ -71,7 +71,7 @@ static i32 print_line(const char *ptr)
     const char *end = ptr;
     while (*end != '\0' && *end != '\n')
         end++;
-    i32 length = end-start;
+    const i32 length = end-start;
     printf("%.*s\n", length, start);
     return length;
 }
@@ -83,23 +83,23 @@ static i32 print_line(const char *ptr)
 #define ANSI_BOLD_RESET  "\e[m"
 
 // precondition: at least one error
-void print_errlist(struct ErrList *errlist, bool color) 
+void print_errarr(struct ErrArr *errarr, const bool color) 
 {
-    i32 last_line = line_num(errlist->errs[errlist->cnt-1].span.start);
-    i32 max_pad = num_digits(last_line);
+    const i32 last_line = line_num(errarr->errs[errarr->cnt-1].span.start);
+    const i32 max_pad = num_digits(last_line);
 
-    for (i32 i = 0; i < errlist->cnt; i++) {
-        struct ErrMsg err = errlist->errs[i];
+    for (i32 i = 0; i < errarr->cnt; i++) {
+        struct ErrMsg err = errarr->errs[i];
         
-        i32 line = line_num(err.span.start);
-        i32 pad = num_digits(line);
+        const i32 line = line_num(err.span.start);
+        const i32 pad = num_digits(line);
 
         if (color)
             printf(ANSI_COLOR_BLUE ANSI_BOLD);      
         printf( "%d%*s | ", line, max_pad - pad, "");
         if (color)
             printf(ANSI_COLOR_RESET ANSI_BOLD_RESET);
-        i32 length = print_line(err.span.start);
+        const i32 length = print_line(err.span.start);
 
         if (color)
             printf(ANSI_COLOR_BLUE ANSI_BOLD);
@@ -108,7 +108,7 @@ void print_errlist(struct ErrList *errlist, bool color)
             printf(ANSI_COLOR_RESET ANSI_BOLD_RESET);
         if (color)
             printf(ANSI_COLOR_RED ANSI_BOLD);
-        i32 indent = print_indent(err.span.start);
+        const i32 indent = print_indent(err.span.start);
         printf("^");
         for (i32 i = 0; i < err.span.len-1 && i < length-1 - indent; i++)
             printf("~");

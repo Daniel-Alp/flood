@@ -10,6 +10,4 @@ void init_arena(struct Arena *arena);
 
 void release_arena(struct Arena *arena);
 
-void *push_arena(struct Arena *arena, u64 size);
-
-void clear_arena(struct Arena *arena);
+void *push_arena(struct Arena *arena, const u64 size);

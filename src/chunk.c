@@ -28,7 +28,7 @@ void release_chunk(struct Chunk *chunk)
     release_val_array(&chunk->constants);
 }
 
-void emit_byte(struct Chunk *chunk, u8 byte, i32 line) 
+void emit_byte(struct Chunk *chunk, const u8 byte, const i32 line) 
 {
     if (chunk->lines_cnt == 0 || chunk->lines[chunk->lines_cnt-2] != line) {
         if (chunk->lines_cnt + 2 >= chunk->lines_cap) {
@@ -50,7 +50,7 @@ void emit_byte(struct Chunk *chunk, u8 byte, i32 line)
     chunk->cnt++;
 }
 
-i32 add_constant(struct Chunk *chunk, Value val) 
+i32 add_constant(struct Chunk *chunk, const Value val) 
 {
     return push_val_array(&chunk->constants, val);
 }

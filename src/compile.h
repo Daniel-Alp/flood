@@ -10,7 +10,7 @@ struct Compiler {
     i32 main_fn_idx;             // idx into global array of main fn, or -1
     struct VM *vm;
     struct SymArr *sym_arr;
-    struct ErrList errlist;
+    struct ErrArr errarr;
 };  
 
 void init_compiler(struct Compiler *compiler, struct SymArr *arr);
