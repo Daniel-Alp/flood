@@ -1,10 +1,10 @@
 #pragma once
+#include "dynarr.h"
 #include "scan.h"
 
-void init_errarr(struct ErrArr *errarr);
+struct ErrMsg {
+    struct Span span;
+    const char *msg;
+};
 
-void release_errarr(struct ErrArr *errarr);
-
-void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg);
-
-void print_errarr(struct ErrArr *errarr, const bool color);
+void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color);

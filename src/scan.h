@@ -1,6 +1,9 @@
 #pragma once
 #include "common.h"
+#include "dynarr.h"
 #include "arena.h"
+
+struct ErrMsg;
 
 enum TokenTag {
     TOKEN_PLUS,
@@ -62,7 +65,7 @@ enum TokenTag {
     TOKEN_EOF,
     TOKEN_ERR,
 
-    // TEMP remove when we add functions
+    // TEMP remove
     TOKEN_PRINT
 };
 
@@ -77,27 +80,69 @@ struct Token {
     enum TokenTag tag;
 };
 
-struct ErrMsg {
-    struct Span span;
-    const char *msg;
-};
-
-struct ErrArr {
-    i32 cnt;
-    i32 cap;
-    struct ErrMsg *errs;
-};
-
-struct Parser {
-    struct ErrArr errarr;
-    struct Arena arena;
+class Scanner {
     const char *source;
     const char *start;
     const char *current;
     i32 line;
-    struct Token at;
-    struct Token prev;
-    bool panic;
+    Dynarr<ErrMsg> &errarr_;
+        
+    char at() const;
+    bool is_at_end() const;
+    char next() const;
+    
+    char bump();
+    void skip_whitespace();
+    void skip_comment();
+
+    Token mk_token(TokenTag tag) const;
+    Token number();
+    Token string();
+    Token check_at(const char c, TokenTag tagthen, TokenTag tagelse);
+    Token check_keyword(const char *rest, const i32 len, TokenTag tag);
+public:
+    Scanner(const char *source, Dynarr<ErrMsg> &errarr)
+        : source(source)
+        , start(source)
+        , current(source)
+        , line(0) 
+        , errarr_(errarr)
+        {};
+    ~Scanner();
+    Dynarr<ErrMsg>const &errarr() const
+    {
+        return errarr_;
+    }
+    Token next_token();
 };
 
-struct Token next_token(struct Parser *parser);
+// class Parser {
+//     Dynarr<ErrMsg> errarr;
+//     Arena arena;
+
+//     const char *source;
+//     const char *start;
+//     const char *current;
+//     i32 len;
+
+//     struct Token at;
+//     struct Token prev;
+
+//     bool panic;
+
+//     Token next_token();
+// };
+
+// struct Parser {
+//     struct ErrArr errarr;
+//     struct Arena arena;
+//     const char *source;
+//     const char *start;
+//     const char *current;
+//     i32 line;
+//     struct Token at;
+//     struct Token prev;
+//     bool panic;
+// };
+
+// struct Token next_token(struct Parser *parser);
