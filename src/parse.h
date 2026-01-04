@@ -95,7 +95,7 @@ struct CallNode : public Node {
 struct VarDeclNode : public Node {
     // span is identifier
     Node *const init;
-    const i32 id;
+    i32 id;
     VarDeclNode(const Span span, Node *const init)
         : Node(span, NODE_VAR_DECL), init(init), id(-1) {};
 };
@@ -105,7 +105,7 @@ struct FnDeclNode : public Node {
     BlockNode *const body;
     IdentNode *const params;
     const i32 arity;
-    const i32 id;
+    i32 id;
     // NOTE: 
     // when a closure is created at runtime there are two ways to get a ptr to a captured value
     //      (1) the ptr is in the current stack frame
@@ -137,7 +137,7 @@ struct ClassDeclNode : public Node {
     // span is identifier
     FnDeclNode *const *const methods;
     const i32 cnt;
-    const i32 id;
+    i32 id;
     ClassDeclNode(const Span span, FnDeclNode *const *const methods, const i32 cnt)
         : Node(span, NODE_CLASS_DECL), methods(methods), cnt(cnt), id(-1) {};
 };
@@ -186,6 +186,12 @@ class Parser {
     Token at_;
     Token prev_;
     bool panic_;
+    Parser(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
+        : arena_(arena), errarr(errarr), scanner(source, errarr)
+    {
+        at_ = scanner.next_token();
+        panic_ = false;
+    }
 public:
     Arena &arena() const;
     Token at() const;
@@ -198,12 +204,6 @@ public:
     bool expect(TokenTag tag, const char *msg);
     void advance_with_err(const char *msg);
     void recover_block();
-    Parser(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
-        : arena_(arena), errarr(errarr), scanner(source, errarr)
-    {
-        at_ = scanner.next_token();
-        panic_ = false;
-    }
+    static Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);
 };
 
-Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);

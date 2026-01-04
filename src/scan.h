@@ -1,4 +1,5 @@
 #pragma once
+#include <string.h>
 #include "common.h"
 #include "dynarr.h"
 #include "arena.h"
@@ -73,6 +74,10 @@ struct Span {
     const char *start;
     i32 len;
     i32 line;
+    bool operator==(Span other) const
+    {
+        return len == other.len && memcmp(start, other.start, len) == 0;
+    }
 };
 
 struct Token {

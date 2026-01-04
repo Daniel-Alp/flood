@@ -432,7 +432,8 @@ FnDeclNode *parse_file(Parser &p)
     return alloc<FnDeclNode>(p.arena(), span, alloc<BlockNode>(p.arena(), span, stmts, cnt), nullptr, 0);
 }
 
-Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
+// TODO consider parser owning Arena 
+Node *Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
 {
     Parser p(source, arena, errarr);
     return parse_file(p);

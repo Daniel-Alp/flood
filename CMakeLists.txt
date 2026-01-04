@@ -7,7 +7,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 add_executable(flood src/arena.cc src/chunk.cc src/compile.cc src/debug.cc src/error.cc src/foreign.cc src/gc.cc 
-    src/main.cc src/object.cc src/parse.cc src/scan.cc src/sema.cc src/symbol.cc src/value.cc src/vm.cc)
+    src/main.cc src/object.cc src/parse.cc src/scan.cc src/sema.cc src/value.cc src/vm.cc)
 
 target_compile_options(flood PRIVATE
     -Wall -Wextra
