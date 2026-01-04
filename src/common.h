@@ -11,3 +11,11 @@ typedef int64_t i64;
 typedef int32_t i32;
 typedef int16_t i16;
 typedef int8_t i8;
+
+template<class T>
+void swap(T& a, T& b)
+{
+    T tmp(static_cast<T&&>(a));
+    a = static_cast<T&&>(b);
+    b = static_cast<T&&>(tmp);
+}

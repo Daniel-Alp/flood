@@ -1,9 +1,9 @@
-// #pragma once
-// #include "parse.h"
+#pragma once
+#include "parse.h"
 // #include "chunk.h"
 // #include "vm.h"
 
-// void print_node(const struct Node *node, const i32 offset);
+void print_node(const struct Node *node, const i32 offset);
 
 // void disassemble_chunk(const struct Chunk *chunk, const char *name);
 

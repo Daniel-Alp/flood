@@ -85,7 +85,7 @@ class Scanner {
     const char *start;
     const char *current;
     i32 line;
-    Dynarr<ErrMsg> &errarr_;
+    Dynarr<ErrMsg> &errarr;
         
     char at() const;
     bool is_at_end() const;
@@ -95,24 +95,20 @@ class Scanner {
     void skip_whitespace();
     void skip_comment();
 
-    Token mk_token(TokenTag tag) const;
+    Token mk_token(const TokenTag tag) const;
     Token number();
     Token string();
-    Token check_at(const char c, TokenTag tagthen, TokenTag tagelse);
-    Token check_keyword(const char *rest, const i32 len, TokenTag tag);
+    Token check_at(const char c, const TokenTag tagthen, const TokenTag tagelse);
+    Token check_keyword(const char *rest, const i32 len, const TokenTag tag);
 public:
     Scanner(const char *source, Dynarr<ErrMsg> &errarr)
         : source(source)
         , start(source)
         , current(source)
         , line(0) 
-        , errarr_(errarr)
+        , errarr(errarr)
         {};
     ~Scanner();
-    Dynarr<ErrMsg>const &errarr() const
-    {
-        return errarr_;
-    }
     Token next_token();
 };
 

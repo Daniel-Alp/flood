@@ -1,6 +1,8 @@
 #include <unistd.h> // for isatty()
 #include <stdio.h>
+#include "arena.h"
 #include "common.h"
+#include "debug.h"
 #include "dynarr.h"
 #include "error.h"
 #include "scan.h"
@@ -31,15 +33,23 @@ int main(int argc, const char **argv)
     const bool flag_color = isatty(1);
 
     Dynarr<ErrMsg> errarr;
-    Scanner scanner(source, errarr);
-    Token token;
-    while ((token = scanner.next_token()).tag != TOKEN_EOF) {
-        printf("%.*s\n", token.span.len,  token.span.start);
-    }
-
-    if (scanner.errarr().size() > 0) {
+    Arena arena;
+    Node *node = Parser::parse(source, arena, errarr);
+    if (errarr.size() > 0) {
         print_errarr(errarr, flag_color);
+    } else {
+        print_node(node, 0);
     }
+    // Dynarr<ErrMsg> errarr;
+    // Scanner scanner(source, errarr);
+    // Token token;
+    // while ((token = scanner.next_token()).tag != TOKEN_EOF) {
+    //     printf("%.*s\n", token.span.len,  token.span.start);
+    // }
+
+    // if (scanner.errarr().size() > 0) {
+    //     print_errarr(errarr, flag_color);
+    // }
 err_release_parser:
     delete[] buf;
     fclose(fp);

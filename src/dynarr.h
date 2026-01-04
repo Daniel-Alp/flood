@@ -17,7 +17,7 @@ class Dynarr
                 new (new_vals + i) T(vals[i]);
             }
             operator delete(vals);
-            new_vals = vals;
+            vals = new_vals;
             cap *= 2;
         }
     }
@@ -35,6 +35,28 @@ public:
         cnt = 0;
         cap = 0;
     };
+
+    Dynarr(const Dynarr &other): cnt(0), cap(other.size()), vals(static_cast<T*>(operator new(cap * sizeof(T))))
+    {
+        for (i32 i = 0; i < other.size(); i++) {
+            push(other[i]);
+        }
+    }
+
+    Dynarr(Dynarr &&other): cnt(other.cnt), cap(other.cap), vals(other.vals)
+    {
+        other.cnt = 0;
+        other.cap = 0;
+        other.vals = nullptr;
+    }
+
+    Dynarr& operator=(Dynarr other)
+    {
+        swap(cnt, other.cnt);
+        swap(cap, other.cap);
+        swap(vals, other.vals);
+        return *this;
+    }
     
     void push(const T &e)
     {

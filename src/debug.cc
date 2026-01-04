@@ -1,199 +1,199 @@
-// #include <stdio.h>
-// #include "debug.h"
+#include <stdio.h>
+#include "debug.h"
+#include "parse.h"
+#include "scan.h"
 
-// // we cannot use the token span for printing the binary operator because  
-// //      x += 3;
-// // is desugared into
-// //      x = x + 3;
-// const char *binop_str[] = {
-//     [TOKEN_PLUS]        = "+",
-//     [TOKEN_MINUS]       = "-",
-//     [TOKEN_STAR]        = "*",
-//     [TOKEN_SLASH]       = "/",
-//     [TOKEN_SLASH_SLASH] = "//", 
-//     [TOKEN_PERCENT]     = "%",
-//     [TOKEN_LT]          = "<",
-//     [TOKEN_LEQ]         = "<=",
-//     [TOKEN_GT]          = ">",
-//     [TOKEN_GEQ]         = ">=",
-//     [TOKEN_EQEQ]        = "==",
-//     [TOKEN_NEQ]         = "!=",
-//     [TOKEN_AND]         = "and",
-//     [TOKEN_OR]          = "or",
-//     [TOKEN_EQ]          = "=",
-//     [TOKEN_L_SQUARE]    = "[]"
-// };
+// we cannot use the token span for printing the binary operator because  
+//      x += 3;
+// is desugared into
+//      x = x + 3;
+const char *binop_str(const TokenTag tag)
+{
+    switch(tag) {
+    case TOKEN_PLUS:        return "+";
+    case TOKEN_MINUS:       return "-";
+    case TOKEN_STAR:        return "*";
+    case TOKEN_SLASH:       return "/";
+    case TOKEN_SLASH_SLASH: return "//"; 
+    case TOKEN_PERCENT:     return "%";
+    case TOKEN_LT:          return "<";
+    case TOKEN_LEQ:         return "<=";
+    case TOKEN_GT:          return ">";
+    case TOKEN_GEQ:         return ">=";
+    case TOKEN_EQEQ:        return "==";
+    case TOKEN_NEQ:         return "!=";
+    case TOKEN_AND:         return "and";
+    case TOKEN_OR:          return "or";
+    case TOKEN_EQ:          return "=";
+    case TOKEN_L_SQUARE:    return "[]";
+    default:                return nullptr;
+    }
+}
 
-// static void print_atom(const struct AtomNode *node) 
-// {
-//     printf("Atom %.*s", node->base.span.len, node->base.span.start);
-// }
+static void print_atom(const AtomNode *node) 
+{
+    printf("Atom %.*s", node->span.len, node->span.start);
+}
 
-// static void print_list(const struct ListNode *node, const i32 offset)
-// {
-//     printf("List");
-//     for (i32 i = 0; i < node->cnt; i++)
-//         print_node(node->items[i], offset + 2);
-// }
+static void print_list(const ListNode *node, const i32 offset)
+{
+    printf("List");
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->items[i], offset + 2);
+}
 
-// static void print_ident(const struct IdentNode *node) 
-// {
-//     printf("Ident %.*s id: %d", node->base.span.len, node->base.span.start, node->id);
-// }
+static void print_ident(const IdentNode *node) 
+{
+    printf("Ident %.*s id: %d", node->span.len, node->span.start, node->id);
+}
 
-// static void print_unary(const struct UnaryNode *node, const i32 offset) 
-// {
-//     printf("Unary\n");
-//     printf("%*s", offset + 2, "");
-//     printf("%.*s", node->base.span.len, node->base.span.start);
-//     print_node(node->rhs, offset + 2);
-// }
+static void print_unary(const UnaryNode *node, const i32 offset) 
+{
+    printf("Unary\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node->span.len, node->span.start);
+    print_node(node->rhs, offset + 2);
+}
 
-// static void print_binary(const struct BinaryNode *node, const i32 offset) 
-// {
-//     printf("Binary\n");
-//     printf("%*s", offset + 2, "");
-//     printf("%s", binop_str[node->op_tag]);
-//     print_node(node->lhs, offset + 2);
-//     print_node(node->rhs, offset + 2);
-// }
+static void print_binary(const BinaryNode *node, const i32 offset) 
+{
+    printf("Binary\n");
+    printf("%*s", offset + 2, "");
+    printf("%s", binop_str(node->op_tag));
+    print_node(node->lhs, offset + 2);
+    print_node(node->rhs, offset + 2);
+}
 
-// static void print_dot(const struct PropertyNode *node, const i32 offset)
-// {
-//     printf("Property");
-//     print_node(node->lhs, offset + 2);
-//     printf("\n%*s", offset + 2, "");
-//     printf("%.*s", node->sym.len, node->sym.start);
-// }
+static void print_dot(const PropertyNode *node, const i32 offset)
+{
+    printf("Property");
+    print_node(node->lhs, offset + 2);
+    printf("\n%*s", offset + 2, "");
+    printf("%.*s", node->sym.len, node->sym.start);
+}
 
-// static void print_call(const struct CallNode *node, const i32 offset) 
-// {
-//     printf("Call");    
-//     print_node(node->lhs, offset + 2);
-//     for (i32 i = 0; i < node->arity; i++)
-//         print_node(node->args[i], offset + 2);
-// }
+static void print_call(const CallNode *node, const i32 offset) 
+{
+    printf("Call");    
+    print_node(node->lhs, offset + 2);
+    for (i32 i = 0; i < node->arity; i++)
+        print_node(node->args[i], offset + 2);
+}
 
-// static void print_block(const struct BlockNode *node, const i32 offset) 
-// {
-//     printf("Block");
-//     for (i32 i = 0; i < node->cnt; i++)
-//         print_node(node->stmts[i], offset + 2);
-// }
+static void print_block(const BlockNode *node, const i32 offset) 
+{
+    printf("Block");
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->stmts[i], offset + 2);
+}
 
-// static void print_if(const struct IfNode *node, const i32 offset) 
-// {
-//     printf("If");
-//     print_node(node->cond, offset + 2);
-//     print_node((struct Node*)node->thn, offset + 2);
-//     if (node->els)
-//         print_node((struct Node*)node->els, offset + 2);
-// }
+static void print_if(const IfNode *node, const i32 offset) 
+{
+    printf("If");
+    print_node(node->cond, offset + 2);
+    print_node(node->thn, offset + 2);
+    if (node->els)
+        print_node(node->els, offset + 2);
+}
 
-// static void print_expr_stmt(const struct ExprStmtNode *node, const i32 offset) 
-// {
-//     printf("ExprStmt");
-//     print_node(node->expr, offset + 2);
-// }
+static void print_expr_stmt(const ExprStmtNode *node, const i32 offset) 
+{
+    printf("ExprStmt");
+    print_node(node->expr, offset + 2);
+}
 
-// static void print_return(const struct ReturnNode *node, const i32 offset) 
-// {
-//     printf("Return");
-//     if (node->expr)
-//         print_node(node->expr, offset + 2);
-// }
+static void print_return(const ReturnNode *node, const i32 offset) 
+{
+    printf("Return");
+    if (node->expr)
+        print_node(node->expr, offset + 2);
+}
 
-// static void print_var_decl(const struct VarDeclNode *node, const i32 offset) 
-// {
-//     printf("VarDecl\n");
-//     printf("%*s", offset + 2, "");
-//     printf("%.*s id: %d", node->base.span.len, node->base.span.start, node->id);
-//     if (node->init)
-//         print_node(node->init, offset + 2);
-// }
+static void print_var_decl(const VarDeclNode *node, const i32 offset) 
+{
+    printf("VarDecl\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s id: %d", node->span.len, node->span.start, node->id);
+    if (node->init)
+        print_node(node->init, offset + 2);
+}
 
-// static void print_fn_decl(const struct FnDeclNode *node, const i32 offset) 
-// {
-//     printf("FnDeclNode\n");
-//     printf("%*s", offset + 2, "");
-//     printf("%.*s(", node->base.span.len, node->base.span.start);
-//     for (i32 i = 0; i < node->arity-1; i++) {
-//         struct IdentNode param = node->params[i];
-//         printf("%.*s id: %d, ", param.base.span.len, param.base.span.start, param.id);
-//     }
-//     if (node->arity > 0) {
-//         struct IdentNode param = node->params[node->arity-1];
-//         printf("%.*s id: %d", param.base.span.len, param.base.span.start, param.id);
-//     }
-//     printf(") id: %d\n", node->id);
+static void print_fn_decl(const FnDeclNode *node, const i32 offset) 
+{
+    printf("FnDeclNode\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s(", node->span.len, node->span.start);
+    for (i32 i = 0; i < node->arity-1; i++) {
+        const IdentNode param = node->params[i];
+        printf("%.*s id: %d, ", param.span.len, param.span.start, param.id);
+    }
+    if (node->arity > 0) {
+        const IdentNode param = node->params[node->arity-1];
+        printf("%.*s id: %d", param.span.len, param.span.start, param.id);
+    }
+    printf(") id: %d\n", node->id);
     
-//     printf("%*s", offset + 2, "");
-//     printf("stack_captures:  [");
-//     for (i32 i = 0; i < node->stack_capture_cnt-1; i++)
-//         printf("%d, ", node->stack_captures[i]);
-//     if (node->stack_capture_cnt > 0)
-//         printf("%d", node->stack_captures[node->stack_capture_cnt-1]);
-//     printf("]\n");
-//     printf("%*s", offset + 2, "");
-//     printf("parent_captures: [");
-//     for (i32 i = 0; i < node->parent_capture_cnt-1; i++)
-//         printf("%d, ", node->parent_captures[i]);
-//     if (node->parent_capture_cnt > 0)
-//         printf("%d", node->parent_captures[node->parent_capture_cnt-1]);
-//     printf("]");
-//     print_node((struct Node*)node->body, offset + 2);
-// }
+    printf("%*s", offset + 2, "");
+    printf("stack_captures:  [");
+    for (i32 i = 0; i < node->stack_capture_cnt-1; i++)
+        printf("%d, ", node->stack_captures[i]);
+    if (node->stack_capture_cnt > 0)
+        printf("%d", node->stack_captures[node->stack_capture_cnt-1]);
+    printf("]\n");
+    printf("%*s", offset + 2, "");
+    printf("parent_captures: [");
+    for (i32 i = 0; i < node->parent_capture_cnt-1; i++)
+        printf("%d, ", node->parent_captures[i]);
+    if (node->parent_capture_cnt > 0)
+        printf("%d", node->parent_captures[node->parent_capture_cnt-1]);
+    printf("]");
+    print_node(node->body, offset + 2);
+}
 
-// static void print_class_decl(const struct ClassDeclNode *node, const i32 offset)
-// {
-//     printf("ClassDeclNode\n");
-//     printf("%*s", offset + 2, "");
-//     printf("%.*s", node->base.span.len, node->base.span.start);
-//     printf(" id: %d", node->id);
-//     for (i32 i = 0; i < node->cnt; i++)
-//         print_node((struct Node*)node->methods[i], offset + 2);
-// }
+static void print_class_decl(const ClassDeclNode *node, const i32 offset)
+{
+    printf("ClassDeclNode\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node->span.len, node->span.start);
+    printf(" id: %d", node->id);
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->methods[i], offset + 2);
+}
 
-// static void print_import(const struct ImportNode *node)
-// {
-//     printf("ImportNode %.*s %.*s", node->path.len, node->path.start, node->base.span.len, node->base.span.start);
-// }
+// TEMP remove when we add functions
+static void print_print(const PrintNode *node, const i32 offset) 
+{
+    printf("Print");
+    print_node(node->expr, offset + 2);
+}
 
-// // TEMP remove when we add functions
-// static void print_print( const struct PrintNode *node,  const i32 offset) 
-// {
-//     printf("Print");
-//     print_node(node->expr, offset + 2);
-// }
-
-// void print_node(const struct Node *node, const i32 offset) 
-// {
-//     if (offset != 0)
-//         printf("\n");
-//     printf("%*s(", offset, "");
-//     switch (node->tag) {
-//     case NODE_ATOM:        print_atom((struct AtomNode*)node); break;
-//     case NODE_LIST:        print_list((struct ListNode*)node, offset); break;
-//     case NODE_IDENT:       print_ident((struct IdentNode*)node); break;
-//     case NODE_UNARY:       print_unary((struct UnaryNode*)node, offset); break;
-//     case NODE_BINARY:      print_binary((struct BinaryNode*)node, offset); break;
-//     case NODE_PROPERTY:    print_dot((struct PropertyNode*)node, offset); break;
-//     case NODE_CALL:        print_call((struct CallNode*)node, offset); break;
-//     case NODE_BLOCK:       print_block((struct BlockNode*)node, offset); break;
-//     case NODE_IF:          print_if((struct IfNode*)node, offset); break;
-//     case NODE_EXPR_STMT:   print_expr_stmt((struct ExprStmtNode*)node, offset); break;
-//     case NODE_VAR_DECL:    print_var_decl((struct VarDeclNode*)node, offset); break;
-//     case NODE_FN_DECL:     print_fn_decl((struct FnDeclNode*)node, offset); break;
-//     case NODE_CLASS_DECL:  print_class_decl((struct ClassDeclNode*)node, offset); break;
-//     case NODE_IMPORT:      print_import((struct ImportNode*)node); break;
-//     case NODE_RETURN:      print_return((struct ReturnNode*)node, offset); break;
-//     // TEMP remove when we add functions
-//     case NODE_PRINT:       print_print((struct PrintNode*)node, offset); break; 
-//     }
-//     printf(")");
-//     if (offset == 0)
-//         printf("\n");
-// }
+void print_node(const Node *node, const i32 offset) 
+{
+    if (offset != 0)
+        printf("\n");
+    printf("%*s(", offset, "");
+    switch (node->tag) {
+    case NODE_ATOM:        print_atom(static_cast<const AtomNode*>(node)); break;
+    case NODE_LIST:        print_list(static_cast<const ListNode*>(node), offset); break;
+    case NODE_IDENT:       print_ident(static_cast<const IdentNode*>(node)); break;
+    case NODE_UNARY:       print_unary(static_cast<const UnaryNode*>(node), offset); break;
+    case NODE_BINARY:      print_binary(static_cast<const BinaryNode*>(node), offset); break;
+    case NODE_PROPERTY:    print_dot(static_cast<const PropertyNode*>(node), offset); break;
+    case NODE_CALL:        print_call(static_cast<const CallNode*>(node), offset); break;
+    case NODE_BLOCK:       print_block(static_cast<const BlockNode*>(node), offset); break;
+    case NODE_IF:          print_if(static_cast<const IfNode*>(node), offset); break;
+    case NODE_EXPR_STMT:   print_expr_stmt(static_cast<const ExprStmtNode*>(node), offset); break;
+    case NODE_VAR_DECL:    print_var_decl(static_cast<const VarDeclNode*>(node), offset); break;
+    case NODE_FN_DECL:     print_fn_decl(static_cast<const FnDeclNode*>(node), offset); break;
+    case NODE_CLASS_DECL:  print_class_decl(static_cast<const ClassDeclNode*>(node), offset); break;
+    case NODE_RETURN:      print_return(static_cast<const ReturnNode*>(node), offset); break;
+    // TEMP remove when we add functions
+    case NODE_PRINT:       print_print(static_cast<const PrintNode*>(node), offset); break; 
+    }
+    printf(")");
+    if (offset == 0)
+        printf("\n");
+}
 
 // const char *opcode_str[] = {
 //     [OP_NULL]          = "OP_NULL",

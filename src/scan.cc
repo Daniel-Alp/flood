@@ -110,7 +110,7 @@ Token Scanner::string()
         // TODO meaningful error message during parsing, not just "expected expression"
         if (is_at_end()) {
             Token token = mk_token(TOKEN_ERR);
-            errarr_.push(ErrMsg{.span = token.span, .msg = "unterminated string"});
+            errarr.push(ErrMsg{.span = token.span, .msg = "unterminated string"});
             return token;
         }
     }
@@ -126,7 +126,7 @@ Token Scanner::string()
     return token;
 }
 
-Token Scanner::check_at(const char c, TokenTag tagthen, TokenTag tagelse)
+Token Scanner::check_at(const char c, const TokenTag tagthen, const TokenTag tagelse)
 {
     if (at() == c) {
         bump();
@@ -135,7 +135,7 @@ Token Scanner::check_at(const char c, TokenTag tagthen, TokenTag tagelse)
     return mk_token(tagelse);
 }
 
-Token Scanner::check_keyword(const char *rest, const i32 len, TokenTag tag)
+Token Scanner::check_keyword(const char *rest, const i32 len, const TokenTag tag)
 {
     while(is_alpha_digit(at()))
         bump();
@@ -192,19 +192,19 @@ Token Scanner::next_token()
         } else if (is_alpha(c)) {
             switch (c) {
             case 'a': 
-                if (next() == 's')
+                if (at() == 's')
                     return check_keyword("s", 2, TOKEN_AS);
                 else
                     return check_keyword("nd", 3, TOKEN_AND);
             case 'e': return check_keyword("lse", 4, TOKEN_ELSE);
             case 'c': return check_keyword("lass", 5, TOKEN_CLASS);
             case 'f':
-                if (next() == 'n')
+                if (at() == 'n')
                     return check_keyword("n", 2, TOKEN_FN);
                 else
                     return check_keyword("alse", 5, TOKEN_FALSE);
             case 'i': 
-                if (next() == 'f')
+                if (at() == 'f')
                     return check_keyword("f", 2, TOKEN_IF);
                 else
                     return check_keyword("mport", 6, TOKEN_IMPORT);
@@ -223,7 +223,7 @@ Token Scanner::next_token()
             }
         } else {
             struct Token token = mk_token(TOKEN_ERR);
-            errarr_.push(ErrMsg{.span = token.span, .msg = "unexpected token"});
+            errarr.push(ErrMsg{.span = token.span, .msg = "unexpected token"});
             return token;
         }
     };
