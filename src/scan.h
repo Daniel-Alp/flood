@@ -111,34 +111,3 @@ public:
     ~Scanner();
     Token next_token();
 };
-
-// class Parser {
-//     Dynarr<ErrMsg> errarr;
-//     Arena arena;
-
-//     const char *source;
-//     const char *start;
-//     const char *current;
-//     i32 len;
-
-//     struct Token at;
-//     struct Token prev;
-
-//     bool panic;
-
-//     Token next_token();
-// };
-
-// struct Parser {
-//     struct ErrArr errarr;
-//     struct Arena arena;
-//     const char *source;
-//     const char *start;
-//     const char *current;
-//     i32 line;
-//     struct Token at;
-//     struct Token prev;
-//     bool panic;
-// };
-
-// struct Token next_token(struct Parser *parser);
