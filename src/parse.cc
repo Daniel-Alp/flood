@@ -80,15 +80,40 @@ static i32 desugar(const TokenTag tag) {
     }
 }
 
+Arena &Parser::arena() const
+{
+    return arena_;
+}
+
+Token Parser::at() const
+{
+    return at_;
+}
+
+Token Parser::prev() const
+{
+    return prev_;
+}
+
+bool Parser::panic() const
+{
+    return panic_;
+}
+
+void Parser::set_panic(const bool panic)
+{
+    panic_ = panic;
+}
+
 void Parser::bump()
 {
-    prev = at;
-    at = scanner.next_token();
+    prev_ = at_;
+    at_ = scanner.next_token();
 }
 
 bool Parser::eat(TokenTag tag)
 {
-    if (at.tag == tag) {
+    if (at_.tag == tag) {
          bump();
          return true;
      }
@@ -97,9 +122,9 @@ bool Parser::eat(TokenTag tag)
 
 void Parser::emit_err(const char *msg)
 {
-    if (!panic)
-        errarr.push(ErrMsg{at.span, msg});
-    panic = true;
+    if (!panic_)
+        errarr.push(ErrMsg{at_.span, msg});
+    panic_ = true;
 }
 
 bool Parser::expect(TokenTag tag, const char *msg)
@@ -118,10 +143,10 @@ void Parser::advance_with_err(const char *msg)
 
 void Parser::recover_block()
 {
-    panic = false;
+    panic_ = false;
     i32 depth = 0;
-    while (prev.tag != TOKEN_SEMI && at.tag != TOKEN_EOF) {
-        switch(at.tag) {
+    while (prev_.tag != TOKEN_SEMI && at_.tag != TOKEN_EOF) {
+        switch(at_.tag) {
         case TOKEN_IF:
         case TOKEN_VAR:
         case TOKEN_FN:
@@ -141,29 +166,32 @@ void Parser::recover_block()
     }
 }   
 
+static Node *parse_expr(Parser &p, const i32 prec_lvl);
+static BlockNode *parse_block(Parser &p);
+
 // precondition: `[` or `(` token consumed
 // parses arguments and fills the ptr array provided
-Dynarr<Node*> Parser::parse_arg_list(const TokenTag tag_right)
+static Dynarr<Node*> parse_arg_list(Parser &p, const TokenTag tag_right)
 {
     Dynarr<Node*> nodearr;
-    while(at.tag != tag_right && at.tag != TOKEN_EOF) {
+    while(p.at().tag != tag_right && p.at().tag != TOKEN_EOF) {
         // breaking early helps when the right token is missing
-        if (!expr_first(at.tag)) {
-            emit_err("expected expression");
+        if (!expr_first(p.at().tag)) {
+            p.emit_err("expected expression");
             break;
         }
-        nodearr.push(parse_expr(1));
-        if (at.tag != tag_right)
-            expect(TOKEN_COMMA, "expected `,`");            
+        nodearr.push(parse_expr(p, 1));
+        if (p.at().tag != tag_right)
+            p.expect(TOKEN_COMMA, "expected `,`");            
     }
     return nodearr;
 }
 
-Node *Parser::parse_expr(const i32 prec_lvl) 
+static Node *parse_expr(Parser &p, const i32 prec_lvl) 
 {
-    Token token = at;
+    Token token = p.at();
     if (expr_first(token.tag)) // we could bump in each arm of the switch but this is simpler
-        bump();
+        p.bump();
     Node *lhs = nullptr;
     switch (token.tag) {
     case TOKEN_NULL:
@@ -171,239 +199,241 @@ Node *Parser::parse_expr(const i32 prec_lvl)
     case TOKEN_FALSE:
     case TOKEN_NUMBER:
     case TOKEN_STRING:
-        lhs = alloc<AtomNode>(arena, token.span, token.tag);
+        lhs = alloc<AtomNode>(p.arena(), token.span, token.tag);
         break;
     case TOKEN_IDENTIFIER:
-        lhs = alloc<IdentNode>(arena, token.span);
+        lhs = alloc<IdentNode>(p.arena(), token.span);
         break;
     case TOKEN_L_SQUARE: {
-        Dynarr<Node*> nodearr = parse_arg_list(TOKEN_R_SQUARE);
-        expect(TOKEN_R_SQUARE, "expected `]`");
+        Dynarr<Node*> nodearr = parse_arg_list(p, TOKEN_R_SQUARE);
+        p.expect(TOKEN_R_SQUARE, "expected `]`");
         const i32 cnt = nodearr.size();
-        Node *const *const items = move_dynarr(arena, static_cast<Dynarr<Node*>&&>(nodearr));
-        lhs = alloc<ListNode>(arena, token.span, items, cnt);
+        Node *const *const items = move_dynarr(p.arena(), move(nodearr));
+        lhs = alloc<ListNode>(p.arena(), token.span, items, cnt);
         break;
     }
     case TOKEN_L_PAREN:
-        lhs = parse_expr(1);
-        expect(TOKEN_R_PAREN, "expected `)`");
+        lhs = parse_expr(p, 1);
+        p.expect(TOKEN_R_PAREN, "expected `)`");
         break;
     case TOKEN_MINUS:
     case TOKEN_NOT:
-        lhs = alloc<UnaryNode>(arena, token.span, parse_expr(15), token.tag);
+        lhs = alloc<UnaryNode>(p.arena(), token.span, parse_expr(p, 15), token.tag);
         break;
     case TOKEN_ERR:
         // we already emitted an error for TOKEN_ERR tokens
-        panic = true;
+        p.set_panic(true);
         return nullptr;
     default:
-        emit_err("expected expression");
+        p.emit_err("expected expression");
         return nullptr;
     }
     while(true) {
-        if (eat(TOKEN_DOT) || eat( TOKEN_COLON)) {
-            const Token token = prev;
-            expect(TOKEN_IDENTIFIER, "expected identifier");
-            lhs = alloc<PropertyNode>(arena, token.span, lhs, prev.span, prev.tag);
+        if (p.eat(TOKEN_DOT) || p.eat(TOKEN_COLON)) {
+            const Token token = p.prev();
+            p.expect(TOKEN_IDENTIFIER, "expected identifier");
+            lhs = alloc<PropertyNode>(p.arena(), token.span, lhs, p.prev().span, p.prev().tag);
             continue;
         }
         // parse fn_call
-        if (eat(TOKEN_L_PAREN)) {
-            const Span fn_call_span = prev.span;
-            Dynarr<Node*> nodearr = parse_arg_list(TOKEN_R_PAREN);
-            expect(TOKEN_R_PAREN, "expected `)`");
+        if (p.eat(TOKEN_L_PAREN)) {
+            const Span fn_call_span = p.prev().span;
+            Dynarr<Node*> nodearr = parse_arg_list(p, TOKEN_R_PAREN);
+            p.expect(TOKEN_R_PAREN, "expected `)`");
             const i32 cnt = nodearr.size();
-            Node *const *const args = move_dynarr(arena, static_cast<Dynarr<Node*>&&>(nodearr));
-            lhs = alloc<CallNode>(arena, fn_call_span, lhs, args, cnt);
+            Node *const *const args = move_dynarr(p.arena(), move(nodearr));
+            lhs = alloc<CallNode>(p.arena(), fn_call_span, lhs, args, cnt);
             continue;
         }
-        token = at;
+        token = p.at();
         const PrecLvl prec = infix_prec(token.tag);
         if (prec.curr < prec_lvl) {
             break;
         }
-        bump();
-        Node *rhs = parse_expr(prec.next);
+        p.bump();
+        Node *rhs = parse_expr(p, prec.next);
         // since we view `[` as a binary operator we have to consume `]` after parsing idx expr
         if (token.tag == TOKEN_L_SQUARE)
-            expect(TOKEN_R_SQUARE, "expected `]`");
+            p.expect(TOKEN_R_SQUARE, "expected `]`");
         
         enum TokenTag tag = token.tag;
         // desugar +=, -=, *=, /=, //=, and %=
         const i32 desugared = desugar(tag);
         if (desugared != -1) {
-            rhs = alloc<BinaryNode>(arena, token.span, lhs, rhs, TokenTag(desugared));
+            rhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, TokenTag(desugared));
             tag = TOKEN_EQ;
         }
-        lhs = alloc<BinaryNode>(arena, token.span, lhs, rhs, tag);
+        lhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, tag);
     }
     return lhs;
 }
 
 // precondition: `if` token consumed
-IfNode *Parser::parse_if() 
+static IfNode *parse_if(Parser &p) 
 {
-    const Span span = prev.span;
-    expect(TOKEN_L_PAREN, "expected `(`");
-    Node *const cond = parse_expr(1);
-    expect(TOKEN_R_PAREN, "expected `)`");
-    BlockNode *const thn = parse_block();
+    const Span span = p.prev().span;
+    p.expect(TOKEN_L_PAREN, "expected `(`");
+    Node *const cond = parse_expr(p, 1);
+    p.expect(TOKEN_R_PAREN, "expected `)`");
+    BlockNode *const thn = parse_block(p);
     BlockNode *els = nullptr;
-    if (eat(TOKEN_ELSE))
-        els = parse_block();
-    return alloc<IfNode>(arena, span, cond, thn, els);
+    if (p.eat(TOKEN_ELSE))
+        els = parse_block(p);
+    return alloc<IfNode>(p.arena(), span, cond, thn, els);
 }
 
 // precondition: `var` token consumed
-VarDeclNode *Parser::parse_var_decl() 
+static VarDeclNode *parse_var_decl(Parser &p) 
 {
     // in a case such as 
     //      var x 4;
     // we assume the user forgot to add an `=` after `x`
-    const Span span = at.span;
-    expect(TOKEN_IDENTIFIER, "expected identifier");
-    if (eat(TOKEN_SEMI))
-        return alloc<VarDeclNode>(arena, span, nullptr);
-    expect(TOKEN_EQ, "expected `=`");
-    Node *const init = parse_expr(1);
-    expect(TOKEN_SEMI, "expected `;`");
-    return alloc<VarDeclNode>(arena, span, init);    
+    const Span span = p.at().span;
+    p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    if (p.eat(TOKEN_SEMI))
+        return alloc<VarDeclNode>(p.arena(), span, nullptr);
+    p.expect(TOKEN_EQ, "expected `=`");
+    Node *const init = parse_expr(p, 1);
+    p.expect(TOKEN_SEMI, "expected `;`");
+    return alloc<VarDeclNode>(p.arena(), span, init);    
 }
 
 // precondition: `fn` token consumed
-FnDeclNode *Parser::parse_fn_decl(const bool is_method) 
+static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method) 
 {
-    const Span span = at.span;
-    expect(TOKEN_IDENTIFIER, "expected identifier");
-    expect(TOKEN_L_PAREN, "expected `(`");  
+    const Span span = p.at().span;
+    p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    p.expect(TOKEN_L_PAREN, "expected `(`");  
     Dynarr<IdentNode> paramarr;
-    while(at.tag != TOKEN_R_PAREN && at.tag != TOKEN_EOF) {
-        if (eat(TOKEN_IDENTIFIER)) {
-            paramarr.push(IdentNode(prev.span));
-            if (at.tag != TOKEN_R_PAREN)
-                expect(TOKEN_COMMA, "expected `,`");
-        } else if (at.tag == TOKEN_FN || at.tag == TOKEN_CLASS || at.tag == TOKEN_L_BRACE || at.tag == TOKEN_IMPORT) {
+    while(p.at().tag != TOKEN_R_PAREN && p.at().tag != TOKEN_EOF) {
+        if (p.eat(TOKEN_IDENTIFIER)) {
+            paramarr.push(IdentNode(p.prev().span));
+            if (p.at().tag != TOKEN_R_PAREN)
+                p.expect(TOKEN_COMMA, "expected `,`");
+        } else if (p.at().tag == TOKEN_FN || p.at().tag == TOKEN_CLASS 
+            || p.at().tag == TOKEN_L_BRACE || p.at().tag == TOKEN_IMPORT) {
             // breaking early helps when there is no matching `)`
             break;            
         } else {
-            advance_with_err("expected identifier");
+            p.advance_with_err("expected identifier");
         }
     }
     if (is_method) {
         // TODO we should never need the line of `self` I believe
         paramarr.push(IdentNode(Span{.start = "self", .len = 4, .line = 0}));
     }
-    expect(TOKEN_R_PAREN, "expected `)`");
+    p.expect(TOKEN_R_PAREN, "expected `)`");
     const i32 arity = paramarr.size();
-    IdentNode *const params = move_dynarr(arena, static_cast<Dynarr<IdentNode>&&>(paramarr));
-    BlockNode *const body = parse_block();
-    return alloc<FnDeclNode>(arena, span, body, params, arity);    
+    IdentNode *const params = move_dynarr(p.arena(), move(paramarr));
+    BlockNode *const body = parse_block(p);
+    return alloc<FnDeclNode>(p.arena(), span, body, params, arity);    
 }
 
-ClassDeclNode *Parser::parse_class_decl()
+ClassDeclNode *parse_class_decl(Parser &p)
 {
-    const Span span = at.span;
-    expect(TOKEN_IDENTIFIER, "expected identifier");
-    expect(TOKEN_L_BRACE, "expected `{`");
+    const Span span = p.at().span;
+    p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    p.expect(TOKEN_L_BRACE, "expected `{`");
 
     Dynarr<FnDeclNode*> nodearr;
-    while (at.tag != TOKEN_R_BRACE && at.tag != TOKEN_EOF) {
-        if (eat(TOKEN_FN)) {
-            panic = false;
-            nodearr.push(parse_fn_decl(true));
+    while (p.at().tag != TOKEN_R_BRACE && p.at().tag != TOKEN_EOF) {
+        if (p.eat(TOKEN_FN)) {
+            p.set_panic(false);
+            nodearr.push(parse_fn_decl(p, true));
         } else {
-            advance_with_err("expected method declaration");
+            p.advance_with_err("expected method declaration");
         }    
     }
-    expect(TOKEN_R_BRACE, "expected `}`");
+    p.expect(TOKEN_R_BRACE, "expected `}`");
     const i32 cnt = nodearr.size();
-    FnDeclNode *const *const methods = move_dynarr(arena, static_cast<Dynarr<FnDeclNode*>&&>(nodearr));
-    return alloc<ClassDeclNode>(arena, span, methods, cnt);
+    FnDeclNode *const *const methods = move_dynarr(p.arena(), move(nodearr));
+    return alloc<ClassDeclNode>(p.arena(), span, methods, cnt);
 }
 
 // precondition: `return` token consumed
-ReturnNode *Parser::parse_return() 
+ReturnNode *parse_return(Parser &p) 
 {
-    const Span span = prev.span;
-    if (eat(TOKEN_SEMI))
-        return alloc<ReturnNode>(arena, span, nullptr);
-    ReturnNode *node = alloc<ReturnNode>(arena, span, parse_expr(1));
-    expect(TOKEN_SEMI, "expected `;`");
+    const Span span = p.prev().span;
+    if (p.eat(TOKEN_SEMI))
+        return alloc<ReturnNode>(p.arena(), span, nullptr);
+    ReturnNode *node = alloc<ReturnNode>(p.arena(), span, parse_expr(p, 1));
+    p.expect(TOKEN_SEMI, "expected `;`");
     return node;
 }
 
 // TEMP remove when we add functions
 // precondition: `print` token consumed
-PrintNode *Parser::parse_print() 
+PrintNode *parse_print(Parser &p) 
 {
-    const Span span = prev.span;
-    PrintNode *node = alloc<PrintNode>(arena, span, parse_expr(1));
-    expect(TOKEN_SEMI, "expected `;`");
+    const Span span = p.prev().span;
+    PrintNode *node = alloc<PrintNode>(p.arena(), span, parse_expr(p, 1));
+    p.expect(TOKEN_SEMI, "expected `;`");
     return node;
 }
 
-BlockNode *Parser::parse_block() 
+BlockNode *parse_block(Parser &p) 
 {
-    const Span span = at.span;
-    if (!expect(TOKEN_L_BRACE, "expected `{`"))
+    const Span span = p.at().span;
+    if (!p.expect(TOKEN_L_BRACE, "expected `{`"))
         return nullptr;
     Dynarr<Node*> nodearr;
-    while(at.tag != TOKEN_R_BRACE && at.tag != TOKEN_EOF) {
+    while(p.at().tag != TOKEN_R_BRACE && p.at().tag != TOKEN_EOF) {
         Node *node = nullptr;
-        if (at.tag == TOKEN_L_BRACE) {
-            node = parse_block();
-        } else if (eat(TOKEN_IF)) {
-            node = parse_if();
-        } else if (eat(TOKEN_VAR)) {
-            node = parse_var_decl();
-        } else if (eat(TOKEN_RETURN)) {
-            node = parse_return();  
-        } else if (eat(TOKEN_FN)) {
-            node = parse_fn_decl(false);
-        } else if (eat(TOKEN_CLASS)) {
-            node = parse_class_decl();
-        } else if (eat(TOKEN_PRINT)) {
-            node = parse_print();
-        } else if (expr_first(at.tag)) {
-            node = parse_expr(1);
-            expect(TOKEN_SEMI, "expected `;`"); 
-            node = alloc<ExprStmtNode>(arena, prev.span, node);
+        if (p.at().tag == TOKEN_L_BRACE) {
+            node = parse_block(p);
+        } else if (p.eat(TOKEN_IF)) {
+            node = parse_if(p);
+        } else if (p.eat(TOKEN_VAR)) {
+            node = parse_var_decl(p);
+        } else if (p.eat(TOKEN_RETURN)) {
+            node = parse_return(p);  
+        } else if (p.eat(TOKEN_FN)) {
+            node = parse_fn_decl(p, false);
+        } else if (p.eat(TOKEN_CLASS)) {
+            node = parse_class_decl(p);
+        } else if (p.eat(TOKEN_PRINT)) {
+            node = parse_print(p);
+        } else if (expr_first(p.at().tag)) {
+            node = parse_expr(p, 1);
+            p.expect(TOKEN_SEMI, "expected `;`"); 
+            node = alloc<ExprStmtNode>(p.arena(), p.prev().span, node);
         } else {
-            advance_with_err("expected statement");
+            p.advance_with_err("expected statement");
         }
         nodearr.push(node);
-        if (panic)
-            recover_block();
+        if (p.panic())
+            p.recover_block();
     }
-    expect(TOKEN_R_BRACE, "expected `}`");
+    p.expect(TOKEN_R_BRACE, "expected `}`");
     const i32 cnt = nodearr.size();
-    Node *const *const stmts = move_dynarr(arena, static_cast<Dynarr<Node*>&&>(nodearr));
-    return alloc<BlockNode>(arena, span, stmts, cnt);    
+    Node *const *const stmts = move_dynarr(p.arena(), move(nodearr));
+    return alloc<BlockNode>(p.arena(), span, stmts, cnt);    
 }
 
 // for now, a file is implicitly a fn except 
 // the body can only contain fn and class decls and mutual recursion is allowed
-FnDeclNode *Parser::parse_file() 
+FnDeclNode *parse_file(Parser &p) 
 {
     Dynarr<Node*> nodearr;
-    while (at.tag != TOKEN_EOF) {
-        if (eat(TOKEN_FN)) {
-            panic = false;
-            nodearr.push(parse_fn_decl(false));
-        } else if (eat(TOKEN_CLASS)) {
-            panic = false;
-            nodearr.push(parse_class_decl());
+    while (p.at().tag != TOKEN_EOF) {
+        if (p.eat(TOKEN_FN)) {
+            p.set_panic(false);
+            nodearr.push(parse_fn_decl(p, false));
+        } else if (p.eat(TOKEN_CLASS)) {
+            p.set_panic(false);
+            nodearr.push(parse_class_decl(p));
         } else {
-            advance_with_err("expected declaration");
+            p.advance_with_err("expected declaration");
         }
     }
     const i32 cnt = nodearr.size();
-    Node *const *const stmts = move_dynarr(arena, static_cast<Dynarr<Node*>&&>(nodearr));
+    Node *const *const stmts = move_dynarr(p.arena(), move(nodearr));
     const Span span = {.start = "script", .len = 7, .line = 1};
-    return alloc<FnDeclNode>(arena, span, alloc<BlockNode>(arena, span, stmts, cnt), nullptr, 0);
+    return alloc<FnDeclNode>(p.arena(), span, alloc<BlockNode>(p.arena(), span, stmts, cnt), nullptr, 0);
 }
 
-Node *Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
+Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
 {
-    return Parser(source, arena, errarr).parse_file();
+    Parser p(source, arena, errarr);
+    return parse_file(p);
 }

@@ -12,10 +12,16 @@ typedef int32_t i32;
 typedef int16_t i16;
 typedef int8_t i8;
 
+template <typename T>
+constexpr T&& move(T& t)
+{
+    return static_cast<T&&>(t);
+}
+
 template<class T>
 void swap(T& a, T& b)
 {
-    T tmp(static_cast<T&&>(a));
-    a = static_cast<T&&>(b);
-    b = static_cast<T&&>(tmp);
+    T tmp(move(a));
+    a = move(b);
+    b = move(tmp);
 }

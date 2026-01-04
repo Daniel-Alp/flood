@@ -34,7 +34,7 @@ int main(int argc, const char **argv)
 
     Dynarr<ErrMsg> errarr;
     Arena arena;
-    Node *node = Parser::parse(source, arena, errarr);
+    Node *node = parse(source, arena, errarr);
     if (errarr.size() > 0) {
         print_errarr(errarr, flag_color);
     } else {

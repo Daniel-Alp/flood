@@ -179,38 +179,31 @@ struct ReturnNode : public Node {
 };
 
 class Parser {
-    Arena &arena;
+    Arena &arena_;
     Dynarr<ErrMsg> &errarr;
     Scanner scanner;
 
-    Token at;
-    Token prev;
-    bool panic;
-
+    Token at_;
+    Token prev_;
+    bool panic_;
+public:
+    Arena &arena() const;
+    Token at() const;
+    Token prev() const;
+    bool panic() const;
+    void set_panic(const bool panic);
     void bump();
     bool eat(TokenTag tag);
     void emit_err(const char *msg);
     bool expect(TokenTag tag, const char *msg);
     void advance_with_err(const char *msg);
     void recover_block();
-
-    Dynarr<Node*> parse_arg_list(const TokenTag tag_right);
-    Node *parse_expr(const i32 prec_lvl);
-    BlockNode *parse_block();
-    IfNode *parse_if();
-    VarDeclNode *parse_var_decl();
-    FnDeclNode *parse_fn_decl(const bool is_method);
-    ClassDeclNode *parse_class_decl();
-    ReturnNode *parse_return();
-    PrintNode *parse_print();
-    FnDeclNode *parse_file();
-
     Parser(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
-        : arena(arena), errarr(errarr), scanner(source, errarr)
+        : arena_(arena), errarr(errarr), scanner(source, errarr)
     {
-        at = scanner.next_token();
-        panic = false;
+        at_ = scanner.next_token();
+        panic_ = false;
     }
-public:
-    static Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);
 };
+
+Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);

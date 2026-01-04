@@ -23,3 +23,4 @@
 // void release_symbol_arr(struct SymArr *arr);
 
 // i32 push_symbol_arr(struct SymArr *arr, struct Symbol sym);
+

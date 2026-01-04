@@ -68,7 +68,7 @@ public:
     void push(T &&e)
     {
         grow();
-        new (vals + cnt) T(static_cast<T&&>(e));
+        new (vals + cnt) T(move(e));
         cnt++;
     };
     

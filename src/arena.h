@@ -26,6 +26,6 @@ T *move_dynarr(Arena &arena, Dynarr<T> &&dynarr)
 {
     T *vals = reinterpret_cast<T*>(arena.push(dynarr.size() * sizeof(T)));
     for (i32 i = 0; i < dynarr.size(); i++) 
-        new (vals + i) T(static_cast<T&&>(dynarr[i]));
+        new (vals + i) T(move(dynarr[i]));
     return vals;
 }
