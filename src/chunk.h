@@ -1,5 +1,6 @@
 // #pragma once
 // #include "common.h"
+// #include "dynarr.h"
 // #include "value.h"
 
 // // TODO add LONG equivalents for GET/SET bytecodes
@@ -62,12 +63,8 @@
 //     OP_PRINT,
 // };
 
-
 // class Chunk {
-//     i32 cnt;
-//     i32 cap;
-//     u8 *code;
-//     // NOTE: 
+//     // NOTE:    
 //     // representing line info
 //     //      var x;
 //     //      x = 1 + 2;
@@ -85,17 +82,19 @@
 //     //      1       line no
 //     //      1       opcode cnt
 //     //      2       line no
-//     //      8       opcode_cnt
-//     i32 lines_cnt; 
-//     i32 lines_cap;                 
-//     i32 *lines;
-//     struct ValArray constants;
+//     //      8       opcode cnt
+//     Dynarr<i32> lines;
+//     Dynarr<u8> code;
+//     Dynarr<Value> constants;
+// public:
+//     i32 len() const
+//     {
+//         return code.len();    
+//     }
+//     u8 &operator[](const i32 idx)
+//     {
+//         return code[idx];
+//     }
+//     void emit_byte(const u8 byte, const i32 line);
+//     i32 add_constant(const Value val);
 // };
-
-// void init_chunk(struct Chunk *chunk);
-
-// void release_chunk(struct Chunk *chunk);
-
-// void emit_byte(struct Chunk *chunk, const u8 byte, const i32 line);
-
-// i32 add_constant(struct Chunk *chunk, const Value val);

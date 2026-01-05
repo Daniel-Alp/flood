@@ -30,6 +30,8 @@ const char *binop_str(const TokenTag tag)
     }
 }
 
+// TODO change pointers to references
+
 static void print_atom(const AtomNode *node) 
 {
     printf("Atom %.*s", node->span.len, node->span.start);
@@ -167,6 +169,13 @@ static void print_print(const PrintNode *node, const i32 offset)
     print_node(node->expr, offset + 2);
 }
 
+static void print_module(const ModuleNode *node, const i32 offset)
+{
+    printf("ModuleNode");
+    for (i32 i = 0; i < node->cnt; i++)
+        print_node(node->decls[i], offset + 2);
+}
+
 void print_node(const Node *node, const i32 offset) 
 {
     if (offset != 0)
@@ -189,6 +198,7 @@ void print_node(const Node *node, const i32 offset)
     case NODE_RETURN:      print_return(static_cast<const ReturnNode*>(node), offset); break;
     // TEMP remove when we add functions
     case NODE_PRINT:       print_print(static_cast<const PrintNode*>(node), offset); break; 
+    case NODE_MODULE:      print_module(static_cast<const ModuleNode*>(node), offset); break;
     }
     printf(")");
     if (offset == 0)

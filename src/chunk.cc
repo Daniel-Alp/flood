@@ -1,56 +1,18 @@
-// #include <stdlib.h>
 // #include "chunk.h"
-// #include "memory.h"
 
-// void init_chunk(struct Chunk *chunk) 
+// void Chunk::emit_byte(const u8 byte, const i32 line) 
 // {
-//     chunk->cnt = 0;
-//     chunk->cap = 8;
-//     chunk->code = allocate(chunk->cap * sizeof(u8));
-//     chunk->lines_cnt = 0;
-//     chunk->lines_cap = 8;
-//     chunk->lines = allocate(chunk->lines_cap * sizeof(i32));
-//     init_val_array(&chunk->constants);
-// }
-
-// void release_chunk(struct Chunk *chunk) 
-// {
-//     chunk->cnt = 0;
-//     chunk->cap = 0;
-//     release(chunk->code);
-//     chunk->code = NULL;
-    
-//     chunk->lines_cnt = 0;
-//     chunk->lines_cap = 0;
-//     release(chunk->lines);
-//     chunk->lines = NULL;
-
-//     release_val_array(&chunk->constants);
-// }
-
-// void emit_byte(struct Chunk *chunk, const u8 byte, const i32 line) 
-// {
-//     if (chunk->lines_cnt == 0 || chunk->lines[chunk->lines_cnt-2] != line) {
-//         if (chunk->lines_cnt + 2 >= chunk->lines_cap) {
-//             chunk->lines_cap *= 2;
-//             chunk->lines = reallocate(chunk->lines, chunk->lines_cap * sizeof(i32));
-//         }
-//         chunk->lines_cnt += 2;
-//         chunk->lines[chunk->lines_cnt-2] = line;
-//         chunk->lines[chunk->lines_cnt-1] = 1;
+//     if (lines.len() == 0 || lines[lines.len()-2] != line) {
+//         lines.push(line);
+//         lines.push(1);  
 //     } else {
-//         chunk->lines[chunk->lines_cnt-1]++;
+//         lines[lines.len()-1]++;
 //     }
-
-//     if (chunk->cnt == chunk->cap) {
-//         chunk->cap *= 2;
-//         chunk->code = reallocate(chunk->code, chunk->cap * sizeof(u8));
-//     }
-//     chunk->code[chunk->cnt] = byte;
-//     chunk->cnt++;
+//     code.push(byte);
 // }
 
-// i32 add_constant(struct Chunk *chunk, const Value val) 
+// i32 Chunk::add_constant(const Value val) 
 // {
-//     return push_val_array(&chunk->constants, val);
+//     constants.push(val);
+//     return constants.len()-1;
 // }

@@ -1,7 +1,7 @@
 #pragma once
 #include <string.h>
 #include "common.h"
-#include "value.h"
+#include "dynarr.h" // consider putting slice into its own thing
 
 inline u32 hash_string(const char *chars, i32 cnt)
 {
@@ -16,49 +16,74 @@ inline u32 hash_string(const char *chars, i32 cnt)
 class String {
     i32 cnt;
     i32 cap;
-    char *chars;
-    u32 hash;
-
-    String(): cnt(0), cap(8), chars(new char[cap]) {}
+    char *chars_;
+    u32 hash_;
+public:
+    String(): cnt(0), cap(8), chars_(new char[cap]) {}
 
     ~String()
     {
         cnt = 0;
         cap = 0;
-        delete[] chars;
-        chars = nullptr;
-        hash = 0;
+        delete[] chars_;
+        chars_ = nullptr;
+        hash_ = 0;
     }
     
-    String(const char *chars): cnt(strlen(chars)+1), cap(cnt), chars(new char[cap]), hash(hash_string(chars, cnt))
+    String(const char *chars): cnt(strlen(chars)+1), cap(cnt), chars_(new char[cap]), hash_(hash_string(chars, cnt))
     {
-        strcpy(this->chars, chars);
+        strcpy(this->chars_, chars);
     };
 
-    String(const String& other): cnt(other.cnt), cap(other.cap), chars(new char[cap]), hash(other.hash)
+    String(const String& other): cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
     {
-        strcpy(chars, other.chars);
+        strcpy(chars_, other.chars_);
     };
 
-    String(String&& other): cnt(other.cnt), cap(other.cap), chars(other.chars), hash(other.hash)
+    String(String&& other): cnt(other.cnt), cap(other.cap), chars_(other.chars_), hash_(other.hash_)
     {
         other.cnt = 0;
         other.cap = 0;
-        other.chars = nullptr;
-        other.hash = 0;
+        other.chars_ = nullptr;
+        other.hash_ = 0;
     }
 
     String& operator=(String other)
     {
         swap(cnt, other.cnt);
         swap(cap, other.cap);
-        swap(chars, other.chars);
-        swap(hash, other.hash);
+        swap(chars_, other.chars_);
+        swap(hash_, other.hash_);
         return *this;
+    }
+
+    bool operator==(const String &other) const
+    {
+        return hash_ == other.hash_ && cnt == other.cnt && memcmp(chars_, other.chars_, cnt) == 0;
     }
 
     char operator[](const i32 idx) const
     {
-        return chars[idx];
+        return chars_[idx];
+    }
+
+    i32 size() const
+    {
+        return cnt;
+    }
+
+    const char *chars() const
+    {
+        return chars_;
+    }
+
+    u32 hash() const
+    {
+        return hash_;
+    }
+
+    Slice<char> slice()
+    {
+        return Slice<char>(chars_, cnt);
     }
 };

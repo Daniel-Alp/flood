@@ -1,5 +1,7 @@
 // #pragma once
 // #include "common.h"
+// #include "dynarr.h"
+// #include "string_symbol.h"
 // #define TABLE_LOAD_FACTOR (0.75)
 
 // struct Obj;
@@ -22,26 +24,26 @@
 //     } as;
 // } Value;
 
-// struct ValArray {
-//     i32 cnt;
-//     i32 cap;
-//     Value *vals;
-// };
-
-// // TODO implement optimization
-// struct ValTableEntry {
+// struct Assoc {
+//     // TODO
 //     // we should really be using ObjString here but it means we need to 
 //     // pass an instance of VM to certain functions in object.c
-//     u32 hash;
-//     i32 len;
-//     const char *chars;
+//     Slice<char> key;
 //     Value val;
 // };
 
-// struct ValTable {
+// // TODO implement optimization
+// class ValTable {
 //     i32 cnt;
 //     i32 cap;
-//     struct ValTableEntry *entries;
+//     Assoc *vals;
+// // statuc ValTable::Assoc &find(String &&key);
+// public:    
+//     ValTable(): cnt(0), cap(8), vals(static_cast<Assoc*>())
+//     {
+
+//     }
+//     void insert(String &&key, Value val);
 // };
 
 // #define MK_NULL           ((Value){VAL_NULL, {.number = 0}})
@@ -58,27 +60,6 @@
 // #define IS_NUM(val)       ((val).tag == VAL_NUM)
 // #define IS_OBJ(val)       ((val).tag == VAL_OBJ)
 
-// void init_val_array(struct ValArray *arr);
-
-// void release_val_array(struct ValArray *arr);
-
-// i32 push_val_array(struct ValArray *arr, Value val);
-
-// u32 hash_string(const char *str, i32 len);
-
-// void init_val_table(struct ValTable *tab);
-
-// void release_val_table(struct ValTable *tab);
-
-// struct ValTableEntry *get_val_table_slot(
-//     struct ValTableEntry *vals, 
-//     i32 cap, 
-//     u32 hash, 
-//     i32 len, 
-//     const char *str);
-
-// void insert_val_table(struct ValTable *tab, const char *str, i32 len, Value val);
-
-// bool val_eq(Value val1, Value val2);
+// bool val_eq(const Value val1, const Value val2);
 
 // void print_val(Value val);

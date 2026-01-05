@@ -1,4 +1,16 @@
 
 fn main() {
-    print (2 + 3) * 4 + 5;
+    var x;
+    var y;
+    {
+        var z;
+        fn foo(h) {
+            var t;
+        }
+    }
+    var w;
+}
+
+fn bar() {
+
 }

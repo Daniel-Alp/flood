@@ -86,10 +86,10 @@ static i32 print_line(const char *ptr)
 // precondition: at least one error
 void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color) 
 {
-    const i32 last_line = line_num(errarr[errarr.size()-1].span.start);
+    const i32 last_line = line_num(errarr[errarr.len()-1].span.start);
     const i32 max_pad = num_digits(last_line);
 
-    for (i32 i = 0; i < errarr.size(); i++) {
+    for (i32 i = 0; i < errarr.len(); i++) {
         struct ErrMsg err = errarr[i];
         
         const i32 line = line_num(err.span.start);

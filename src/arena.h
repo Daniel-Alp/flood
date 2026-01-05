@@ -24,8 +24,8 @@ T *alloc(Arena &arena, Args&&... args)
 template<typename T>
 T *move_dynarr(Arena &arena, Dynarr<T> &&dynarr)
 {
-    T *vals = reinterpret_cast<T*>(arena.push(dynarr.size() * sizeof(T)));
-    for (i32 i = 0; i < dynarr.size(); i++) 
+    T *vals = reinterpret_cast<T*>(arena.push(dynarr.len() * sizeof(T)));
+    for (i32 i = 0; i < dynarr.len(); i++) 
         new (vals + i) T(move(dynarr[i]));
     return vals;
 }

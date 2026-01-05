@@ -207,7 +207,7 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
     case TOKEN_L_SQUARE: {
         Dynarr<Node*> nodearr = parse_arg_list(p, TOKEN_R_SQUARE);
         p.expect(TOKEN_R_SQUARE, "expected `]`");
-        const i32 cnt = nodearr.size();
+        const i32 cnt = nodearr.len();
         Node *const *const items = move_dynarr(p.arena(), move(nodearr));
         lhs = alloc<ListNode>(p.arena(), token.span, items, cnt);
         break;
@@ -240,7 +240,7 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
             const Span fn_call_span = p.prev().span;
             Dynarr<Node*> nodearr = parse_arg_list(p, TOKEN_R_PAREN);
             p.expect(TOKEN_R_PAREN, "expected `)`");
-            const i32 cnt = nodearr.size();
+            const i32 cnt = nodearr.len();
             Node *const *const args = move_dynarr(p.arena(), move(nodearr));
             lhs = alloc<CallNode>(p.arena(), fn_call_span, lhs, args, cnt);
             continue;
@@ -323,7 +323,7 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
         paramarr.push(IdentNode(Span{.start = "self", .len = 4, .line = 0}));
     }
     p.expect(TOKEN_R_PAREN, "expected `)`");
-    const i32 arity = paramarr.size();
+    const i32 arity = paramarr.len();
     IdentNode *const params = move_dynarr(p.arena(), move(paramarr));
     BlockNode *const body = parse_block(p);
     return alloc<FnDeclNode>(p.arena(), span, body, params, arity);    
@@ -345,7 +345,7 @@ ClassDeclNode *parse_class_decl(Parser &p)
         }    
     }
     p.expect(TOKEN_R_BRACE, "expected `}`");
-    const i32 cnt = nodearr.size();
+    const i32 cnt = nodearr.len();
     FnDeclNode *const *const methods = move_dynarr(p.arena(), move(nodearr));
     return alloc<ClassDeclNode>(p.arena(), span, methods, cnt);
 }
@@ -405,14 +405,14 @@ BlockNode *parse_block(Parser &p)
             p.recover_block();
     }
     p.expect(TOKEN_R_BRACE, "expected `}`");
-    const i32 cnt = nodearr.size();
+    const i32 cnt = nodearr.len();
     Node *const *const stmts = move_dynarr(p.arena(), move(nodearr));
     return alloc<BlockNode>(p.arena(), span, stmts, cnt);    
 }
 
 // for now, a file is implicitly a fn except 
 // the body can only contain fn and class decls and mutual recursion is allowed
-FnDeclNode *parse_file(Parser &p) 
+ModuleNode &parse_file(Parser &p) 
 {
     Dynarr<Node*> nodearr;
     while (p.at().tag != TOKEN_EOF) {
@@ -426,14 +426,14 @@ FnDeclNode *parse_file(Parser &p)
             p.advance_with_err("expected declaration");
         }
     }
-    const i32 cnt = nodearr.size();
-    Node *const *const stmts = move_dynarr(p.arena(), move(nodearr));
-    const Span span = {.start = "script", .len = 7, .line = 1};
-    return alloc<FnDeclNode>(p.arena(), span, alloc<BlockNode>(p.arena(), span, stmts, cnt), nullptr, 0);
+    const i32 cnt = nodearr.len();
+    Node *const *const decls = move_dynarr(p.arena(), move(nodearr));
+    const Span span = {.start = "module", .len = 7, .line = 1};
+    return *alloc<ModuleNode>(p.arena(), span, decls, cnt);
 }
 
 // TODO consider parser owning Arena 
-Node *Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
+ModuleNode &Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
 {
     Parser p(source, arena, errarr);
     return parse_file(p);

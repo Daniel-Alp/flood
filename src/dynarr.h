@@ -2,6 +2,26 @@
 #include <new>
 #include "common.h"
 
+// template <typename T>
+// class Slice
+// {
+//     T *const p;
+//     const i32 cnt;
+
+// public:
+//     Slice(T *const p, const i32 cnt): p(p), cnt(cnt) {};
+
+//     i32 len() const
+//     {
+//         return cnt;
+//     };
+
+//     T& operator[](const i32 idx) 
+//     {
+//         return p[idx];
+//     };
+// };
+
 template<typename T>
 class Dynarr
 {
@@ -14,7 +34,7 @@ class Dynarr
         if (cnt == cap) {
             T *new_vals = static_cast<T*>(operator new(cap*2 * sizeof(T)));
             for (i32 i = 0; i < cap; i++) {
-                new (new_vals + i) T(vals[i]);
+                new (new_vals + i) T(move(vals[i]));
             }
             operator delete(vals);
             vals = new_vals;
@@ -36,9 +56,9 @@ public:
         cap = 0;
     };
 
-    Dynarr(const Dynarr &other): cnt(0), cap(other.size()), vals(static_cast<T*>(operator new(cap * sizeof(T))))
+    Dynarr(const Dynarr &other): cnt(0), cap(other.len()), vals(static_cast<T*>(operator new(cap * sizeof(T))))
     {
-        for (i32 i = 0; i < other.size(); i++) {
+        for (i32 i = 0; i < other.len(); i++) {
             push(other[i]);
         }
     }
@@ -72,7 +92,7 @@ public:
         cnt++;
     };
     
-    i32 size() const
+    i32 len() const
     {
         return cnt;
     };

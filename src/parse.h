@@ -23,8 +23,11 @@ enum NodeTag {
     NODE_IF,
     NODE_RETURN,
     // TEMP remove when we add functions
-    NODE_PRINT
+    NODE_PRINT,
+    NODE_MODULE
 };
+
+// TODO replace this shit with slices where needed
 
 struct BlockNode;
 
@@ -178,6 +181,14 @@ struct ReturnNode : public Node {
     ReturnNode(const Span span, Node *const expr): Node(span, NODE_RETURN), expr(expr) {};
 };
 
+struct ModuleNode : public Node {
+    // span is ??? (for now just dummy span) TODO
+    Node *const *const decls;
+    const i32 cnt;
+    ModuleNode(const Span span, Node *const *const decls, const i32 cnt)
+        : Node(span, NODE_MODULE), decls(decls), cnt(cnt) {};
+};
+
 class Parser {
     Arena &arena_;
     Dynarr<ErrMsg> &errarr;
@@ -204,6 +215,6 @@ public:
     bool expect(TokenTag tag, const char *msg);
     void advance_with_err(const char *msg);
     void recover_block();
-    static Node *parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);
+    static ModuleNode &parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);
 };
 
