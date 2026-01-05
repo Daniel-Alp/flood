@@ -6,7 +6,6 @@
 #define MAX_GLOBALS   (256)
 #define FLAG_NONE     (0)
 #define FLAG_CAPTURED (1 << 1) // variable that a function closes over
-#define FLAG_INIT     (1 << 3) // identifier is a constructor
 
 // TODO add back special case (recursive closure case) and profile
 

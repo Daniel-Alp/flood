@@ -282,7 +282,7 @@
 //         }
 //         case OP_CLASS: {
 //             u8 idx = *ip++;
-//             struct StringObj *name = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+//             struct StringObj *name = AS_STRING(frame->closure->fn->chunk.constants_.vals[idx]);
 //             struct ClassObj *klass = (struct ClassObj*)alloc_vm_obj(vm, sizeof(struct ClassObj));
 //             init_class_obj(klass, name, vm);
 //             sp[0] = MK_OBJ((struct Obj*)klass);
@@ -319,7 +319,7 @@
 //         }
 //         case OP_GET_CONST: {
 //             u16 idx = *ip++;
-//             sp[0] = frame->closure->fn->chunk.constants.vals[idx];
+//             sp[0] = frame->closure->fn->chunk.constants_.vals[idx];
 //             sp++;
 //             break;
 //         }
@@ -427,7 +427,7 @@
 //         // TODO string interning (and later symbols) to optimize method lookup
 //         case OP_GET_FIELD: {
 //             u8 idx = *ip++;
-//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants_.vals[idx]);
 //             Value val = sp[-1];
         
 //             // attempt to lookup field
@@ -454,7 +454,7 @@
 //         // TODO should distinguish between setting prop outside or within the instance
 //         case OP_SET_FIELD: {
 //             u8 idx = *ip++;
-//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants_.vals[idx]);
 //             Value container = sp[-2];
 //             Value val = sp[-1];
 
@@ -484,7 +484,7 @@
 //         // TODO implement OP_INVOKE optimization
 //         case OP_GET_METHOD: {
 //             u8 idx = *ip++;
-//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants.vals[idx]);
+//             struct StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants_.vals[idx]);
 //             Value val = sp[-1];
 //             if(IS_OBJ(val)) {
 //                 struct ClassObj *klass = AS_OBJ(val)->klass;

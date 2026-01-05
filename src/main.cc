@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "arena.h"
 #include "common.h"
+#include "compile.h"
 #include "debug.h"
 #include "dynarr.h"
 #include "error.h"
@@ -38,8 +39,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    Dynarr<Ident> symarr;
-    SemaCtx::analyze(node, symarr, errarr);
+    Dynarr<Ident> idarr;
+    SemaCtx::analyze(node, idarr, errarr);
     if (errarr.len() > 0) {
         print_errarr(errarr, flag_color);
         delete[] buf;
@@ -47,12 +48,16 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    for (i32 i = 0; i < symarr.len(); i++) {
-        printf("span: %.*s\n", symarr[i].span.len, symarr[i].span.start);
-        printf("idx: %d\n", symarr[i].idx);
+    print_node(&node, 0);
+    VM vm;
+    CompileCtx::compile(vm, idarr, node, errarr);
+    if (errarr.len() > 0) {
+        print_errarr(errarr, flag_color);
+        delete[] buf;
+        fclose(fp);
+        return 1;
     }
 
-    print_node(&node, 0);
     delete[] buf;
     fclose(fp);
 }

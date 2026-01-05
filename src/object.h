@@ -1,30 +1,25 @@
 #pragma once
 #include "dynarr.h"
+#include "string_symbol.h"
 #include "value.h"
 #include "chunk.h"
-#include "scan.h"
+#include "gc.h"
 
 enum ObjTag {
     OBJ_FOREIGN_FN,
-    OBJ_FOREIGN_METHOD,
     OBJ_FN,
     OBJ_HEAP_VAL,
     OBJ_CLOSURE,
-    OBJ_CLASS,
-    OBJ_INSTANCE,
-    OBJ_METHOD,
     OBJ_LIST,
     OBJ_STRING
 };
 
-struct ClassObj;
-
 struct Obj {
-    enum ObjTag tag;
+    ObjTag tag;
     u8 color;         
     u8 printed;
-    ClassObj *klass;
     Obj *next;
+    Obj(const ObjTag tag): tag(tag), color(GC_WHITE), printed(0), next(nullptr) {}
 };
 
 // foreign fn returns true if function executed successfully, false otherwise
@@ -40,22 +35,21 @@ struct ForeignFnObj : public Obj {
     StringObj *name;
     ForeignFn code;
     i32 arity;
-};
-
-// TODO for f_method and method consider storing a copy fn instead of a pointer
-struct ForeignMethodObj : public Obj {
-    ForeignFnObj *fn;
-    Obj *self;
+    ForeignFnObj(StringObj *name, ForeignFn code, i32 arity)
+        : Obj(OBJ_FOREIGN_FN), name(name), code(code), arity(arity) {}
 };
 
 struct FnObj : public Obj {
     StringObj *name;
     Chunk chunk; 
     i32 arity;
+    FnObj(StringObj *name, Chunk &&chunk, i32 arity)
+        : Obj(OBJ_FN), name(name), chunk(move(chunk)), arity(arity) {};
 };
 
 struct HeapValObj : public Obj {
     Value val;
+    HeapValObj(Value val): Obj(OBJ_HEAP_VAL), val(val) {};
 };
 
 struct ClosureObj : public Obj {
@@ -63,29 +57,22 @@ struct ClosureObj : public Obj {
     // every element of this array is a pointer to a heap allocated Val
     u8 capture_cnt;
     HeapValObj **captures;
-    // TODO store captured values that are not mutated directly in the closure
-};
-
-struct ClassObj : public Obj {
-    StringObj *name;
-    ValTable methods; // hashmap of fn's
-};
-
-struct InstanceObj : public Obj {
-    ValTable fields; 
-};
-
-struct MethodObj : public Obj {
-    ClosureObj *closure;
-    InstanceObj *self;
+    ClosureObj(FnObj *fn, u8 capture_cnt)
+        : Obj(OBJ_CLOSURE), fn(fn), capture_cnt(capture_cnt), captures(new HeapValObj*[capture_cnt]) {}
+    ~ClosureObj()
+    {
+        delete[] captures;
+    }
 };
 
 struct ListObj : public Obj {
     Dynarr<Value> vals;
+    ListObj(Dynarr<Value> &&vals): Obj(OBJ_LIST), vals(move(vals)) {};
 };
 
 struct StringObj : public Obj {
     String str;
+    StringObj(String &&str): Obj(OBJ_STRING), str(move(str)) {};
 };
 
 static inline bool is_obj_tag(Value val, enum ObjTag tag) 
@@ -94,79 +81,15 @@ static inline bool is_obj_tag(Value val, enum ObjTag tag)
 }
 
 #define IS_FOREIGN_FN(val)     (is_obj_tag(val, OBJ_FOREIGN_FN))
-#define IS_FOREIGN_METHOD(val) (is_obj_tag(val, OBJ_FOREIGN_METHOD)) 
 #define IS_FN(val)             (is_obj_tag(val, OBJ_FN))
 #define IS_HEAP_VAL(val)       (is_obj_tag(val, OBJ_HEAP_VAL))
 #define IS_CLOSURE(val)        (is_obj_tag(val, OBJ_CLOSURE))
-#define IS_CLASS(val)          (is_obj_tag(val, OBJ_CLASS))
-#define IS_INSTANCE(val)       (is_obj_tag(val, OBJ_INSTANCE))
-#define IS_METHOD(val)         (is_obj_tag(val, OBJ_METHOD))
 #define IS_LIST(val)           (is_obj_tag(val, OBJ_LIST))
 #define IS_STRING(val)         (is_obj_tag(val, OBJ_STRING))
 
-#define AS_FOREIGN_FN(val)     ((struct ForeignFnObj*)AS_OBJ(val))
-#define AS_FOREIGN_METHOD(val) ((struct ForeignMethodObj*)AS_OBJ(val))
-#define AS_FN(val)             ((struct FnObj*)AS_OBJ(val))
-#define AS_HEAP_VAL(val)       ((struct HeapValObj*)AS_OBJ(val))
-#define AS_CLOSURE(val)        ((struct ClosureObj*)AS_OBJ(val))
-#define AS_CLASS(val)          ((struct ClassObj*)AS_OBJ(val))
-#define AS_INSTANCE(val)       ((struct InstanceObj*)AS_OBJ(val))
-#define AS_METHOD(val)         ((struct MethodObj*)AS_OBJ(val))
-#define AS_LIST(val)           ((struct ListObj*)AS_OBJ(val))
-#define AS_STRING(val)         ((struct StringObj*)AS_OBJ(val))
-
-// void init_foreign_fn_obj(
-//     struct ForeignFnObj *f_fn,
-//     struct StringObj *name,
-//     i32 arity,
-//     ForeignFn code
-// );
-
-// struct Obj *alloc_vm_obj(struct VM *vm, u64 size);
-
-// void release_obj(struct Obj *obj);
-
-// void release_foreign_fn_obj(struct ForeignFnObj *f_fn);
-
-// void init_foreign_method_obj(
-//     struct ForeignMethodObj *f_method, 
-//     struct ForeignFnObj *f_fn,
-//     struct Obj* self
-// );
-
-// void release_foreign_method_obj(struct ForeignMethodObj *f_method);
-
-// void init_fn_obj(struct FnObj *fn, struct StringObj *name, i32 arity);
-
-// void release_fn_obj(struct FnObj *fn);
-
-// // no release method because nothing to release
-// void init_heap_val_obj(struct HeapValObj *heap_val, Value val);
-
-// void init_closure_obj(struct ClosureObj *closure, struct FnObj *fn, u8 cnt);
-
-// void release_closure_obj(struct ClosureObj *closure);
-
-// void init_class_obj(struct ClassObj *klass, struct StringObj *name, struct VM *vm);
-
-// void release_class_obj(struct ClassObj *klass);
-
-// void init_instance_obj(struct InstanceObj *instance, struct ClassObj *klass);
-
-// void release_instance_obj(struct InstanceObj *instance);
-
-// void init_method_obj(struct MethodObj *method, struct ClosureObj *closure, struct InstanceObj *self);
-
-// void release_method_obj(struct MethodObj *method);
-
-// void init_list_obj(struct ListObj *list, Value *vals, i32 cnt, struct VM *vm);
-
-// void release_list_obj(struct ListObj *list);
-
-// void init_string_obj(struct StringObj *str, u32 hash, i32 len, char *chars, struct VM *vm);
-
-// void release_string_obj(struct StringObj *str);
-
-// struct StringObj *string_from_span(struct VM *vm, struct Span span);
-
-// struct StringObj *string_from_c_str(struct VM *vm, const char *c_str);
+#define AS_FOREIGN_FN(val)     (static_cast<ForeignFnObj*>(AS_OBJ(val)))
+#define AS_FN(val)             (static_cast<FnObj*>(AS_OBJ(val)))
+#define AS_HEAP_VAL(val)       (static_cast<HeapValObj*>(AS_OBJ(val)))
+#define AS_CLOSURE(val)        (static_cast<ClosureObj*>(AS_OBJ(val)))
+#define AS_LIST(val)           (static_cast<ListObj*>(AS_OBJ(val)))
+#define AS_STRING(val)         (static_cast<StringObj*>(AS_OBJ(val)))

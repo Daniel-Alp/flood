@@ -2,26 +2,6 @@
 #include <new>
 #include "common.h"
 
-// template <typename T>
-// class Slice
-// {
-//     T *const p;
-//     const i32 cnt;
-
-// public:
-//     Slice(T *const p, const i32 cnt): p(p), cnt(cnt) {};
-
-//     i32 len() const
-//     {
-//         return cnt;
-//     };
-
-//     T& operator[](const i32 idx) 
-//     {
-//         return p[idx];
-//     };
-// };
-
 template<typename T>
 class Dynarr
 {

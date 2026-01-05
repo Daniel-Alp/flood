@@ -18,7 +18,7 @@ public:
 template<typename T, typename... Args>
 T *alloc(Arena &arena, Args&&... args) 
 {
-    return new (arena.push(sizeof(T))) T(args...);
+    return new (arena.push(sizeof(T))) T(forward<Args>(args)...);
 }
 
 template<typename T>

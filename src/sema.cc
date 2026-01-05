@@ -70,9 +70,7 @@ static void propagate_captures(SemaCtx &s, const i32 id)
     // NOTE: 
     // special cases. 
     // if sym->depth == 0 the ident is global so we don't need to capture it.
-    // if id == fn->id then the fn we're compiling needs a ptr to itself,
-    // we can get this from the current stack frame.
-    if (ident.depth > s.idarr[fn->id].depth || ident.depth == 0 || id == fn->id)
+    if (ident.depth > s.idarr[fn->id].depth || ident.depth == 0)
         return;
     for (i32 i = 0; i < fn->stack_capture_cnt; i++) {
         if (id == fn->stack_captures[i])
@@ -151,13 +149,14 @@ static void analyze_fn_call(SemaCtx &s, const CallNode &node)
         analyze_node(s, *node.args[i]);
 }
 
-static void analyze_block(SemaCtx &s, const BlockNode &node) 
+static void analyze_block(SemaCtx &s, BlockNode &node) 
 {
     const i32 local_cnt = s.local_cnt;
     s.depth++;
     for (i32 i = 0; i < node.cnt; i++)
         analyze_node(s, *node.stmts[i]);
     s.depth--;
+    node.local_cnt += local_cnt - s.local_cnt;
     s.local_cnt = local_cnt;
 }
 
@@ -181,11 +180,8 @@ static void analyze_print(SemaCtx &s, const PrintNode &node)
 
 static void analyze_return(SemaCtx &s, const ReturnNode &node) 
 {
-    if (node.expr) {
-        if (s.idarr[s.fn_node->id].flags & FLAG_INIT)
-            s.errarr.push(ErrMsg{node.span, "init implicitly returns `self` so return cannot have expression"});
+    if (node.expr)
         analyze_node(s, *node.expr);
-    }
 }
 
 static void analyze_var_decl(SemaCtx &s, VarDeclNode &node) 
@@ -197,7 +193,6 @@ static void analyze_var_decl(SemaCtx &s, VarDeclNode &node)
 
 static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
 {
-    // push state and enter the fn
     node.parent = s.fn_node;
     s.fn_node = &node;
     const i32 local_cnt = s.local_cnt;
@@ -205,10 +200,10 @@ static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
     s.depth++;
     for (i32 i = 0; i < node.arity; i++)
         node.params[i].id = declare_local(s, node.params[i].span, FLAG_NONE);
+    node.body->local_cnt += node.arity;
     s.depth--;
     analyze_block(s, *node.body);
 
-    // pop state and leave the fn
     s.local_cnt = local_cnt;
     s.fn_node = node.parent;
     

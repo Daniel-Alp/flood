@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "debug.h"
+#include "chunk.h"
 #include "parse.h"
 #include "scan.h"
 
@@ -152,16 +153,6 @@ static void print_fn_decl(const FnDeclNode *node, const i32 offset)
     print_node(node->body, offset + 2);
 }
 
-static void print_class_decl(const ClassDeclNode *node, const i32 offset)
-{
-    printf("ClassDeclNode\n");
-    printf("%*s", offset + 2, "");
-    printf("%.*s", node->span.len, node->span.start);
-    printf(" id: %d", node->id);
-    for (i32 i = 0; i < node->cnt; i++)
-        print_node(node->methods[i], offset + 2);
-}
-
 // TEMP remove when we add functions
 static void print_print(const PrintNode *node, const i32 offset) 
 {
@@ -194,7 +185,6 @@ void print_node(const Node *node, const i32 offset)
     case NODE_EXPR_STMT:   print_expr_stmt(static_cast<const ExprStmtNode*>(node), offset); break;
     case NODE_VAR_DECL:    print_var_decl(static_cast<const VarDeclNode*>(node), offset); break;
     case NODE_FN_DECL:     print_fn_decl(static_cast<const FnDeclNode*>(node), offset); break;
-    case NODE_CLASS_DECL:  print_class_decl(static_cast<const ClassDeclNode*>(node), offset); break;
     case NODE_RETURN:      print_return(static_cast<const ReturnNode*>(node), offset); break;
     // TEMP remove when we add functions
     case NODE_PRINT:       print_print(static_cast<const PrintNode*>(node), offset); break; 
@@ -205,108 +195,111 @@ void print_node(const Node *node, const i32 offset)
         printf("\n");
 }
 
-// const char *opcode_str[] = {
-//     [OP_NULL]          = "OP_NULL",
-//     [OP_TRUE]          = "OP_TRUE",
-//     [OP_FALSE]         = "OP_FALSE",
-//     [OP_ADD]           = "OP_ADD",
-//     [OP_SUB]           = "OP_SUB", 
-//     [OP_MUL]           = "OP_MUL",
-//     [OP_DIV]           = "OP_DIV",
-//     [OP_FLOORDIV]      = "OP_FLOORDIV",
-//     [OP_MOD]           = "OP_MOD",
-//     [OP_LT]            = "OP_LT",
-//     [OP_LEQ]           = "OP_LEQ",
-//     [OP_GT]            = "OP_GT",
-//     [OP_GEQ]           = "OP_GEQ",
-//     [OP_EQEQ]          = "OP_EQEQ",
-//     [OP_NEQ]           = "OP_NEQ",
-//     [OP_NEGATE]        = "OP_NEGATE",
-//     [OP_NOT]           = "OP_NOT",
-//     [OP_LIST]          = "OP_LIST",
-//     [OP_CLOSURE]       = "OP_CLOSURE",
-//     [OP_CLASS]         = "OP_CLASS",
-//     [OP_METHOD]        = "OP_METHOD",
-//     [OP_GET_CONST]     = "OP_GET_CONST",
-//     [OP_GET_LOCAL]     = "OP_GET_LOCAL",
-//     [OP_SET_LOCAL]     = "OP_SET_LOCAL",
-//     [OP_HEAPVAL]       = "OP_HEAPVAL",
-//     [OP_GET_HEAPVAL]   = "OP_GET_HEAPVAL",
-//     [OP_SET_HEAPVAL]   = "OP_SET_HEAPVAL",
-//     [OP_GET_CAPTURED]  = "OP_GET_CAPTURED",
-//     [OP_SET_CAPTURED]  = "OP_SET_CAPTURED",
-//     // TEMP remove globals when we added user-defined classes
-//     [OP_GET_GLOBAL]    = "OP_GET_GLOBAL",
-//     [OP_SET_GLOBAL]    = "OP_SET_GLOBAL",
-//     [OP_GET_SUBSCR]    = "OP_GET_SUBSCR",
-//     [OP_SET_SUBSCR]    = "OP_SET_SUBSCR",
-//     [OP_GET_FIELD]     = "OP_GET_FIELD",
-//     [OP_SET_FIELD]     = "OP_SET_FIELD",
-//     [OP_GET_METHOD]    = "OP_GET_METHOD",
-//     [OP_JUMP_IF_FALSE] = "OP_JUMP_IF_FALSE",
-//     [OP_JUMP_IF_TRUE]  = "OP_JUMP_IF_TRUE",
-//     [OP_JUMP]          = "OP_JUMP",
-//     [OP_CALL]          = "OP_CALL",
-//     [OP_RETURN]        = "OP_RETURN",
-//     [OP_POP]           = "OP_POP",
-//     [OP_POP_N]         = "OP_POP_N",
-//     [OP_PRINT]         = "OP_PRINT"
-// };
+const char* opcode_str(const OpCode op) {
+    switch (op) {
+    case OP_NULL:          return "OP_NULL";
+    case OP_TRUE:          return "OP_TRUE";
+    case OP_FALSE:         return "OP_FALSE";
+    case OP_ADD:           return "OP_ADD";
+    case OP_SUB:           return "OP_SUB";
+    case OP_MUL:           return "OP_MUL";
+    case OP_DIV:           return "OP_DIV";
+    case OP_FLOORDIV:      return "OP_FLOORDIV";
+    case OP_MOD:           return "OP_MOD";
+    case OP_LT:            return "OP_LT";
+    case OP_LEQ:           return "OP_LEQ";
+    case OP_GT:            return "OP_GT";
+    case OP_GEQ:           return "OP_GEQ";
+    case OP_EQEQ:          return "OP_EQEQ";
+    case OP_NEQ:           return "OP_NEQ";
+    case OP_NEGATE:        return "OP_NEGATE";
+    case OP_NOT:           return "OP_NOT";
+    case OP_LIST:          return "OP_LIST";
+    case OP_CLOSURE:       return "OP_CLOSURE";
+    case OP_CLASS:         return "OP_CLASS";
+    case OP_METHOD:        return "OP_METHOD";
+    case OP_GET_CONST:     return "OP_GET_CONST";
+    case OP_GET_LOCAL:     return "OP_GET_LOCAL";
+    case OP_SET_LOCAL:     return "OP_SET_LOCAL";
+    case OP_HEAPVAL:       return "OP_HEAPVAL";
+    case OP_GET_HEAPVAL:   return "OP_GET_HEAPVAL";
+    case OP_SET_HEAPVAL:   return "OP_SET_HEAPVAL";
+    case OP_GET_CAPTURED:  return "OP_GET_CAPTURED";
+    case OP_SET_CAPTURED:  return "OP_SET_CAPTURED";
+    case OP_GET_GLOBAL:    return "OP_GET_GLOBAL";
+    // TEMP remove globals when we added user-defined classes
+    case OP_SET_GLOBAL:    return "OP_SET_GLOBAL";
+    case OP_GET_SUBSCR:    return "OP_GET_SUBSCR";
+    case OP_SET_SUBSCR:    return "OP_SET_SUBSCR";
+    case OP_GET_FIELD:     return "OP_GET_FIELD";
+    case OP_SET_FIELD:     return "OP_SET_FIELD";
+    case OP_GET_METHOD:    return "OP_GET_METHOD";
+    case OP_JUMP_IF_FALSE: return "OP_JUMP_IF_FALSE";
+    case OP_JUMP_IF_TRUE:  return "OP_JUMP_IF_TRUE";
+    case OP_JUMP:          return "OP_JUMP";
+    case OP_CALL:          return "OP_CALL";
+    case OP_RETURN:        return "OP_RETURN";
+    case OP_POP:           return "OP_POP";
+    case OP_POP_N:         return "OP_POP_N";
+    case OP_PRINT:         return "OP_PRINT";
+    default:               return nullptr;
+    }
+}
 
-// // TODO currently this instruction is a bit confusing because for constants we print their value
-// // but for GET/SET we print the index. Would make a bit more sense to print the name of the ident
-// void disassemble_chunk(const struct Chunk *chunk, const char *name)
-// {
-//     printf("     [disassembly for %s]\n", name);
-//     for (i32 i = 0; i < chunk->cnt; i++) {
-//         printf("%4d | ", i);
-//         const u8 op = chunk->code[i];
-//         printf("%-20s", opcode_str[op]);
-//         switch (op) {
-//         case OP_GET_LOCAL:     
-//         case OP_SET_LOCAL:   
-//         case OP_GET_HEAPVAL:
-//         case OP_SET_HEAPVAL:
-//         case OP_GET_CAPTURED:
-//         case OP_SET_CAPTURED: 
-//         case OP_GET_GLOBAL:   
-//         case OP_SET_GLOBAL:    
-//         case OP_CALL:          
-//         case OP_POP_N:
-//         case OP_LIST: 
-//         case OP_HEAPVAL:
-//             printf("%d\n", chunk->code[++i]); 
-//             break;
-//         case OP_JUMP_IF_FALSE: 
-//         case OP_JUMP_IF_TRUE:
-//         case OP_JUMP: {
-//             u16 offset = (i += 2, (chunk->code[i-2] << 8) | chunk->code[i-1]);
-//             printf("%d\n", offset);
-//             break;
-//         }       
-//         case OP_GET_FIELD:
-//         case OP_SET_FIELD:
-//         case OP_GET_METHOD:
-//         case OP_GET_CONST: {
-//             print_val(chunk->constants.vals[chunk->code[++i]]);
-//             printf("\n");
-//             break;
-//         }
-//         case OP_CLOSURE: {
-//             const i32 stack_captures = chunk->code[++i];
-//             printf("%d\n", stack_captures); 
-//             const i32 parent_captures = chunk->code[++i];
-//             printf("     | %*s%d\n", 20, "", parent_captures);
-//             for (i32 j = 0; j < stack_captures + parent_captures; j++)
-//                 printf("     | %*s%d\n", 20, "", chunk->code[++i]);
-//             break;
-//         }      
-//         default:
-//             printf("\n");
-//         }
-//     }    
-//     printf("\n");
-// }
+// TODO currently this instruction is a bit confusing because for constants we print their value
+// but for GET/SET we print the index. Would make a bit more sense to print the name of the ident
+void disassemble_chunk(const Chunk &chunk, const char *name)
+{
+    printf("     [disassembly for %s]\n", name);
+    for (i32 i = 0; i < chunk.len(); i++) {
+        printf("%4d | ", i);
+        const u8 op = chunk[i];
+        printf("%-20s", opcode_str(OpCode(op)));
+        switch (op) {
+        case OP_GET_LOCAL:     
+        case OP_SET_LOCAL:   
+        case OP_GET_HEAPVAL:
+        case OP_SET_HEAPVAL:
+        case OP_GET_CAPTURED:
+        case OP_SET_CAPTURED: 
+        case OP_GET_GLOBAL:   
+        case OP_SET_GLOBAL:    
+        case OP_CALL:          
+        case OP_POP_N:
+        case OP_LIST: 
+        case OP_HEAPVAL:
+            printf("%d\n", chunk[++i]); 
+            break;
+        case OP_JUMP_IF_FALSE: 
+        case OP_JUMP_IF_TRUE:
+        case OP_JUMP: {
+            u16 offset = (i += 2, (chunk[i-2] << 8) | chunk[i-1]);
+            printf("%d\n", offset);
+            break;
+        }       
+        case OP_GET_FIELD:
+        case OP_SET_FIELD:
+        case OP_GET_METHOD:
+        case OP_GET_CONST: {
+            print_val(chunk.constants()[chunk[++i]]);
+            printf("\n");
+            break;
+        }
+        case OP_CLOSURE: {
+            const i32 stack_captures = chunk[++i];
+            printf("%d\n", stack_captures); 
+            const i32 parent_captures = chunk[++i];
+            printf("     | %*s%d\n", 20, "", parent_captures);
+            for (i32 j = 0; j < stack_captures + parent_captures; j++)
+                printf("     | %*s%d\n", 20, "", chunk[++i]);
+            break;
+        }      
+        default:
+            printf("\n");
+        }
+    }    
+    printf("\n");
+}
 
 // void print_stack(const struct VM *vm, const Value *sp, const Value *bp) 
 // {

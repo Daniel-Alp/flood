@@ -1,41 +1,39 @@
-// #pragma once
-// #include "arena.h"
-// #include "chunk.h"
-// #include "symbol.h"
-// #define MAX_CALL_FRAMES (1024)   // TODO implement tail call optimization
-// #define MAX_STACK       (MAX_CALL_FRAMES * 256)
+#pragma once
+#include "arena.h"
+#include "chunk.h"
+#include "dynarr.h"
+#define MAX_CALL_FRAMES (1024)   // TODO implement tail call optimization
+#define MAX_STACK       (MAX_CALL_FRAMES * 256)
 
-// struct CallFrame {
-//     struct ClosureObj *closure;
-//     u8 *ip;
-//     Value *bp;
-// };
+struct ClosureObj;
 
-// enum InterpResult {
-//     INTERP_COMPILE_ERR,
-//     INTERP_RUNTIME_ERR,
-//     INTERP_OK
-// };
+struct CallFrame {
+    ClosureObj *closure;
+    u8 *ip;
+    Value *bp;
+};
 
-// struct VM {
-//     struct ClassObj *list_class;
-//     struct ClassObj *string_class;
-//     struct ClassObj *class_class;
+enum InterpResult {
+    INTERP_COMPILE_ERR,
+    INTERP_RUNTIME_ERR,
+    INTERP_OK
+};
 
-//     struct CallFrame *call_stack;
-//     u16 call_cnt;
+struct VM {
+    struct CallFrame *call_stack;
+    u16 call_cnt;
 
-//     Value *sp;
-//     Value *val_stack;
+    Value *sp;
+    Value *val_stack;
 
-//     struct ValArray globals;
+    Dynarr<Value> globals;
     
-//     // linked list of all objects
-//     struct Obj *obj_list;
-//     u32 gray_cnt;
-//     u32 gray_cap;
-//     struct Obj **gray;
-// };
+    // linked list of all objects
+    struct Obj *obj_list;
+    u32 gray_cnt;
+    u32 gray_cap;
+    struct Obj **gray;
+};
 
 // void init_vm(struct VM *vm);
 

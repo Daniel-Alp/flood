@@ -1,14 +1,4 @@
-
-class Foo {
-    fn init() {
-        
-    }
-
-    fn main() {
-
-    }
-}
-
 fn bar() {
-
+    var x = 3;
+    return x + 4;
 }

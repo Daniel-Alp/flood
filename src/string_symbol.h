@@ -2,6 +2,7 @@
 #include <string.h>
 #include "common.h"
 #include "dynarr.h" // consider putting slice into its own thing
+#include "scan.h"
 
 inline u32 hash_string(const char *chars, i32 cnt)
 {
@@ -34,6 +35,12 @@ public:
     {
         strcpy(this->chars_, chars);
     };
+
+    String(Span span)
+        : cnt(span.len+1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
+    {
+        strncpy(chars_, span.start, span.len);
+    }
 
     String(const String& other): cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
     {
@@ -69,7 +76,7 @@ public:
 
     i32 size() const
     {
-        return cnt;
+        return cnt-1;
     }
 
     const char *chars() const
@@ -80,10 +87,5 @@ public:
     u32 hash() const
     {
         return hash_;
-    }
-
-    Slice<char> slice()
-    {
-        return Slice<char>(chars_, cnt);
     }
 };
