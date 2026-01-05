@@ -49,7 +49,7 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    print_node(&node, 0);
+    // print_node(&node, 0);
     VM vm;
     ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);
     if (errarr.len() > 0) {

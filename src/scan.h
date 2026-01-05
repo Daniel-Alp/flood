@@ -110,9 +110,8 @@ public:
         : source(source)
         , start(source)
         , current(source)
-        , line(0) 
+        , line(1) 
         , errarr(errarr)
         {}
-    ~Scanner();
     Token next_token();
 };

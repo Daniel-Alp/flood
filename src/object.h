@@ -20,6 +20,7 @@ struct Obj {
     u8 printed;
     Obj *next;
     Obj(const ObjTag tag): tag(tag), color(GC_WHITE), printed(0), next(nullptr) {}
+    virtual ~Obj() {};
 };
 
 // foreign fn returns true if function executed successfully, false otherwise

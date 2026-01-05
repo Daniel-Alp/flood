@@ -40,14 +40,15 @@ public:
         : cnt(span.len+1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
     {
         strncpy(chars_, span.start, span.len);
+        chars_[span.len] = '\0';
     }
 
-    String(const String& other): cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
+    String(const String &other): cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
     {
         strcpy(chars_, other.chars_);
     };
 
-    String(String&& other): cnt(other.cnt), cap(other.cap), chars_(other.chars_), hash_(other.hash_)
+    String(String &&other): cnt(other.cnt), cap(other.cap), chars_(other.chars_), hash_(other.hash_)
     {
         other.cnt = 0;
         other.cap = 0;

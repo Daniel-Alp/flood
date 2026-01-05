@@ -273,7 +273,7 @@ void disassemble_chunk(const Chunk &chunk, const char *name)
         case OP_JUMP_IF_FALSE: 
         case OP_JUMP_IF_TRUE:
         case OP_JUMP: {
-            const u16 offset = (i += 2, (chunk.code()[i-2] << 8) | chunk.code()[i-1]);
+            const u16 offset = (i += 2, (chunk.code()[i-1] << 8) | chunk.code()[i]);
             printf("%d\n", offset);
             break;
         }       
@@ -301,18 +301,18 @@ void disassemble_chunk(const Chunk &chunk, const char *name)
     printf("\n");
 }
 
-// void print_stack(const struct VM *vm, const Value *sp, const Value *bp) 
-// {
-//     printf("    [value stack]\n");
-//     i32 i = 0;
-//     while (vm->val_stack + i != sp) {
-//         if (vm->val_stack + i == bp)
-//             printf("bp > ");
-//         else    
-//             printf("     ");
-//         print_val(vm->val_stack[i]);
-//         printf("\n");
-//         i++;
-//     }
-//     printf("sp >\n\n");
-// }
+void print_stack(const struct VM &vm, const Value *sp, const Value *bp) 
+{
+    printf("    [value stack]\n");
+    i32 i = 0;
+    while (vm.val_stack + i != sp) {
+        if (vm.val_stack + i == bp)
+            printf("bp > ");
+        else    
+            printf("     ");
+        print_val(vm.val_stack[i]);
+        printf("\n");
+        i++;
+    }
+    printf("sp >\n\n");
+}

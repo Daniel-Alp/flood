@@ -104,7 +104,7 @@ static void analyze_ident(SemaCtx &s, IdentNode &node)
     }
     for (i32 i = s.global_cnt-1; i >= 0; i--) {
         if (node.span == s.idarr[s.globals[i]].span) {
-            node.id = s.locals[i];
+            node.id = s.globals[i];
             return;
         }
     }

@@ -65,12 +65,6 @@ static i32 resolve_capture(const FnDeclNode &node, const i32 id)
 static void compile_ident_get_or_set(CompileCtx &c, const i32 id, const bool get, const i32 line)
 {
     const Ident ident = c.idarr[id];
-    // special case if a function is referencing itself we can do OP_GET_LOCAL 0 or OP_SET_LOCAL 0
-    if (id == c.fn_node->id) {
-        c.chunk().emit_byte(get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
-        c.chunk().emit_byte(0, line);
-        return;
-    }
     if (ident.depth == 0) {
         c.chunk().emit_byte(get ? OP_GET_GLOBAL : OP_SET_GLOBAL, line);
         c.chunk().emit_byte(ident.idx, line);
@@ -293,7 +287,7 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     compile_block(c, *node.body);
     c.chunk().emit_byte(OP_NULL, line);
     c.chunk().emit_byte(OP_RETURN, line);
-    disassemble_chunk(c.chunk(), c.fn->name->str.chars());
+    // disassemble_chunk(c.chunk(), c.fn->name->str.chars());
 
     // pop state and exit the fn
     c.fn = parent;
@@ -349,18 +343,17 @@ ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const Module
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) {
             const auto &fn_node = static_cast<const FnDeclNode&>(*node.decls[i]);
-            FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, node.span), Chunk(), fn_node.arity);
+            FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, fn_node.span), Chunk(), fn_node.arity);
             c.fn_node = &fn_node;
             c.fn = fn;
             compile_block(c, *fn_node.body);
             c.chunk().emit_byte(OP_NULL, fn_node.span.line);
             c.chunk().emit_byte(OP_RETURN, fn_node.span.line);
-            disassemble_chunk(c.chunk(), c.fn->name->str.chars());
+            // disassemble_chunk(c.chunk(), c.fn->name->str.chars());
             ClosureObj *closure = alloc<ClosureObj>(c.vm, fn, 0);
             vm.globals[c.idarr[c.fn_node->id].idx] = MK_OBJ(closure);
-            if (fn_node.span == Span{"main", 4, 0}) {
+            if (fn_node.span == Span{"main", 4, 0})
                 main = closure;
-            }
         }
     }
     return main;

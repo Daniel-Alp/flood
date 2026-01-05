@@ -17,14 +17,6 @@ static bool is_alpha_digit(const char c)
     return is_digit(c) || is_alpha(c);
 }
 
-Scanner::~Scanner()
-{
-    source = nullptr;
-    start = nullptr;
-    current = nullptr;
-    line = 0;
-}
-
 char Scanner::at() const
 {
     return current[0];

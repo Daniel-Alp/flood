@@ -2,10 +2,13 @@
 #include <stdio.h>
 #include <math.h>
 #include "vm.h"
+#include "chunk.h"
 #include "dynarr.h"
 #include "object.h"
 #include "foreign.h"
 #include "value.h"
+
+#include "debug.h"
 
 static i32 get_opcode_line(Dynarr<i32>const &lines, const i32 tgt_opcode_idx)
 {
@@ -33,7 +36,7 @@ void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
     vprintf(format, args);
     va_end(args);
     printf("\n");
-    for (i32 i = vm.call_cnt-1; i >= 1; i--) {
+    for (i32 i = vm.call_cnt-1; i >= 0; i--) {
         const FnObj &fn = *vm.call_stack[i].closure->fn;
         const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip-1 - fn.chunk.code().raw());
         printf("[line %d] in %s\n", line, fn.name->str.chars());
@@ -54,15 +57,6 @@ VM::~VM()
     while (obj_list) {
         Obj *obj = obj_list;
         obj_list = obj->next;
-        switch (obj->tag) {
-        case OBJ_FOREIGN_FN:    break;
-        case OBJ_FN:            static_cast<FnObj*>(obj)->~FnObj(); break;
-        case OBJ_HEAP_VAL:      static_cast<HeapValObj*>(obj)->~HeapValObj(); break;
-        case OBJ_CLOSURE:       static_cast<ClosureObj*>(obj)->~ClosureObj(); break;
-        case OBJ_LIST:          static_cast<ListObj*>(obj)->~ListObj(); break;
-        case OBJ_STRING:        static_cast<StringObj*>(obj)->~StringObj(); break;
-        }
-
         delete obj;
     }
 }
@@ -439,7 +433,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             frame->ip = ip;
             vm.call_cnt++;
             frame++;
-            frame->bp = sp-1-arg_count;
+            frame->bp = sp-arg_count;
             frame->closure = closure;
             ip = closure->fn->chunk.code().raw();
             break;
@@ -458,8 +452,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             //      ...
             //      <local> <-return value
             // sp-> 
-            frame->bp[0] = sp[-1];
-            sp = frame->bp + 1;   
+            frame->bp[-1] = sp[-1];
+            sp = frame->bp;   
             frame--; 
             ip = frame->ip;
             break;
@@ -481,7 +475,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         }
         vm.sp = sp;
-        // printf("%s\n", opcode_str[op]);
+        // printf("%s\n", opcode_str(OpCode(op)));
         // print_stack(vm, sp, frame->bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth

@@ -29,10 +29,10 @@ def diff(test_path: Path) -> None:
             print(f"\033[32m{test_path}\033[0m")
         else:
             print(f"\033[31m{test_path}\033[0m")
-            print("old:")
-            print(snapshot.read(),end="")
-            print("new:")
-            print(tmp.read(),end="")
+            # print("old:")
+            # print(snapshot.read(),end="")
+            # print("new:")
+            # print(tmp.read(),end="")
 
 def upgrade(test_path: Path) -> None:
     snap_path = to_snap_path(test_path)
