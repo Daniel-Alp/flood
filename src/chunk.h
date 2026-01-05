@@ -83,23 +83,23 @@ class Chunk {
     //      1       opcode cnt
     //      2       line no
     //      8       opcode cnt
-    Dynarr<i32> lines;
-    Dynarr<u8> code;
+    Dynarr<i32> lines_;
+    Dynarr<u8> code_;
     Dynarr<Value> constants_;
 public:
-    i32 len() const
+    Dynarr<i32> const &lines() const
     {
-        return code.len();    
+        return lines_;
     }
-    u8 operator[](const i32 idx) const
+    Dynarr<u8> const &code() const
     {
-        return code[idx];
+        return code_;
     }
-    u8 &operator[](const i32 idx)
+    Dynarr<u8>& code()
     {
-        return code[idx];
+        return code_;
     }
-    Dynarr<Value>const &constants() const
+    Dynarr<Value> const &constants() const
     {
         return constants_;
     }

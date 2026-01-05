@@ -156,7 +156,7 @@ static void analyze_block(SemaCtx &s, BlockNode &node)
     for (i32 i = 0; i < node.cnt; i++)
         analyze_node(s, *node.stmts[i]);
     s.depth--;
-    node.local_cnt += local_cnt - s.local_cnt;
+    node.local_cnt += s.local_cnt - local_cnt;
     s.local_cnt = local_cnt;
 }
 

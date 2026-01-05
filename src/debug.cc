@@ -251,9 +251,9 @@ const char* opcode_str(const OpCode op) {
 void disassemble_chunk(const Chunk &chunk, const char *name)
 {
     printf("     [disassembly for %s]\n", name);
-    for (i32 i = 0; i < chunk.len(); i++) {
+    for (i32 i = 0; i < chunk.code().len(); i++) {
         printf("%4d | ", i);
-        const u8 op = chunk[i];
+        const u8 op = chunk.code()[i];
         printf("%-20s", opcode_str(OpCode(op)));
         switch (op) {
         case OP_GET_LOCAL:     
@@ -268,12 +268,12 @@ void disassemble_chunk(const Chunk &chunk, const char *name)
         case OP_POP_N:
         case OP_LIST: 
         case OP_HEAPVAL:
-            printf("%d\n", chunk[++i]); 
+            printf("%d\n", chunk.code()[++i]); 
             break;
         case OP_JUMP_IF_FALSE: 
         case OP_JUMP_IF_TRUE:
         case OP_JUMP: {
-            u16 offset = (i += 2, (chunk[i-2] << 8) | chunk[i-1]);
+            const u16 offset = (i += 2, (chunk.code()[i-2] << 8) | chunk.code()[i-1]);
             printf("%d\n", offset);
             break;
         }       
@@ -281,17 +281,17 @@ void disassemble_chunk(const Chunk &chunk, const char *name)
         case OP_SET_FIELD:
         case OP_GET_METHOD:
         case OP_GET_CONST: {
-            print_val(chunk.constants()[chunk[++i]]);
+            print_val(chunk.constants()[chunk.code()[++i]]);
             printf("\n");
             break;
         }
         case OP_CLOSURE: {
-            const i32 stack_captures = chunk[++i];
+            const i32 stack_captures = chunk.code()[++i];
             printf("%d\n", stack_captures); 
-            const i32 parent_captures = chunk[++i];
+            const i32 parent_captures = chunk.code()[++i];
             printf("     | %*s%d\n", 20, "", parent_captures);
             for (i32 j = 0; j < stack_captures + parent_captures; j++)
-                printf("     | %*s%d\n", 20, "", chunk[++i]);
+                printf("     | %*s%d\n", 20, "", chunk.code()[++i]);
             break;
         }      
         default:

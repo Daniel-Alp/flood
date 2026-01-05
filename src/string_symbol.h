@@ -69,14 +69,14 @@ public:
         return hash_ == other.hash_ && cnt == other.cnt && memcmp(chars_, other.chars_, cnt) == 0;
     }
 
+    i32 len() const
+    {
+        return cnt-1;
+    }
+
     char operator[](const i32 idx) const
     {
         return chars_[idx];
-    }
-
-    i32 size() const
-    {
-        return cnt-1;
     }
 
     const char *chars() const

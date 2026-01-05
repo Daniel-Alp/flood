@@ -44,12 +44,12 @@ struct FnObj : public Obj {
     Chunk chunk; 
     i32 arity;
     FnObj(StringObj *name, Chunk &&chunk, i32 arity)
-        : Obj(OBJ_FN), name(name), chunk(move(chunk)), arity(arity) {};
+        : Obj(OBJ_FN), name(name), chunk(move(chunk)), arity(arity) {}
 };
 
 struct HeapValObj : public Obj {
     Value val;
-    HeapValObj(Value val): Obj(OBJ_HEAP_VAL), val(val) {};
+    HeapValObj(Value val): Obj(OBJ_HEAP_VAL), val(val) {}
 };
 
 struct ClosureObj : public Obj {
@@ -67,12 +67,12 @@ struct ClosureObj : public Obj {
 
 struct ListObj : public Obj {
     Dynarr<Value> vals;
-    ListObj(Dynarr<Value> &&vals): Obj(OBJ_LIST), vals(move(vals)) {};
+    ListObj(Dynarr<Value> &&vals): Obj(OBJ_LIST), vals(move(vals)) {}
 };
 
 struct StringObj : public Obj {
     String str;
-    StringObj(String &&str): Obj(OBJ_STRING), str(move(str)) {};
+    StringObj(String &&str): Obj(OBJ_STRING), str(move(str)) {}
 };
 
 static inline bool is_obj_tag(Value val, enum ObjTag tag) 

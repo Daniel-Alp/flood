@@ -4,7 +4,7 @@
 
 static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line) 
 {
-    const i32 offset = c.chunk().len();
+    const i32 offset = c.chunk().code().len();
     c.chunk().emit_byte(op, line);
     // skip two bytes for jump
     //      OP_JUMP
@@ -19,11 +19,11 @@ static void patch_jump(CompileCtx &c, const Span span, const i32 offset)
 {
     // offset idx of the OP_JUMP instr
     // len is idx of to-be-executed instr
-    const i32 jump = c.chunk().len() - (offset+3);
+    const i32 jump = c.chunk().code().len() - (offset+3);
     if (jump > ((1 << 16) - 1))
         c.errarr.push(ErrMsg{span, "jump too far"});
-    c.chunk()[offset+1] = (jump >> 8) & 0xff;
-    c.chunk()[offset+2] = jump & 0xff; 
+    c.chunk().code()[offset+1] = (jump >> 8) & 0xff;
+    c.chunk().code()[offset+2] = jump & 0xff; 
 }
 
 static void emit_constant(CompileCtx &c, const Value val, const i32 line)

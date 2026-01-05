@@ -112,7 +112,7 @@ public:
         , current(source)
         , line(0) 
         , errarr(errarr)
-        {};
+        {}
     ~Scanner();
     Token next_token();
 };

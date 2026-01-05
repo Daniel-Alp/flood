@@ -9,7 +9,7 @@ struct ClosureObj;
 
 struct CallFrame {
     ClosureObj *closure;
-    u8 *ip;
+    const u8 *ip;
     Value *bp;
 };
 
@@ -20,25 +20,22 @@ enum InterpResult {
 };
 
 struct VM {
-    struct CallFrame *call_stack;
+    CallFrame *call_stack;
     u16 call_cnt;
 
-    Value *sp;
     Value *val_stack;
+    Value *sp;
 
     Dynarr<Value> globals;
     
     // linked list of all objects
-    struct Obj *obj_list;
-    u32 gray_cnt;
-    u32 gray_cap;
-    struct Obj **gray;
+    Obj *obj_list;
+    Dynarr<Obj*> gray;
+
+    VM();
+    ~VM();
 };
 
-// void init_vm(struct VM *vm);
+void runtime_err(u8 *ip, VM &vm, const char *format, ...);
 
-// void release_vm(struct VM *vm);
-
-// void runtime_err(u8 *ip, struct VM *vm, const char *format, ...);
-
-// enum InterpResult run_vm(struct VM *vm, struct ClosureObj *closure);
+InterpResult run_vm(VM &vm, ClosureObj &closure);

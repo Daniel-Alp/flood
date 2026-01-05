@@ -23,7 +23,7 @@ class Dynarr
     }
 
 public:
-    Dynarr(): cnt(0), cap(8), vals(static_cast<T*>(operator new(cap * sizeof(T)))) {};
+    Dynarr(): cnt(0), cap(8), vals(static_cast<T*>(operator new(cap * sizeof(T)))) {}
 
     ~Dynarr()
     {
@@ -34,7 +34,7 @@ public:
         vals = nullptr;
         cnt = 0;
         cap = 0;
-    };
+    }
 
     Dynarr(const Dynarr &other): cnt(0), cap(other.len()), vals(static_cast<T*>(operator new(cap * sizeof(T))))
     {
@@ -50,7 +50,7 @@ public:
         other.vals = nullptr;
     }
 
-    Dynarr& operator=(Dynarr other)
+    Dynarr &operator=(Dynarr other)
     {
         swap(cnt, other.cnt);
         swap(cap, other.cap);
@@ -63,27 +63,32 @@ public:
         grow();
         new (vals + cnt) T(e);
         cnt++;
-    };
+    }
     
     void push(T &&e)
     {
         grow();
         new (vals + cnt) T(move(e));
         cnt++;
-    };
+    }
     
     i32 len() const
     {
         return cnt;
-    };
+    }
 
-    T& operator[](const i32 idx) 
+    T &operator[](const i32 idx) 
     {
         return vals[idx];
-    };
+    }
     
-    const T& operator[](const i32 idx) const
+    const T &operator[](const i32 idx) const
     {
         return vals[idx];
-    };
+    }
+
+    const T *raw() const
+    {
+        return vals;
+    }
 };

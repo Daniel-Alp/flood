@@ -9,6 +9,7 @@
 #include "parse.h"
 #include "scan.h"
 #include "sema.h"
+#include "vm.h"
 
 int main(int argc, const char **argv) 
 {
@@ -50,13 +51,16 @@ int main(int argc, const char **argv)
 
     print_node(&node, 0);
     VM vm;
-    CompileCtx::compile(vm, idarr, node, errarr);
+    ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);
     if (errarr.len() > 0) {
         print_errarr(errarr, flag_color);
         delete[] buf;
         fclose(fp);
         return 1;
     }
+
+    if (script)
+        run_vm(vm, *script);
 
     delete[] buf;
     fclose(fp);

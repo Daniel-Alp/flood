@@ -22,6 +22,6 @@ struct CompileCtx {
 
 private:
     CompileCtx(VM &vm, const Dynarr<Ident> &idarr, Dynarr<ErrMsg> &errarr)
-        : vm(vm), idarr(idarr), errarr(errarr), fn_node(nullptr)
+        : fn_node(nullptr), fn(nullptr), vm(vm), idarr(idarr), errarr(errarr)
     {}
 };
