@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "compile.h"
 #include "debug.h"
+#include "parse.h"
 
 static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line) 
 {
@@ -264,18 +265,9 @@ static void compile_var_decl(CompileCtx &c, const VarDeclNode &node)
     }
 }
 
-static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
+static void compile_fn_body(CompileCtx &c, const FnDeclNode &node)
 {
     const i32 line = node.span.line;
-    const Ident &ident = c.idarr[node.id];
-
-    FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, node.span), Chunk(), node.arity);
-
-    // push state and enter the fn
-    FnObj *parent = c.fn; 
-    const FnDeclNode *parent_node = c.fn_node;
-    c.fn = fn;
-    c.fn_node = &node;
     for (i32 i = 0; i < node.arity; i++) {
         const Ident &param = c.idarr[node.params[i].id];
         // move param on heap if it is captured
@@ -288,10 +280,22 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     c.chunk().emit_byte(OP_NULL, line);
     c.chunk().emit_byte(OP_RETURN, line);
     // disassemble_chunk(c.chunk(), c.fn->name->str.chars());
+}
 
-    // pop state and exit the fn
+static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
+{
+    const i32 line = node.span.line;
+    const Ident &ident = c.idarr[node.id];
+
+    FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, node.span), Chunk(), node.arity);
+    FnObj *parent = c.fn; 
+    const FnDeclNode *parent_node = c.fn_node;
+    c.fn = fn;
+    c.fn_node = &node;
+    compile_fn_body(c, node);
     c.fn = parent;
     c.fn_node = parent_node;
+
     emit_constant(c, MK_OBJ(fn), line);
     // wrap the fn in a closure
     c.chunk().emit_byte(OP_CLOSURE, line);
@@ -346,10 +350,7 @@ ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const Module
             FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, fn_node.span), Chunk(), fn_node.arity);
             c.fn_node = &fn_node;
             c.fn = fn;
-            compile_block(c, *fn_node.body);
-            c.chunk().emit_byte(OP_NULL, fn_node.span.line);
-            c.chunk().emit_byte(OP_RETURN, fn_node.span.line);
-            // disassemble_chunk(c.chunk(), c.fn->name->str.chars());
+            compile_fn_body(c, fn_node);
             ClosureObj *closure = alloc<ClosureObj>(c.vm, fn, 0);
             vm.globals[c.idarr[c.fn_node->id].idx] = MK_OBJ(closure);
             if (fn_node.span == Span{"main", 4, 0})

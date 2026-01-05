@@ -1,10 +1,12 @@
-fn main() {
-    print factorial(1);
+fn a(x) {
+    fn b() {
+        print x;
+    }
+    return b;
 }
 
-fn factorial(n) {
-    if (n == 0) {
-        return 1;
-    }
-    return n * factorial(n-1);
+fn main() {
+    var b = a(3);
+    # print 3 twice
+    b();
 }
