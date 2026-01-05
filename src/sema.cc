@@ -216,31 +216,6 @@ static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
         propagate_captures(s, node.parent_captures[i]);
 }
 
-static void analyze_class_body(SemaCtx &s, const ClassDeclNode &node)
-{
-    bool has_init = false;
-    const i32 local_cnt = s.local_cnt;
-    s.depth++;
-
-    for (i32 i = 0; i < node.cnt; i++) {
-        FnDeclNode &fn_decl = static_cast<FnDeclNode&>(*node.methods[i]);        
-        const Span fn_span = fn_decl.span;
-        u32 flags = FLAG_NONE;
-        if (fn_span == Span{"init", 4, 0}) {
-            flags |= FLAG_INIT;
-            has_init = true;
-        }
-        fn_decl.id = declare_local(s, fn_span, flags);
-        analyze_fn_body(s, *node.methods[i]);
-    }
-
-    s.local_cnt = local_cnt;
-    s.depth--;
-    // TODO allow implicit `init` methods
-    if (!has_init)
-        s.errarr.push(ErrMsg{node.span, "class must have `init` method"});
-}
-
 static void analyze_node(SemaCtx &s, Node &node)
 {
     switch (node.tag) {
@@ -256,12 +231,6 @@ static void analyze_node(SemaCtx &s, Node &node)
         FnDeclNode &fn_decl = static_cast<FnDeclNode&>(node);
         fn_decl.id = declare_local(s, fn_decl.span, FLAG_NONE);        
         analyze_fn_body(s, fn_decl);
-        break;
-    }
-    case NODE_CLASS_DECL: {
-        ClassDeclNode &class_decl = static_cast<ClassDeclNode&>(node);
-        class_decl.id = declare_local(s, class_decl.span, FLAG_NONE);        
-        analyze_class_body(s, class_decl);
         break;
     }
     case NODE_EXPR_STMT: analyze_expr_stmt(s, static_cast<ExprStmtNode&>(node)); break;
@@ -285,15 +254,10 @@ void SemaCtx::analyze(ModuleNode &node, Dynarr<Ident> &idarr, Dynarr<ErrMsg> &er
         if (node.decls[i]->tag == NODE_FN_DECL) {
             FnDeclNode &fn_decl = static_cast<FnDeclNode&>(*node.decls[i]);
             fn_decl.id = declare_global(s, fn_decl.span, FLAG_NONE);
-        } else {
-            ClassDeclNode &class_decl = static_cast<ClassDeclNode&>(*node.decls[i]);
-            class_decl.id = declare_global(s, class_decl.span, FLAG_NONE);
         }
     } 
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) 
-            analyze_fn_body(s, static_cast<FnDeclNode&>(*node.decls[i]));        
-        else
-            analyze_class_body(s, static_cast<ClassDeclNode&>(*node.decls[i]));
+            analyze_fn_body(s, static_cast<FnDeclNode&>(*node.decls[i]));
     }
 }

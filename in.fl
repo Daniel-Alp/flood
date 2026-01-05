@@ -1,14 +1,12 @@
 
-fn main() {
-    var x;
-    var y;
-    {
-        var z;
-        fn foo(h) {
-            var t;
-        }
+class Foo {
+    fn init() {
+        
     }
-    var w;
+
+    fn main() {
+
+    }
 }
 
 fn bar() {

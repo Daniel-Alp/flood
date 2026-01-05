@@ -329,27 +329,6 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
     return alloc<FnDeclNode>(p.arena(), span, body, params, arity);    
 }
 
-ClassDeclNode *parse_class_decl(Parser &p)
-{
-    const Span span = p.at().span;
-    p.expect(TOKEN_IDENTIFIER, "expected identifier");
-    p.expect(TOKEN_L_BRACE, "expected `{`");
-
-    Dynarr<FnDeclNode*> nodearr;
-    while (p.at().tag != TOKEN_R_BRACE && p.at().tag != TOKEN_EOF) {
-        if (p.eat(TOKEN_FN)) {
-            p.set_panic(false);
-            nodearr.push(parse_fn_decl(p, true));
-        } else {
-            p.advance_with_err("expected method declaration");
-        }    
-    }
-    p.expect(TOKEN_R_BRACE, "expected `}`");
-    const i32 cnt = nodearr.len();
-    FnDeclNode *const *const methods = move_dynarr(p.arena(), move(nodearr));
-    return alloc<ClassDeclNode>(p.arena(), span, methods, cnt);
-}
-
 // precondition: `return` token consumed
 ReturnNode *parse_return(Parser &p) 
 {
@@ -389,8 +368,6 @@ BlockNode *parse_block(Parser &p)
             node = parse_return(p);  
         } else if (p.eat(TOKEN_FN)) {
             node = parse_fn_decl(p, false);
-        } else if (p.eat(TOKEN_CLASS)) {
-            node = parse_class_decl(p);
         } else if (p.eat(TOKEN_PRINT)) {
             node = parse_print(p);
         } else if (expr_first(p.at().tag)) {
@@ -419,9 +396,6 @@ ModuleNode &parse_file(Parser &p)
         if (p.eat(TOKEN_FN)) {
             p.set_panic(false);
             nodearr.push(parse_fn_decl(p, false));
-        } else if (p.eat(TOKEN_CLASS)) {
-            p.set_panic(false);
-            nodearr.push(parse_class_decl(p));
         } else {
             p.advance_with_err("expected declaration");
         }

@@ -17,7 +17,6 @@ enum NodeTag {
     NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
-    NODE_CLASS_DECL,
     NODE_EXPR_STMT,
     NODE_BLOCK,
     NODE_IF,
@@ -134,15 +133,6 @@ struct FnDeclNode : public Node {
         , parent_capture_cnt(0)
         , parent(nullptr)
     {};
-};
-
-struct ClassDeclNode : public Node {
-    // span is identifier
-    FnDeclNode *const *const methods;
-    const i32 cnt;
-    i32 id;
-    ClassDeclNode(const Span span, FnDeclNode *const *const methods, const i32 cnt)
-        : Node(span, NODE_CLASS_DECL), methods(methods), cnt(cnt), id(-1) {};
 };
 
 // TEMP remove when we add functions
