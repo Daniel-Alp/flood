@@ -1,5 +1,3 @@
-#include <unistd.h> // for isatty()
-#include <stdio.h>
 #include "arena.h"
 #include "common.h"
 #include "compile.h"
@@ -10,8 +8,10 @@
 #include "scan.h"
 #include "sema.h"
 #include "vm.h"
+#include <stdio.h>
+#include <unistd.h> // for isatty()
 
-int main(int argc, const char **argv) 
+int main(int argc, const char **argv)
 {
     if (argc != 2) {
         printf("usage: flood script.fl\n");
@@ -20,12 +20,12 @@ int main(int argc, const char **argv)
 
     FILE *fp = fopen(argv[1], "rb");
     fseek(fp, 0, SEEK_END);
-    const u64 length = ftell(fp); 
+    const u64 length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    char *buf = new char[length+2];
+    char *buf = new char[length + 2];
     buf[0] = '\0';
-    buf[length+1] = '\0';
-    char *source = buf+1;
+    buf[length + 1] = '\0';
+    char *source = buf + 1;
     // TODO check for null bytes
     fread(source, 1, length, fp);
     const bool flag_color = isatty(1);

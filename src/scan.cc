@@ -1,18 +1,18 @@
-#include <string.h>
 #include "scan.h"
 #include "error.h"
+#include <string.h>
 
-static bool is_digit(const char c) 
+static bool is_digit(const char c)
 {
-    return '0' <= c && c <= '9'; 
+    return '0' <= c && c <= '9';
 }
 
-static bool is_alpha(const char c) 
+static bool is_alpha(const char c)
 {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
 }
 
-static bool is_alpha_digit(const char c) 
+static bool is_alpha_digit(const char c)
 {
     return is_digit(c) || is_alpha(c);
 }
@@ -44,14 +44,10 @@ void Scanner::skip_whitespace()
 {
     while (true) {
         switch (at()) {
-        case '\n':
-            line++;
+        case '\n': line++;
         case ' ':
-        case '\t':
-            bump();
-            break;
-        default:
-            return;
+        case '\t': bump(); break;
+        default: return;
         }
     }
 }
@@ -69,11 +65,7 @@ void Scanner::skip_comment()
 Token Scanner::mk_token(TokenTag tag) const
 {
     const struct Token token = {
-        .span = {
-            .start = start, 
-            .len = i32(current - start),
-            .line = line
-        },
+        .span = {.start = start, .len = i32(current - start), .line = line},
         .tag = tag,
     };
     return token;
@@ -81,20 +73,20 @@ Token Scanner::mk_token(TokenTag tag) const
 
 Token Scanner::number()
 {
-    while(is_digit(at()))
+    while (is_digit(at()))
         bump();
 
     if (at() == '.' && is_digit(next())) {
         bump();
         while (is_digit(at()))
             bump();
-    } 
+    }
     return mk_token(TOKEN_NUMBER);
 }
 
 Token Scanner::string()
 {
-    while(at() != '"') {
+    while (at() != '"') {
         bump();
         // TODO remove outdated TODO's >:)
         // TODO support multi-line strings zig style
@@ -108,11 +100,7 @@ Token Scanner::string()
     }
     bump();
     const struct Token token = {
-        .span = {
-            .start = start+1, 
-            .len = i32(current - start - 2),
-            .line = line
-        },
+        .span = {.start = start + 1, .len = i32(current - start - 2), .line = line},
         .tag = TOKEN_STRING,
     };
     return token;
@@ -129,15 +117,15 @@ Token Scanner::check_at(const char c, const TokenTag tagthen, const TokenTag tag
 
 Token Scanner::check_keyword(const char *rest, const i32 len, const TokenTag tag)
 {
-    while(is_alpha_digit(at()))
+    while (is_alpha_digit(at()))
         bump();
     const i32 token_len = current - start;
-    if (token_len != len || memcmp(start+1, rest, len-1) != 0)
+    if (token_len != len || memcmp(start + 1, rest, len - 1) != 0)
         return mk_token(TOKEN_IDENTIFIER);
     return mk_token(tag);
 }
 
-Token Scanner::next_token() 
+Token Scanner::next_token()
 {
     skip_whitespace();
     while (at() == '#') {
@@ -157,7 +145,7 @@ Token Scanner::next_token()
     case '/': {
         if (at() == '/') {
             bump();
-            return check_at('=', TOKEN_SLASH_SLASH_EQ, TOKEN_SLASH_SLASH);   
+            return check_at('=', TOKEN_SLASH_SLASH_EQ, TOKEN_SLASH_SLASH);
         } else {
             return check_at('=', TOKEN_SLASH_EQ, TOKEN_SLASH);
         }
@@ -183,7 +171,7 @@ Token Scanner::next_token()
             return number();
         } else if (is_alpha(c)) {
             switch (c) {
-            case 'a': 
+            case 'a':
                 if (at() == 's')
                     return check_keyword("s", 2, TOKEN_AS);
                 else
@@ -195,7 +183,7 @@ Token Scanner::next_token()
                     return check_keyword("n", 2, TOKEN_FN);
                 else
                     return check_keyword("alse", 5, TOKEN_FALSE);
-            case 'i': 
+            case 'i':
                 if (at() == 'f')
                     return check_keyword("f", 2, TOKEN_IF);
                 else
@@ -208,7 +196,7 @@ Token Scanner::next_token()
             case 't': return check_keyword("rue", 4, TOKEN_TRUE);
             case 'v': return check_keyword("ar", 3, TOKEN_VAR);
             default: {
-                while(is_alpha_digit(at()))
+                while (is_alpha_digit(at()))
                     bump();
                 return mk_token(TOKEN_IDENTIFIER);
             }

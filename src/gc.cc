@@ -28,7 +28,7 @@
 // }
 
 // // precondition: all objects white
-// void collect_garbage(struct VM *vm) 
+// void collect_garbage(struct VM *vm)
 // {
 //     // mark roots
 //     const Value *locals_lo = vm->val_stack;
@@ -46,7 +46,7 @@
 //         const Value val = *ptr;
 //         if (IS_OBJ(val))
 //             push_gray_stack(vm, AS_OBJ(val));
-//     }    
+//     }
 //     // each call frame contains a closure which points to a function which
 //     // contains a constant table whose objects are not in scope but cannot be freed
 //     // furthermore, the closure contains an array of pointers to heap vals which also cannot be freed
@@ -100,7 +100,7 @@
 //             struct ClosureObj *closure = (struct ClosureObj*)obj;
 //             push_gray_stack(vm, (struct Obj*)closure->fn);
 //             if (closure->capture_cnt == 0)
-//                 break; 
+//                 break;
 //             struct HeapValObj **lo = closure->captures;
 //             struct HeapValObj **hi = lo + closure->capture_cnt;
 //             for (struct HeapValObj **ptr = lo; ptr < hi; ptr++)
@@ -149,7 +149,7 @@
 //     while ((obj = *indirect) != NULL) {
 //         if (obj->color == GC_WHITE) {
 //             *indirect = obj->next;
-//             release_obj(obj);    
+//             release_obj(obj);
 //             release(obj);
 //         } else {
 //             obj->color = GC_WHITE;

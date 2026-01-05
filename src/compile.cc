@@ -1,9 +1,9 @@
-#include <stdlib.h>
 #include "compile.h"
 #include "debug.h"
 #include "parse.h"
+#include <stdlib.h>
 
-static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line) 
+static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line)
 {
     const i32 offset = c.chunk().code().len();
     c.chunk().emit_byte(op, line);
@@ -16,15 +16,15 @@ static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line)
     return offset;
 }
 
-static void patch_jump(CompileCtx &c, const Span span, const i32 offset) 
+static void patch_jump(CompileCtx &c, const Span span, const i32 offset)
 {
     // offset idx of the OP_JUMP instr
     // len is idx of to-be-executed instr
-    const i32 jump = c.chunk().code().len() - (offset+3);
+    const i32 jump = c.chunk().code().len() - (offset + 3);
     if (jump > ((1 << 16) - 1))
         c.errarr.push(ErrMsg{span, "jump too far"});
-    c.chunk().code()[offset+1] = (jump >> 8) & 0xff;
-    c.chunk().code()[offset+2] = jump & 0xff; 
+    c.chunk().code()[offset + 1] = (jump >> 8) & 0xff;
+    c.chunk().code()[offset + 2] = jump & 0xff;
 }
 
 static void emit_constant(CompileCtx &c, const Value val, const i32 line)
@@ -35,9 +35,10 @@ static void emit_constant(CompileCtx &c, const Value val, const i32 line)
 
 static void compile_node(CompileCtx &c, const Node &node);
 
-static void compile_atom(CompileCtx &c, const AtomNode &node) 
+static void compile_atom(CompileCtx &c, const AtomNode &node)
 {
     const i32 line = node.span.line;
+    // clang-format off
     switch(node.atom_tag) {
     case TOKEN_NULL:   c.chunk().emit_byte(OP_NULL, line); break;
     case TOKEN_TRUE:   c.chunk().emit_byte(OP_TRUE, line); break;
@@ -46,9 +47,10 @@ static void compile_atom(CompileCtx &c, const AtomNode &node)
     case TOKEN_STRING: emit_constant(c, MK_OBJ(alloc<StringObj>(c.vm, node.span)), line); break;
     default:           c.errarr.push(ErrMsg{node.span, "default case of compile_atom reached"});
     }
+    // clang-format on
 }
 
-// given an identifier that is captured return what it's idx will be 
+// given an identifier that is captured return what it's idx will be
 // in the fn's capture array, or -1 if this fn does not capture it
 static i32 resolve_capture(const FnDeclNode &node, const i32 id)
 {
@@ -82,29 +84,29 @@ static void compile_ident_get_or_set(CompileCtx &c, const i32 id, const bool get
         c.chunk().emit_byte(get ? OP_GET_CAPTURED : OP_SET_CAPTURED, line);
         c.chunk().emit_byte(captures_arr_idx, line);
         return;
-    } 
+    }
     c.chunk().emit_byte(get ? OP_GET_LOCAL : OP_SET_LOCAL, line);
     c.chunk().emit_byte(ident.idx, line);
 }
 
 // ident get
-static void compile_ident(CompileCtx &c, const IdentNode &node) 
+static void compile_ident(CompileCtx &c, const IdentNode &node)
 {
     compile_ident_get_or_set(c, node.id, true, node.span.line);
 }
 
-static void compile_list(CompileCtx &c, const ListNode &node) 
+static void compile_list(CompileCtx &c, const ListNode &node)
 {
     // TODO allow lists to be initialized with more than 256 elements
     // TODO handle lists being initialized with too many elements
     const i32 line = node.span.line;
     for (i32 i = 0; i < node.cnt; i++)
-        compile_node(c, *node.items[i]);    
+        compile_node(c, *node.items[i]);
     c.chunk().emit_byte(OP_LIST, line);
     c.chunk().emit_byte(node.cnt, line);
 }
 
-static void compile_unary(CompileCtx &c, const UnaryNode &node) 
+static void compile_unary(CompileCtx &c, const UnaryNode &node)
 {
     const i32 line = node.span.line;
     compile_node(c, *node.rhs);
@@ -114,19 +116,19 @@ static void compile_unary(CompileCtx &c, const UnaryNode &node)
         c.chunk().emit_byte(OP_NOT, line);
 }
 
-static void compile_binary(CompileCtx &c, const BinaryNode &node) 
+static void compile_binary(CompileCtx &c, const BinaryNode &node)
 {
     const i32 line = node.span.line;
     const TokenTag op_tag = node.op_tag;
     if (op_tag == TOKEN_EQ) {
         if (node.lhs->tag == NODE_IDENT) {
             // ident set
-            const auto& lhs = static_cast<const IdentNode&>(*node.lhs);
+            const auto &lhs = static_cast<const IdentNode &>(*node.lhs);
             compile_node(c, *node.rhs);
             compile_ident_get_or_set(c, lhs.id, false, lhs.span.line);
         } else if (node.lhs->tag == NODE_BINARY) {
             // list set
-            const auto& lhs = static_cast<const BinaryNode&>(*node.lhs);
+            const auto &lhs = static_cast<const BinaryNode &>(*node.lhs);
             // TODO assert lhs.op_tag == TOKEN_L_SQUARE
             compile_node(c, *lhs.lhs);
             compile_node(c, *lhs.rhs);
@@ -134,7 +136,7 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
             c.chunk().emit_byte(OP_SET_SUBSCR, line);
         } else if (node.lhs->tag == NODE_PROPERTY) {
             // field set
-            const auto& lhs = static_cast<const PropertyNode&>(*node.lhs);
+            const auto &lhs = static_cast<const PropertyNode &>(*node.lhs);
             // TODO assert lhs.op_tag == TOKEN_DOT
             compile_node(c, *lhs.lhs);
             compile_node(c, *node.rhs);
@@ -150,6 +152,7 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
     } else {
         compile_node(c, *node.lhs);
         compile_node(c, *node.rhs);
+        // clang-format off
         switch (op_tag) {
         case TOKEN_PLUS:        c.chunk().emit_byte(OP_ADD, line); break;
         case TOKEN_MINUS:       c.chunk().emit_byte(OP_SUB, line); break;
@@ -166,6 +169,7 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
         case TOKEN_L_SQUARE:    c.chunk().emit_byte(OP_GET_SUBSCR, line); break;
         default:                c.errarr.push(ErrMsg{node.span, "default case of compile_binary reached"});
         }
+        // clang-format on
     }
 }
 
@@ -174,11 +178,11 @@ static void compile_get_property(CompileCtx &c, const PropertyNode &node)
     const i32 line = node.span.line;
     compile_node(c, *node.lhs);
     StringObj *str = alloc<StringObj>(c.vm, String(node.sym));
-    c.chunk().emit_byte(node.op_tag == TOKEN_DOT ? OP_GET_FIELD : OP_GET_METHOD, line); 
+    c.chunk().emit_byte(node.op_tag == TOKEN_DOT ? OP_GET_FIELD : OP_GET_METHOD, line);
     c.chunk().emit_byte(c.chunk().add_constant(MK_OBJ(str)), line);
 }
 
-static void compile_call(CompileCtx &c, const CallNode &node) 
+static void compile_call(CompileCtx &c, const CallNode &node)
 {
     const i32 line = node.span.line;
     compile_node(c, *node.lhs);
@@ -190,12 +194,12 @@ static void compile_call(CompileCtx &c, const CallNode &node)
     // the callee is responsible for cleanup and moving the return value
 }
 
-static void compile_block(CompileCtx &c, const BlockNode &node) 
+static void compile_block(CompileCtx &c, const BlockNode &node)
 {
     const i32 line = node.span.line;
     for (i32 i = 0; i < node.cnt; i++)
         compile_node(c, *node.stmts[i]);
-    // TODO handle more than 256 locals 
+    // TODO handle more than 256 locals
     if (node.local_cnt == 1) {
         c.chunk().emit_byte(OP_POP, line);
     } else if (node.local_cnt > 1) {
@@ -204,16 +208,16 @@ static void compile_block(CompileCtx &c, const BlockNode &node)
     }
 }
 
-static void compile_if(CompileCtx &c, const IfNode &node) 
+static void compile_if(CompileCtx &c, const IfNode &node)
 {
     const i32 line = node.span.line;
     compile_node(c, *node.cond);
     //      OP_JUMP_IF_FALSE (jump 1)
-    //      OP_POP           
-    //      thn block              
+    //      OP_POP
+    //      thn block
     //      OP_JUMP          (jump 2)
     //      OP_POP           (destination of jump 1)
-    //      els block        
+    //      els block
     //      ...              (destination of jump 2)
     const i32 offset1 = emit_jump(c, OP_JUMP_IF_FALSE, line);
     c.chunk().emit_byte(OP_POP, line);
@@ -226,13 +230,13 @@ static void compile_if(CompileCtx &c, const IfNode &node)
     patch_jump(c, node.span, offset2);
 }
 
-static void compile_expr_stmt(CompileCtx &c, const ExprStmtNode &node) 
+static void compile_expr_stmt(CompileCtx &c, const ExprStmtNode &node)
 {
     compile_node(c, *node.expr);
     c.chunk().emit_byte(OP_POP, node.span.line);
 }
 
-static void compile_return(CompileCtx &c, const ReturnNode &node) 
+static void compile_return(CompileCtx &c, const ReturnNode &node)
 {
     const i32 line = node.span.line;
     if (node.expr) {
@@ -243,20 +247,20 @@ static void compile_return(CompileCtx &c, const ReturnNode &node)
     c.chunk().emit_byte(OP_RETURN, line);
 }
 
-static void compile_print(CompileCtx &c, const PrintNode &node) 
+static void compile_print(CompileCtx &c, const PrintNode &node)
 {
     compile_node(c, *node.expr);
     c.chunk().emit_byte(OP_PRINT, node.span.line);
 }
 
-static void compile_var_decl(CompileCtx &c, const VarDeclNode &node) 
+static void compile_var_decl(CompileCtx &c, const VarDeclNode &node)
 {
     const i32 line = node.span.line;
-    // TODO var decls for class members 
+    // TODO var decls for class members
     const Ident &ident = c.idarr[node.id];
     if (node.init)
         compile_node(c, *node.init);
-    else 
+    else
         c.chunk().emit_byte(OP_NULL, line);
     // move variable on heap if it is captured
     if (ident.flags & FLAG_CAPTURED) {
@@ -288,7 +292,7 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     const Ident &ident = c.idarr[node.id];
 
     FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, node.span), Chunk(), node.arity);
-    FnObj *parent = c.fn; 
+    FnObj *parent = c.fn;
     const FnDeclNode *parent_node = c.fn_node;
     c.fn = fn;
     c.fn_node = &node;
@@ -301,7 +305,7 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     c.chunk().emit_byte(OP_CLOSURE, line);
     c.chunk().emit_byte(node.stack_capture_cnt, line);
     c.chunk().emit_byte(node.parent_capture_cnt, line);
-    
+
     for (i32 i = 0; i < node.stack_capture_cnt; i++)
         c.chunk().emit_byte(c.idarr[node.stack_captures[i]].idx, line);
 
@@ -316,8 +320,9 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     }
 }
 
-static void compile_node(CompileCtx &c, const Node &node) 
+static void compile_node(CompileCtx &c, const Node &node)
 {
+    // clang-format off
     switch (node.tag) {
     case NODE_ATOM:       compile_atom(c, static_cast<const AtomNode&>(node)); break;
     case NODE_LIST:       compile_list(c, static_cast<const ListNode&>(node)); break;
@@ -336,6 +341,7 @@ static void compile_node(CompileCtx &c, const Node &node)
     case NODE_PRINT:      compile_print(c, static_cast<const PrintNode&>(node)); break; 
     default:              {} // TODO ASSERT FALSE
     }
+    // clang-format on
 }
 
 ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const ModuleNode &node, Dynarr<ErrMsg> &errarr)
@@ -346,7 +352,7 @@ ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const Module
         vm.globals.push(MK_NULL);
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) {
-            const auto &fn_node = static_cast<const FnDeclNode&>(*node.decls[i]);
+            const auto &fn_node = static_cast<const FnDeclNode &>(*node.decls[i]);
             FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, fn_node.span), Chunk(), fn_node.arity);
             c.fn_node = &fn_node;
             c.fn = fn;

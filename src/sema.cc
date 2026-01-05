@@ -1,12 +1,12 @@
-#include <stdlib.h>
 #include "sema.h"
 #include "error.h"
 #include "parse.h"
 #include "scan.h"
+#include <stdlib.h>
 
 static i32 declare_global(SemaCtx &s, const Span span, const u32 flags)
 {
-    for (i32 i = s.global_cnt-1; i >= 0; i--) {
+    for (i32 i = s.global_cnt - 1; i >= 0; i--) {
         if (span == s.idarr[s.globals[i]].span) {
             s.errarr.push(ErrMsg{span, "redeclared variable"});
             return s.globals[i];
@@ -22,29 +22,29 @@ static i32 declare_global(SemaCtx &s, const Span span, const u32 flags)
 
 static i32 declare_local(SemaCtx &s, const Span span, const u32 flags)
 {
-    for (i32 i = s.local_cnt-1; i >= 0; i--) {
+    for (i32 i = s.local_cnt - 1; i >= 0; i--) {
         if (span == s.idarr[s.locals[i]].span) {
             s.errarr.push(ErrMsg{span, "redeclared variable"});
             return s.locals[i];
         }
     }
-    for (i32 i = s.global_cnt-1; i >= 0; i--) {
+    for (i32 i = s.global_cnt - 1; i >= 0; i--) {
         if (span == s.idarr[s.globals[i]].span) {
             s.errarr.push(ErrMsg{span, "redeclared variable"});
             return s.globals[i];
         }
-    }    
+    }
     i32 i = s.local_cnt;
-    for (; i-1 >= 0 && s.idarr[s.locals[i-1]].depth > s.idarr[s.fn_node->id].depth; i--) {
+    for (; i - 1 >= 0 && s.idarr[s.locals[i - 1]].depth > s.idarr[s.fn_node->id].depth; i--) {
     }
     const i32 idx = s.local_cnt - i;
     s.locals[s.local_cnt] = s.idarr.len();
     s.local_cnt++;
     s.idarr.push(Ident{.span = span, .flags = flags, .depth = s.depth, .idx = idx});
-    return s.idarr.len()-1;
+    return s.idarr.len() - 1;
 }
 
-// NOTE: 
+// NOTE:
 // given a fn and an ident, we update the capture arrs of the fn
 // we do this
 //      (1) when we analyze an ident we update the stack_captures and parent_captures of the fn
@@ -60,15 +60,16 @@ static i32 declare_local(SemaCtx &s, const Span span, const u32 flags)
 //              }
 //              return bar;
 //          }
-//          in this case y is in the stack_captures of baz and x is in the parent_captures of baz 
-//          we take every ident in the parent_captures of baz, and use it to update the captures arrs of bar
+//          in this case y is in the stack_captures of baz and x is in the parent_captures of baz
+//          we take every ident in the parent_captures of baz, and use it to update the captures
+//          arrs of bar
 static void propagate_captures(SemaCtx &s, const i32 id)
 {
     Ident &ident = s.idarr[id];
     FnDeclNode *fn = s.fn_node;
     FnDeclNode *parent = fn->parent;
-    // NOTE: 
-    // special cases. 
+    // NOTE:
+    // special cases.
     // if sym->depth == 0 the ident is global so we don't need to capture it.
     if (ident.depth > s.idarr[fn->id].depth || ident.depth == 0)
         return;
@@ -79,8 +80,8 @@ static void propagate_captures(SemaCtx &s, const i32 id)
     for (i32 i = 0; i < fn->parent_capture_cnt; i++) {
         if (id == fn->parent_captures[i])
             return;
-    } 
-    ident.flags |= FLAG_CAPTURED; 
+    }
+    ident.flags |= FLAG_CAPTURED;
     // TODO handle more than 256 captures
     if (!parent || ident.depth > s.idarr[parent->id].depth || id == parent->id) {
         fn->stack_captures[fn->stack_capture_cnt] = id;
@@ -95,14 +96,14 @@ static void analyze_node(SemaCtx &s, Node &node);
 
 static void analyze_ident(SemaCtx &s, IdentNode &node)
 {
-    for (i32 i = s.local_cnt-1; i >= 0; i--) {
+    for (i32 i = s.local_cnt - 1; i >= 0; i--) {
         if (node.span == s.idarr[s.locals[i]].span) {
             node.id = s.locals[i];
             propagate_captures(s, node.id);
             return;
-        }          
+        }
     }
-    for (i32 i = s.global_cnt-1; i >= 0; i--) {
+    for (i32 i = s.global_cnt - 1; i >= 0; i--) {
         if (node.span == s.idarr[s.globals[i]].span) {
             node.id = s.globals[i];
             return;
@@ -122,14 +123,13 @@ static void analyze_unary(SemaCtx &s, const UnaryNode &node)
     analyze_node(s, *node.rhs);
 }
 
-static void analyze_binary(SemaCtx &s, const BinaryNode &node) 
+static void analyze_binary(SemaCtx &s, const BinaryNode &node)
 {
     if (node.op_tag == TOKEN_EQ) {
         const bool ident = node.lhs->tag == NODE_IDENT;
-        const bool dot = node.lhs->tag == NODE_PROPERTY 
-            && static_cast<PropertyNode&>(*node.lhs).op_tag == TOKEN_DOT; 
-        const bool list_elem = node.lhs->tag == NODE_BINARY 
-            && static_cast<BinaryNode&>(*node.lhs).op_tag == TOKEN_L_SQUARE;
+        const bool dot = node.lhs->tag == NODE_PROPERTY && static_cast<PropertyNode &>(*node.lhs).op_tag == TOKEN_DOT;
+        const bool list_elem =
+            node.lhs->tag == NODE_BINARY && static_cast<BinaryNode &>(*node.lhs).op_tag == TOKEN_L_SQUARE;
         if (!ident && !dot && !list_elem)
             s.errarr.push(ErrMsg{node.span, "cannot assign to left-hand expression"});
     }
@@ -142,14 +142,14 @@ static void analyze_property(SemaCtx &s, const PropertyNode &node)
     analyze_node(s, *node.lhs);
 }
 
-static void analyze_fn_call(SemaCtx &s, const CallNode &node) 
+static void analyze_fn_call(SemaCtx &s, const CallNode &node)
 {
     analyze_node(s, *node.lhs);
     for (i32 i = 0; i < node.arity; i++)
         analyze_node(s, *node.args[i]);
 }
 
-static void analyze_block(SemaCtx &s, BlockNode &node) 
+static void analyze_block(SemaCtx &s, BlockNode &node)
 {
     const i32 local_cnt = s.local_cnt;
     s.depth++;
@@ -160,7 +160,7 @@ static void analyze_block(SemaCtx &s, BlockNode &node)
     s.local_cnt = local_cnt;
 }
 
-static void analyze_if(SemaCtx &s, const IfNode &node) 
+static void analyze_if(SemaCtx &s, const IfNode &node)
 {
     analyze_node(s, *node.cond);
     analyze_block(s, *node.thn);
@@ -168,23 +168,23 @@ static void analyze_if(SemaCtx &s, const IfNode &node)
         analyze_block(s, *node.els);
 }
 
-static void analyze_expr_stmt(SemaCtx &s, const ExprStmtNode &node) 
+static void analyze_expr_stmt(SemaCtx &s, const ExprStmtNode &node)
 {
     analyze_node(s, *node.expr);
 }
 
-static void analyze_print(SemaCtx &s, const PrintNode &node) 
+static void analyze_print(SemaCtx &s, const PrintNode &node)
 {
     analyze_node(s, *node.expr);
 }
 
-static void analyze_return(SemaCtx &s, const ReturnNode &node) 
+static void analyze_return(SemaCtx &s, const ReturnNode &node)
 {
     if (node.expr)
         analyze_node(s, *node.expr);
 }
 
-static void analyze_var_decl(SemaCtx &s, VarDeclNode &node) 
+static void analyze_var_decl(SemaCtx &s, VarDeclNode &node)
 {
     node.id = declare_local(s, node.span, FLAG_NONE);
     if (node.init)
@@ -206,13 +206,14 @@ static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
 
     s.local_cnt = local_cnt;
     s.fn_node = node.parent;
-    
+
     for (i32 i = 0; i < node.parent_capture_cnt; i++)
         propagate_captures(s, node.parent_captures[i]);
 }
 
 static void analyze_node(SemaCtx &s, Node &node)
 {
+    // clang-format off
     switch (node.tag) {
     case NODE_ATOM:      return;
     case NODE_LIST:      analyze_list(s, static_cast<ListNode&>(node)); break;
@@ -237,6 +238,7 @@ static void analyze_node(SemaCtx &s, Node &node)
     // PROBABLY BETTER TO DO SOMETHING LIKE assert(false) or exit(1) TODO. see compile.cc for similar case 
     default:             s.errarr.push(ErrMsg{node.span, "default case of analyze_node reached"});
     }
+    // clang-format on
 }
 
 void SemaCtx::analyze(ModuleNode &node, Dynarr<Ident> &idarr, Dynarr<ErrMsg> &errarr)
@@ -247,12 +249,12 @@ void SemaCtx::analyze(ModuleNode &node, Dynarr<Ident> &idarr, Dynarr<ErrMsg> &er
     // BlockNode& body = *static_cast<FnDeclNode&>(node).body;
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) {
-            FnDeclNode &fn_decl = static_cast<FnDeclNode&>(*node.decls[i]);
+            FnDeclNode &fn_decl = static_cast<FnDeclNode &>(*node.decls[i]);
             fn_decl.id = declare_global(s, fn_decl.span, FLAG_NONE);
         }
-    } 
+    }
     for (i32 i = 0; i < node.cnt; i++) {
-        if (node.decls[i]->tag == NODE_FN_DECL) 
-            analyze_fn_body(s, static_cast<FnDeclNode&>(*node.decls[i]));
+        if (node.decls[i]->tag == NODE_FN_DECL)
+            analyze_fn_body(s, static_cast<FnDeclNode &>(*node.decls[i]));
     }
 }

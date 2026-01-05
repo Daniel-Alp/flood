@@ -1,8 +1,8 @@
 #pragma once
-#include <string.h>
 #include "common.h"
 #include "dynarr.h" // consider putting slice into its own thing
 #include "scan.h"
+#include <string.h>
 
 inline u32 hash_string(const char *chars, i32 cnt)
 {
@@ -19,8 +19,9 @@ class String {
     i32 cap;
     char *chars_;
     u32 hash_;
+
 public:
-    String(): cnt(0), cap(8), chars_(new char[cap]) {}
+    String() : cnt(0), cap(8), chars_(new char[cap]) {}
 
     ~String()
     {
@@ -30,25 +31,24 @@ public:
         chars_ = nullptr;
         hash_ = 0;
     }
-    
-    String(const char *chars): cnt(strlen(chars)+1), cap(cnt), chars_(new char[cap]), hash_(hash_string(chars, cnt))
+
+    String(const char *chars) : cnt(strlen(chars) + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(chars, cnt))
     {
         strcpy(this->chars_, chars);
     };
 
-    String(Span span)
-        : cnt(span.len+1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
+    String(Span span) : cnt(span.len + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
     {
         strncpy(chars_, span.start, span.len);
         chars_[span.len] = '\0';
     }
 
-    String(const String &other): cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
+    String(const String &other) : cnt(other.cnt), cap(other.cap), chars_(new char[cap]), hash_(other.hash_)
     {
         strcpy(chars_, other.chars_);
     };
 
-    String(String &&other): cnt(other.cnt), cap(other.cap), chars_(other.chars_), hash_(other.hash_)
+    String(String &&other) : cnt(other.cnt), cap(other.cap), chars_(other.chars_), hash_(other.hash_)
     {
         other.cnt = 0;
         other.cap = 0;
@@ -56,7 +56,7 @@ public:
         other.hash_ = 0;
     }
 
-    String& operator=(String other)
+    String &operator=(String other)
     {
         swap(cnt, other.cnt);
         swap(cap, other.cap);
@@ -72,7 +72,7 @@ public:
 
     i32 len() const
     {
-        return cnt-1;
+        return cnt - 1;
     }
 
     char operator[](const i32 idx) const

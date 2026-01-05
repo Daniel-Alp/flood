@@ -1,16 +1,16 @@
 #include <stdio.h>
 // #include "memory.h"
-#include "error.h"
 #include "dynarr.h"
+#include "error.h"
 
-// void init_errarr(struct ErrArr *errarr) 
+// void init_errarr(struct ErrArr *errarr)
 // {
 //     errarr->cnt = 0;
 //     errarr->cap = 8;
 //     errarr->errs = allocate(errarr->cap * sizeof(struct ErrMsg));
 // }
 
-// void release_errarr(struct ErrArr *errarr) 
+// void release_errarr(struct ErrArr *errarr)
 // {
 //     errarr->cnt = 0;
 //     errarr->cap = 0;
@@ -18,7 +18,7 @@
 //     errarr->errs = NULL;
 // }
 
-// void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg) 
+// void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg)
 // {
 //     const struct ErrMsg err = {.span = span, .msg = msg};
 //     if (errarr->cnt == errarr->cap) {
@@ -30,17 +30,17 @@
 // }
 
 // n != 0
-static i32 num_digits(i32 n) 
+static i32 num_digits(i32 n)
 {
     i32 c = 0;
-    while(n) {
+    while (n) {
         c++;
         n /= 10;
     }
     return c;
 }
 
-static i32 line_num(const char *ptr) 
+static i32 line_num(const char *ptr)
 {
     i32 line = 1;
     // error at EOF
@@ -54,7 +54,7 @@ static i32 line_num(const char *ptr)
     return line;
 }
 
-static i32 print_indent(const char *ptr) 
+static i32 print_indent(const char *ptr)
 {
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
@@ -64,7 +64,7 @@ static i32 print_indent(const char *ptr)
     return indent;
 }
 
-static i32 print_line(const char *ptr) 
+static i32 print_line(const char *ptr)
 {
     const char *start = ptr;
     while (start[-1] != '\0' && start[-1] != '\n')
@@ -72,32 +72,32 @@ static i32 print_line(const char *ptr)
     const char *end = ptr;
     while (*end != '\0' && *end != '\n')
         end++;
-    const i32 length = end-start;
+    const i32 length = end - start;
     printf("%.*s\n", length, start);
     return length;
 }
 
-#define ANSI_COLOR_BLUE  "\x1b[34m"
-#define ANSI_COLOR_RED   "\x1b[31m"
+#define ANSI_COLOR_BLUE "\x1b[34m"
+#define ANSI_COLOR_RED "\x1b[31m"
 #define ANSI_COLOR_RESET "\x1b[0m"
-#define ANSI_BOLD        "\e[1m"
-#define ANSI_BOLD_RESET  "\e[m"
+#define ANSI_BOLD "\e[1m"
+#define ANSI_BOLD_RESET "\e[m"
 
 // precondition: at least one error
-void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color) 
+void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color)
 {
-    const i32 last_line = line_num(errarr[errarr.len()-1].span.start);
+    const i32 last_line = line_num(errarr[errarr.len() - 1].span.start);
     const i32 max_pad = num_digits(last_line);
 
     for (i32 i = 0; i < errarr.len(); i++) {
         struct ErrMsg err = errarr[i];
-        
+
         const i32 line = line_num(err.span.start);
         const i32 pad = num_digits(line);
 
         if (color)
-            printf(ANSI_COLOR_BLUE ANSI_BOLD);      
-        printf( "%d%*s | ", line, max_pad - pad, "");
+            printf(ANSI_COLOR_BLUE ANSI_BOLD);
+        printf("%d%*s | ", line, max_pad - pad, "");
         if (color)
             printf(ANSI_COLOR_RESET ANSI_BOLD_RESET);
         const i32 length = print_line(err.span.start);
@@ -111,7 +111,7 @@ void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color)
             printf(ANSI_COLOR_RED ANSI_BOLD);
         const i32 indent = print_indent(err.span.start);
         printf("^");
-        for (i32 i = 0; i < err.span.len-1 && i < length-1 - indent; i++)
+        for (i32 i = 0; i < err.span.len - 1 && i < length - 1 - indent; i++)
             printf("~");
         printf(" %s\n\n", err.msg);
         if (color)

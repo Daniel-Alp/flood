@@ -2,8 +2,8 @@
 #include "arena.h"
 #include "chunk.h"
 #include "dynarr.h"
-#define MAX_CALL_FRAMES (1024)   // TODO implement tail call optimization
-#define MAX_STACK       (MAX_CALL_FRAMES * 256)
+#define MAX_CALL_FRAMES (1024) // TODO implement tail call optimization
+#define MAX_STACK (MAX_CALL_FRAMES * 256)
 
 struct ClosureObj;
 
@@ -13,11 +13,7 @@ struct CallFrame {
     Value *bp;
 };
 
-enum InterpResult {
-    INTERP_COMPILE_ERR,
-    INTERP_RUNTIME_ERR,
-    INTERP_OK
-};
+enum InterpResult { INTERP_COMPILE_ERR, INTERP_RUNTIME_ERR, INTERP_OK };
 
 struct VM {
     CallFrame *call_stack;
@@ -27,10 +23,10 @@ struct VM {
     Value *sp;
 
     Dynarr<Value> globals;
-    
+
     // linked list of all objects
     Obj *obj_list;
-    Dynarr<Obj*> gray;
+    Dynarr<Obj *> gray;
 
     VM();
     ~VM();

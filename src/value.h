@@ -5,12 +5,7 @@
 struct Obj;
 struct StringObj;
 
-enum ValTag {
-    VAL_NULL,
-    VAL_BOOL,
-    VAL_NUM,
-    VAL_OBJ
-};
+enum ValTag { VAL_NULL, VAL_BOOL, VAL_NUM, VAL_OBJ };
 
 // TODO NaN tagging
 typedef struct {
@@ -22,19 +17,19 @@ typedef struct {
     } as;
 } Value;
 
-#define MK_NULL           ((Value){VAL_NULL, {.number = 0}})
-#define MK_BOOL(val)      ((Value){VAL_BOOL, {.boolean = val}})
-#define MK_NUM(val)       ((Value){VAL_NUM, {.number = val}})
-#define MK_OBJ(val)       ((Value){VAL_OBJ, {.obj = val}})
+#define MK_NULL ((Value){VAL_NULL, {.number = 0}})
+#define MK_BOOL(val) ((Value){VAL_BOOL, {.boolean = val}})
+#define MK_NUM(val) ((Value){VAL_NUM, {.number = val}})
+#define MK_OBJ(val) ((Value){VAL_OBJ, {.obj = val}})
 
-#define AS_BOOL(val)      ((val).as.boolean)
-#define AS_NUM(val)       ((val).as.number)
-#define AS_OBJ(val)       ((val).as.obj)
+#define AS_BOOL(val) ((val).as.boolean)
+#define AS_NUM(val) ((val).as.number)
+#define AS_OBJ(val) ((val).as.obj)
 
-#define IS_NULL(val)      ((val).tag == VAL_NULL)
-#define IS_BOOL(val)      ((val).tag == VAL_BOOL)
-#define IS_NUM(val)       ((val).tag == VAL_NUM)
-#define IS_OBJ(val)       ((val).tag == VAL_OBJ)
+#define IS_NULL(val) ((val).tag == VAL_NULL)
+#define IS_BOOL(val) ((val).tag == VAL_BOOL)
+#define IS_NUM(val) ((val).tag == VAL_NUM)
+#define IS_OBJ(val) ((val).tag == VAL_OBJ)
 
 bool val_eq(const Value val1, const Value val2);
 

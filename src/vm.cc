@@ -1,16 +1,16 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <math.h>
 #include "vm.h"
 #include "chunk.h"
 #include "dynarr.h"
-#include "object.h"
 #include "foreign.h"
+#include "object.h"
 #include "value.h"
+#include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "debug.h"
 
-static i32 get_opcode_line(Dynarr<i32>const &lines, const i32 tgt_opcode_idx)
+static i32 get_opcode_line(Dynarr<i32> const &lines, const i32 tgt_opcode_idx)
 {
     // see chunk.h
     i32 opcode_idx = 0;
@@ -18,37 +18,34 @@ static i32 get_opcode_line(Dynarr<i32>const &lines, const i32 tgt_opcode_idx)
     while (true) {
         opcode_idx += lines[i];
         if (opcode_idx >= tgt_opcode_idx)
-            return lines[i-1];
+            return lines[i - 1];
         i += 2;
     }
 }
 
 void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
 {
-    // NOTE: 
+    // NOTE:
     // we put ip in a local variable for performance
     // this means we need to save the top frame's ip before we print the stack trace.
     // however, a foreign method can also call run_time err, in which case there is nothing to save.
     if (ip)
-        vm.call_stack[vm.call_cnt-1].ip = ip;
+        vm.call_stack[vm.call_cnt - 1].ip = ip;
     va_list args;
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
     printf("\n");
-    for (i32 i = vm.call_cnt-1; i >= 0; i--) {
+    for (i32 i = vm.call_cnt - 1; i >= 0; i--) {
         const FnObj &fn = *vm.call_stack[i].closure->fn;
-        const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip-1 - fn.chunk.code().raw());
+        const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip - 1 - fn.chunk.code().raw());
         printf("[line %d] in %s\n", line, fn.name->str.chars());
     }
 }
 
-VM::VM()
-    : call_stack(new CallFrame[MAX_CALL_FRAMES])
-    , val_stack(new Value[MAX_STACK])
-    , sp(val_stack)
-    , obj_list(nullptr)
-{}
+VM::VM() : call_stack(new CallFrame[MAX_CALL_FRAMES]), val_stack(new Value[MAX_STACK]), sp(val_stack), obj_list(nullptr)
+{
+}
 
 VM::~VM()
 {
@@ -61,9 +58,8 @@ VM::~VM()
     }
 }
 
-
 // TODO check if exceeding max stack size
-InterpResult run_vm(VM &vm, ClosureObj &script) 
+InterpResult run_vm(VM &vm, ClosureObj &script)
 {
     Value *sp = vm.val_stack;
     CallFrame *frame = vm.call_stack;
@@ -73,8 +69,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
     // also consider moving putting bp in its own var so I don't have to go through frame to reach bp each time
     frame->bp = sp;
     vm.call_cnt = 1;
-    const u8 *ip = frame->closure->fn->chunk.code().raw(); //FIXME!!! frame->closure->fn.;
-    while(true) {
+    const u8 *ip = frame->closure->fn->chunk.code().raw(); // FIXME!!! frame->closure->fn.;
+    while (true) {
         const u8 op = *ip;
         ip++;
         switch (op) {
@@ -97,7 +93,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(AS_NUM(lhs)+AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs) + AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -109,7 +105,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(AS_NUM(lhs)-AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs) - AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -121,7 +117,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(AS_NUM(lhs)*AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs) * AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -133,7 +129,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(AS_NUM(lhs)/AS_NUM(rhs));
+                sp[-2] = MK_NUM(AS_NUM(lhs) / AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -145,7 +141,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(floor(AS_NUM(lhs)/AS_NUM(rhs)));
+                sp[-2] = MK_NUM(floor(AS_NUM(lhs) / AS_NUM(rhs)));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -157,7 +153,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_NUM(fmod(AS_NUM(lhs),AS_NUM(rhs)));
+                sp[-2] = MK_NUM(fmod(AS_NUM(lhs), AS_NUM(rhs)));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -169,7 +165,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_BOOL(AS_NUM(lhs)<AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs) < AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -181,7 +177,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_BOOL(AS_NUM(lhs)<=AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs) <= AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -193,7 +189,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_BOOL(AS_NUM(lhs)>AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs) > AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -205,7 +201,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value lhs = sp[-2];
             const Value rhs = sp[-1];
             if (IS_NUM(lhs) && IS_NUM(rhs)) {
-                sp[-2] = MK_BOOL(AS_NUM(lhs)>=AS_NUM(rhs));
+                sp[-2] = MK_BOOL(AS_NUM(lhs) >= AS_NUM(rhs));
                 sp--;
             } else {
                 runtime_err(ip, vm, "operands must be numbers");
@@ -267,11 +263,11 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         case OP_CLOSURE: {
             const u8 stack_captures = *ip++;
             const u8 parent_captures = *ip++;
-            ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), stack_captures+parent_captures);
+            ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), stack_captures + parent_captures);
             for (i32 i = 0; i < stack_captures; i++)
                 closure->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
             for (i32 i = 0; i < parent_captures; i++)
-                closure->captures[stack_captures+i] = frame->closure->captures[*ip++];
+                closure->captures[stack_captures + i] = frame->closure->captures[*ip++];
             sp[-1] = MK_OBJ(closure);
             break;
         }
@@ -296,7 +292,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const u8 idx = *ip++;
             sp[0] = AS_HEAP_VAL(frame->bp[idx])->val;
             sp++;
-            break; 
+            break;
         }
         case OP_SET_HEAPVAL: {
             const u8 idx = *ip++;
@@ -323,12 +319,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                         sp[-2] = AS_LIST(container)->vals[u32(AS_NUM(idx))];
                         sp--;
                     } else {
-                        runtime_err(ip, 
-                            vm, 
-                            "index %d out of bounds for list of size %d", 
-                            i32(AS_NUM(idx)), 
-                            AS_LIST(container)->vals.len()
-                        );                       
+                        runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
+                            AS_LIST(container)->vals.len());
                         return INTERP_RUNTIME_ERR;
                     }
 
@@ -354,12 +346,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                         sp[-3] = sp[-1];
                         sp -= 2;
                     } else {
-                        runtime_err(ip, 
-                            vm, 
-                            "index %d out of bounds for list of size %d", 
-                            i32(AS_NUM(idx)), 
-                            i32(AS_LIST(container)->vals.len())
-                        );
+                        runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
+                            i32(AS_LIST(container)->vals.len()));
                         return INTERP_RUNTIME_ERR;
                     }
                 } else {
@@ -414,7 +402,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         case OP_CALL: {
             const u8 arg_count = *ip++;
-            const Value val = sp[-1-arg_count];
+            const Value val = sp[-1 - arg_count];
             ClosureObj *closure;
             if (IS_CLOSURE(val)) {
                 closure = AS_CLOSURE(val);
@@ -426,14 +414,14 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 runtime_err(ip, vm, "incorrect number of arguments provided");
                 return INTERP_RUNTIME_ERR;
             }
-            if (vm.call_cnt+1 >= MAX_CALL_FRAMES) {
+            if (vm.call_cnt + 1 >= MAX_CALL_FRAMES) {
                 runtime_err(ip, vm, "stack overflow");
                 return INTERP_RUNTIME_ERR;
             }
             frame->ip = ip;
             vm.call_cnt++;
             frame++;
-            frame->bp = sp-arg_count;
+            frame->bp = sp - arg_count;
             frame->closure = closure;
             ip = closure->fn->chunk.code().raw();
             break;
@@ -442,19 +430,19 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             vm.call_cnt--;
             if (vm.call_cnt == 0)
                 return INTERP_OK;
-            // NOTE: 
+            // NOTE:
             // when a function returns the stack looks like this
-            // bp-> <function foo> 
+            // bp-> <function foo>
             //      <arg>
             //      ...
             //      <arg>
             //      <local>
             //      ...
             //      <local> <-return value
-            // sp-> 
+            // sp->
             frame->bp[-1] = sp[-1];
-            sp = frame->bp;   
-            frame--; 
+            sp = frame->bp;
+            frame--;
             ip = frame->ip;
             break;
         }

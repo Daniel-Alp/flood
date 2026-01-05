@@ -49,7 +49,7 @@
 //         return false;
 //     }
 //     list->cnt--;
-//     bp[0] = list->vals[list->cnt]; 
+//     bp[0] = list->vals[list->cnt];
 //     return true;
 // }
 

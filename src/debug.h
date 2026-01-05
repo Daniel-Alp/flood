@@ -1,11 +1,11 @@
 #pragma once
-#include "parse.h"
 #include "chunk.h"
+#include "parse.h"
 #include "vm.h"
 
 void print_node(const Node *node, const i32 offset);
 
-const char* opcode_str(const OpCode op);
+const char *opcode_str(const OpCode op);
 
 void disassemble_chunk(const Chunk &chunk, const char *name);
 

@@ -1,0 +1,28 @@
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign   
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: true
+BreakConstructorInitializers: BeforeComma
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: false
+  AfterStruct: false
+  AfterClass: false
+  AfterEnum: false
+ColumnLimit: 120
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+IndentWidth: 4
+IndentCaseLabels: false
+KeepEmptyLinesAtEOF: true
+PointerAlignment: Right
+ReferenceAlignment: Right
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: Never
+SpacesInParens: Never
+Standard: c++20
+UseTab: Never

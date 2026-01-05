@@ -1,8 +1,8 @@
 #pragma once
-#include <string.h>
+#include "arena.h"
 #include "common.h"
 #include "dynarr.h"
-#include "arena.h"
+#include <string.h>
 
 struct ErrMsg;
 
@@ -31,7 +31,7 @@ enum TokenTag {
 
     TOKEN_AND,
     TOKEN_OR,
-    
+
     TOKEN_NOT,
 
     TOKEN_L_PAREN,
@@ -81,7 +81,7 @@ struct Span {
 };
 
 struct Token {
-    struct Span span;
+    Span span;
     enum TokenTag tag;
 };
 
@@ -91,11 +91,11 @@ class Scanner {
     const char *current;
     i32 line;
     Dynarr<ErrMsg> &errarr;
-        
+
     char at() const;
     bool is_at_end() const;
     char next() const;
-    
+
     char bump();
     void skip_whitespace();
     void skip_comment();
@@ -105,13 +105,11 @@ class Scanner {
     Token string();
     Token check_at(const char c, const TokenTag tagthen, const TokenTag tagelse);
     Token check_keyword(const char *rest, const i32 len, const TokenTag tag);
+
 public:
     Scanner(const char *source, Dynarr<ErrMsg> &errarr)
-        : source(source)
-        , start(source)
-        , current(source)
-        , line(1) 
-        , errarr(errarr)
-        {}
+        : source(source), start(source), current(source), line(1), errarr(errarr)
+    {
+    }
     Token next_token();
 };
