@@ -33,17 +33,17 @@ void print_val(const Value val)
         enum ObjTag tag = AS_OBJ(val)->tag;
         switch (tag) {
         case OBJ_FOREIGN_FN: {
-            const char *name = AS_FOREIGN_FN(val)->name->str.chars();
+            const char *name = AS_FOREIGN_FN(val)->name.chars();
             printf("<foreign function %s>", name);
             break;
         }
         case OBJ_FN: {
-            const char *name = AS_FN(val)->name->str.chars();
+            const char *name = AS_FN(val)->name.chars();
             printf("<function %s>", name);
             break;
         }
         case OBJ_CLOSURE: {
-            const char *name = AS_CLOSURE(val)->fn->name->str.chars();
+            const char *name = AS_CLOSURE(val)->fn->name.chars();
             printf("<closure %s>", name);
             break;
         }

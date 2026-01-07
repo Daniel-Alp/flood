@@ -1,4 +1,5 @@
 #include "compile.h"
+#include "chunk.h"
 #include "debug.h"
 #include "parse.h"
 #include <stdlib.h>
@@ -291,7 +292,7 @@ static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
     const i32 line = node.span.line;
     const Ident &ident = c.idarr[node.id];
 
-    FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, node.span), Chunk(), node.arity);
+    FnObj *fn = alloc<FnObj>(c.vm, node.span, Chunk(), node.arity);
     FnObj *parent = c.fn;
     const FnDeclNode *parent_node = c.fn_node;
     c.fn = fn;
@@ -353,7 +354,7 @@ ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const Module
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) {
             const auto &fn_node = static_cast<const FnDeclNode &>(*node.decls[i]);
-            FnObj *fn = alloc<FnObj>(c.vm, alloc<StringObj>(c.vm, fn_node.span), Chunk(), fn_node.arity);
+            FnObj *fn = alloc<FnObj>(c.vm, fn_node.span, Chunk(), fn_node.arity);
             c.fn_node = &fn_node;
             c.fn = fn;
             compile_fn_body(c, fn_node);

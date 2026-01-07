@@ -26,19 +26,21 @@ typedef bool (*ForeignFn)(struct VM *vm);
 struct StringObj;
 
 struct ForeignFnObj : public Obj {
-    StringObj *name;
+    String name;
     ForeignFn code;
     i32 arity;
-    ForeignFnObj(StringObj *name, ForeignFn code, i32 arity) : Obj(OBJ_FOREIGN_FN), name(name), code(code), arity(arity)
+    ForeignFnObj(String &&name, ForeignFn code, i32 arity)
+        : Obj(OBJ_FOREIGN_FN), name(move(name)), code(code), arity(arity)
     {
     }
 };
 
 struct FnObj : public Obj {
-    StringObj *name;
+    String name;
+    // StringObj *name;
     Chunk chunk;
     i32 arity;
-    FnObj(StringObj *name, Chunk &&chunk, i32 arity) : Obj(OBJ_FN), name(name), chunk(move(chunk)), arity(arity) {}
+    FnObj(String &&name, Chunk &&chunk, i32 arity) : Obj(OBJ_FN), name(move(name)), chunk(move(chunk)), arity(arity) {}
 };
 
 struct HeapValObj : public Obj {

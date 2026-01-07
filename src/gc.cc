@@ -15,7 +15,7 @@ void collect_garbage(VM &vm)
     // mark roots
     const Value *const locals_lo = vm.val_stack;
     const Value *const locals_hi = vm.sp;
-    for (const  Value *ptr = locals_lo; ptr < locals_hi; ptr++) {
+    for (const Value *ptr = locals_lo; ptr < locals_hi; ptr++) {
         const Value val = *ptr;
         if (IS_OBJ(val))
             push_gray_stack(vm, AS_OBJ(val));
@@ -39,19 +39,16 @@ void collect_garbage(VM &vm)
         push_gray_stack(vm, static_cast<Obj *>(frame->closure));
 
     while (vm.gray.len() > 0) {
-        Obj *const obj = vm.gray[vm.gray.len()-1];
+        Obj *const obj = vm.gray[vm.gray.len() - 1];
         obj->color = GC_BLACK;
         vm.gray.pop();
 
         switch (obj->tag) {
         case OBJ_FOREIGN_FN: {
-            ForeignFnObj *f_fn = static_cast<ForeignFnObj*>(obj);
-            push_gray_stack(vm, static_cast<Obj*>(f_fn->name));
             break;
         }
         case OBJ_FN: {
-            FnObj *const fn = static_cast<FnObj*>(obj);
-            push_gray_stack(vm, static_cast<Obj*>(fn->name));
+            FnObj *const fn = static_cast<FnObj *>(obj);
             // lo != nullptr because chunk.constants.cap >= 8
             const Value *const lo = fn->chunk.constants().raw();
             const Value *const hi = lo + fn->chunk.constants().len();
@@ -63,24 +60,24 @@ void collect_garbage(VM &vm)
             break;
         }
         case OBJ_HEAP_VAL: {
-            HeapValObj *const heap_val = static_cast<HeapValObj*>(obj);
+            HeapValObj *const heap_val = static_cast<HeapValObj *>(obj);
             if (IS_OBJ(heap_val->val))
                 push_gray_stack(vm, AS_OBJ(heap_val->val));
             break;
         }
         case OBJ_CLOSURE: {
-            ClosureObj *const closure = static_cast<ClosureObj*>(obj);
-            push_gray_stack(vm, static_cast<Obj*>(closure->fn));
+            ClosureObj *const closure = static_cast<ClosureObj *>(obj);
+            push_gray_stack(vm, static_cast<Obj *>(closure->fn));
             if (closure->capture_cnt == 0)
                 break;
             HeapValObj *const *const lo = closure->captures;
             HeapValObj *const *const hi = lo + closure->capture_cnt;
             for (HeapValObj *const *ptr = lo; ptr < hi; ptr++)
-                push_gray_stack(vm, static_cast<Obj*>(*ptr));
+                push_gray_stack(vm, static_cast<Obj *>(*ptr));
             break;
         }
         case OBJ_LIST: {
-            ListObj *const list = static_cast<ListObj*>(obj);
+            ListObj *const list = static_cast<ListObj *>(obj);
             // lo != nullptr because list.cap >= 8
             const Value *const val_lo = list->vals.raw();
             const Value *const val_hi = val_lo + list->vals.len();

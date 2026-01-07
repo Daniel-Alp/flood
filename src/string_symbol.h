@@ -21,8 +21,6 @@ class String {
     u32 hash_;
 
 public:
-    String() : cnt(0), cap(8), chars_(new char[cap]) {}
-
     ~String()
     {
         cnt = 0;
@@ -37,7 +35,8 @@ public:
         strcpy(this->chars_, chars);
     };
 
-    String(Span span) : cnt(span.len + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
+    String(const Span span)
+        : cnt(span.len + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(span.start, span.len))
     {
         strncpy(chars_, span.start, span.len);
         chars_[span.len] = '\0';

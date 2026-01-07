@@ -40,7 +40,7 @@ void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
     for (i32 i = vm.call_cnt - 1; i >= 0; i--) {
         const FnObj &fn = *vm.call_stack[i].closure->fn;
         const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip - 1 - fn.chunk.code().raw());
-        printf("[line %d] in %s\n", line, fn.name->str.chars());
+        printf("[line %d] in %s\n", line, fn.name.chars());
     }
 }
 
