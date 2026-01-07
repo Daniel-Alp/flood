@@ -71,6 +71,12 @@ public:
         cnt++;
     }
 
+    void pop()
+    {
+        cnt--;
+        vals[cnt].~T();
+    }
+
     i32 len() const
     {
         return cnt;

@@ -7,12 +7,14 @@ bool val_eq(const Value val1, const Value val2)
 {
     if (val1.tag != val2.tag)
         return false;
+    // clang-format off
     switch (val1.tag) {
     case VAL_BOOL: return AS_BOOL(val1) == AS_BOOL(val2);
-    case VAL_NUM: return AS_NUM(val1) == AS_NUM(val2);
+    case VAL_NUM:  return AS_NUM(val1) == AS_NUM(val2);
     case VAL_NULL: return true;
-    case VAL_OBJ: return AS_OBJ(val1) == AS_OBJ(val2); // TODO proper string comparison (?)
+    case VAL_OBJ:  return AS_OBJ(val1) == AS_OBJ(val2); // TODO proper string comparison (?)
     }
+    // clang-format on
     // TODO should never reach this case
 }
 

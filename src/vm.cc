@@ -2,6 +2,7 @@
 #include "chunk.h"
 #include "dynarr.h"
 #include "foreign.h"
+#include "gc.h"
 #include "object.h"
 #include "value.h"
 #include <math.h>
@@ -468,6 +469,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
         // FIXME add back!!!
-        // collect_garbage(vm);
+        collect_garbage(vm);
     }
 }

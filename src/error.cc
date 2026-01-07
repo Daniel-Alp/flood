@@ -77,11 +77,11 @@ static i32 print_line(const char *ptr)
     return length;
 }
 
-#define ANSI_COLOR_BLUE "\x1b[34m"
-#define ANSI_COLOR_RED "\x1b[31m"
+#define ANSI_COLOR_BLUE  "\x1b[34m"
+#define ANSI_COLOR_RED   "\x1b[31m"
 #define ANSI_COLOR_RESET "\x1b[0m"
-#define ANSI_BOLD "\e[1m"
-#define ANSI_BOLD_RESET "\e[m"
+#define ANSI_BOLD        "\e[1m"
+#define ANSI_BOLD_RESET  "\e[m"
 
 // precondition: at least one error
 void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color)

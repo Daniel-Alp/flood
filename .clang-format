@@ -1,5 +1,6 @@
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign   
+AlignConsecutiveMacros: true
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: true
