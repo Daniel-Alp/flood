@@ -35,163 +35,176 @@ const char *binop_str(const TokenTag tag)
 
 // TODO change pointers to references
 
-static void print_atom(const AtomNode *node)
+static void print_atom(const AtomNode &node)
 {
-    printf("Atom %.*s", node->span.len, node->span.start);
+    printf("Atom %.*s", node.span.len, node.span.start);
 }
 
-static void print_list(const ListNode *node, const i32 offset)
+static void print_list(const ListNode &node, const i32 offset)
 {
     printf("List");
-    for (i32 i = 0; i < node->cnt; i++)
-        print_node(node->items[i], offset + 2);
+    for (i32 i = 0; i < node.cnt; i++)
+        print_node(node.items[i], offset + 2);
 }
 
-static void print_ident(const IdentNode *node)
+static void print_ident(const IdentNode &node)
 {
-    printf("Ident %.*s id: %d", node->span.len, node->span.start, node->id);
+    printf("Ident %.*s id: %d", node.span.len, node.span.start, node.id);
 }
 
-static void print_unary(const UnaryNode *node, const i32 offset)
+static void print_unary(const UnaryNode &node, const i32 offset)
 {
     printf("Unary\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s", node->span.len, node->span.start);
-    print_node(node->rhs, offset + 2);
+    printf("%.*s", node.span.len, node.span.start);
+    print_node(node.rhs, offset + 2);
 }
 
-static void print_binary(const BinaryNode *node, const i32 offset)
+static void print_binary(const BinaryNode &node, const i32 offset)
 {
     printf("Binary\n");
     printf("%*s", offset + 2, "");
-    printf("%s", binop_str(node->op_tag));
-    print_node(node->lhs, offset + 2);
-    print_node(node->rhs, offset + 2);
+    printf("%s", binop_str(node.op_tag));
+    print_node(node.lhs, offset + 2);
+    print_node(node.rhs, offset + 2);
 }
 
-static void print_dot(const PropertyNode *node, const i32 offset)
+static void print_dot(const PropertyNode &node, const i32 offset)
 {
     printf("Property");
-    print_node(node->lhs, offset + 2);
+    print_node(node.lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
-    printf("%.*s", node->sym.len, node->sym.start);
+    printf("%.*s", node.sym.len, node.sym.start);
 }
 
-static void print_call(const CallNode *node, const i32 offset)
+static void print_call(const CallNode &node, const i32 offset)
 {
     printf("Call");
-    print_node(node->lhs, offset + 2);
-    for (i32 i = 0; i < node->arity; i++)
-        print_node(node->args[i], offset + 2);
+    print_node(node.lhs, offset + 2);
+    for (i32 i = 0; i < node.arity; i++)
+        print_node(node.args[i], offset + 2);
 }
 
-static void print_block(const BlockNode *node, const i32 offset)
+static void print_block(const BlockNode &node, const i32 offset)
 {
     printf("Block");
-    for (i32 i = 0; i < node->cnt; i++)
-        print_node(node->stmts[i], offset + 2);
+    for (i32 i = 0; i < node.cnt; i++)
+        print_node(node.stmts[i], offset + 2);
 }
 
-static void print_if(const IfNode *node, const i32 offset)
+static void print_if(const IfNode &node, const i32 offset)
 {
     printf("If");
-    print_node(node->cond, offset + 2);
-    print_node(node->thn, offset + 2);
-    if (node->els)
-        print_node(node->els, offset + 2);
+    print_node(node.cond, offset + 2);
+    print_node(node.thn, offset + 2);
+    if (node.els)
+        print_node(node.els, offset + 2);
 }
 
-static void print_expr_stmt(const ExprStmtNode *node, const i32 offset)
+static void print_expr_stmt(const ExprStmtNode &node, const i32 offset)
 {
     printf("ExprStmt");
-    print_node(node->expr, offset + 2);
+    print_node(node.expr, offset + 2);
 }
 
-static void print_return(const ReturnNode *node, const i32 offset)
+static void print_return(const ReturnNode &node, const i32 offset)
 {
     printf("Return");
-    if (node->expr)
-        print_node(node->expr, offset + 2);
+    if (node.expr)
+        print_node(node.expr, offset + 2);
 }
 
-static void print_var_decl(const VarDeclNode *node, const i32 offset)
+static void print_var_decl(const VarDeclNode &node, const i32 offset)
 {
     printf("VarDecl\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s id: %d", node->span.len, node->span.start, node->id);
-    if (node->init)
-        print_node(node->init, offset + 2);
+    printf("%.*s id: %d", node.span.len, node.span.start, node.id);
+    if (node.init)
+        print_node(node.init, offset + 2);
 }
 
-static void print_fn_decl(const FnDeclNode *node, const i32 offset)
+static void print_fn_decl(const FnDeclNode &node, const i32 offset)
 {
     printf("FnDeclNode\n");
     printf("%*s", offset + 2, "");
-    printf("%.*s(", node->span.len, node->span.start);
-    for (i32 i = 0; i < node->arity - 1; i++) {
-        const IdentNode param = node->params[i];
+    printf("%.*s(", node.span.len, node.span.start);
+    for (i32 i = 0; i < node.arity - 1; i++) {
+        const IdentNode param = node.params[i];
         printf("%.*s id: %d, ", param.span.len, param.span.start, param.id);
     }
-    if (node->arity > 0) {
-        const IdentNode param = node->params[node->arity - 1];
+    if (node.arity > 0) {
+        const IdentNode param = node.params[node.arity - 1];
         printf("%.*s id: %d", param.span.len, param.span.start, param.id);
     }
-    printf(") id: %d\n", node->id);
+    printf(") id: %d\n", node.id);
 
     printf("%*s", offset + 2, "");
     printf("stack_captures:  [");
-    for (i32 i = 0; i < node->stack_capture_cnt - 1; i++)
-        printf("%d, ", node->stack_captures[i]);
-    if (node->stack_capture_cnt > 0)
-        printf("%d", node->stack_captures[node->stack_capture_cnt - 1]);
+    for (i32 i = 0; i < node.stack_capture_cnt - 1; i++)
+        printf("%d, ", node.stack_captures[i]);
+    if (node.stack_capture_cnt > 0)
+        printf("%d", node.stack_captures[node.stack_capture_cnt - 1]);
     printf("]\n");
     printf("%*s", offset + 2, "");
     printf("parent_captures: [");
-    for (i32 i = 0; i < node->parent_capture_cnt - 1; i++)
-        printf("%d, ", node->parent_captures[i]);
-    if (node->parent_capture_cnt > 0)
-        printf("%d", node->parent_captures[node->parent_capture_cnt - 1]);
+    for (i32 i = 0; i < node.parent_capture_cnt - 1; i++)
+        printf("%d, ", node.parent_captures[i]);
+    if (node.parent_capture_cnt > 0)
+        printf("%d", node.parent_captures[node.parent_capture_cnt - 1]);
     printf("]");
-    print_node(node->body, offset + 2);
+    print_node(node.body, offset + 2);
+}
+
+static void print_class_decl(const ClassDeclNode &node, const i32 offset)
+{
+    printf("ClassDeclNode\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node.span.len, node.span.start);
+    printf(" id: %d", node.id);
+    for (i32 i = 0; i < node.cnt; i++)
+        print_node(node.methods[i], offset + 2);
 }
 
 // TEMP remove when we add functions
-static void print_print(const PrintNode *node, const i32 offset)
+static void print_print(const PrintNode &node, const i32 offset)
 {
     printf("Print");
-    print_node(node->expr, offset + 2);
+    print_node(node.expr, offset + 2);
 }
 
-static void print_module(const ModuleNode *node, const i32 offset)
+static void print_module(const ModuleNode &node, const i32 offset)
 {
     printf("ModuleNode");
-    for (i32 i = 0; i < node->cnt; i++)
-        print_node(node->decls[i], offset + 2);
+    for (i32 i = 0; i < node.cnt; i++)
+        print_node(node.decls[i], offset + 2);
 }
 
-void print_node(const Node *node, const i32 offset)
+void print_node(const Node *const node, const i32 offset)
 {
     if (offset != 0)
         printf("\n");
     printf("%*s(", offset, "");
+    // clang-format off
     switch (node->tag) {
-    case NODE_ATOM: print_atom(static_cast<const AtomNode *>(node)); break;
-    case NODE_LIST: print_list(static_cast<const ListNode *>(node), offset); break;
-    case NODE_IDENT: print_ident(static_cast<const IdentNode *>(node)); break;
-    case NODE_UNARY: print_unary(static_cast<const UnaryNode *>(node), offset); break;
-    case NODE_BINARY: print_binary(static_cast<const BinaryNode *>(node), offset); break;
-    case NODE_PROPERTY: print_dot(static_cast<const PropertyNode *>(node), offset); break;
-    case NODE_CALL: print_call(static_cast<const CallNode *>(node), offset); break;
-    case NODE_BLOCK: print_block(static_cast<const BlockNode *>(node), offset); break;
-    case NODE_IF: print_if(static_cast<const IfNode *>(node), offset); break;
-    case NODE_EXPR_STMT: print_expr_stmt(static_cast<const ExprStmtNode *>(node), offset); break;
-    case NODE_VAR_DECL: print_var_decl(static_cast<const VarDeclNode *>(node), offset); break;
-    case NODE_FN_DECL: print_fn_decl(static_cast<const FnDeclNode *>(node), offset); break;
-    case NODE_RETURN: print_return(static_cast<const ReturnNode *>(node), offset); break;
+    case NODE_ATOM:         print_atom(static_cast<const AtomNode &>(*node)); break;
+    case NODE_LIST:         print_list(static_cast<const ListNode &>(*node), offset); break;
+    case NODE_IDENT:        print_ident(static_cast<const IdentNode &>(*node)); break;
+    case NODE_UNARY:        print_unary(static_cast<const UnaryNode &>(*node), offset); break;
+    case NODE_BINARY:       print_binary(static_cast<const BinaryNode &>(*node), offset); break;
+    case NODE_PROPERTY:     print_dot(static_cast<const PropertyNode &>(*node), offset); break;
+    case NODE_CALL:         print_call(static_cast<const CallNode &>(*node), offset); break;
+    case NODE_BLOCK:        print_block(static_cast<const BlockNode &>(*node), offset); break;
+    case NODE_IF:           print_if(static_cast<const IfNode &>(*node), offset); break;
+    case NODE_EXPR_STMT:    print_expr_stmt(static_cast<const ExprStmtNode &>(*node), offset); break;
+    case NODE_VAR_DECL:     print_var_decl(static_cast<const VarDeclNode &>(*node), offset); break;
+    case NODE_FN_DECL:      print_fn_decl(static_cast<const FnDeclNode &>(*node), offset); break;
+    case NODE_CLASS_DECL:   print_class_decl(static_cast<const ClassDeclNode &>(*node), offset); break;
+    case NODE_RETURN:       print_return(static_cast<const ReturnNode &>(*node), offset); break;
     // TEMP remove when we add functions
-    case NODE_PRINT: print_print(static_cast<const PrintNode *>(node), offset); break;
-    case NODE_MODULE: print_module(static_cast<const ModuleNode *>(node), offset); break;
+    case NODE_PRINT:        print_print(static_cast<const PrintNode &>(*node), offset); break;
+    case NODE_MODULE:       print_module(static_cast<const ModuleNode &>(*node), offset); break;
     }
+    // clang-format on
     printf(")");
     if (offset == 0)
         printf("\n");

@@ -3,7 +3,7 @@
 #include "scan.h"
 
 struct ErrMsg {
-    struct Span span;
+    Span span;
     const char *msg;
 };
 

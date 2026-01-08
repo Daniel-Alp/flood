@@ -17,6 +17,7 @@ enum NodeTag {
     NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
+    NODE_CLASS_DECL,
     NODE_EXPR_STMT,
     NODE_BLOCK,
     NODE_IF,
@@ -138,6 +139,17 @@ struct FnDeclNode : public Node {
     }
 };
 
+struct ClassDeclNode : public Node {
+    // span is identifier
+    FnDeclNode *const *const methods;
+    const i32 cnt;
+    i32 id;
+    ClassDeclNode(const Span span, FnDeclNode *const *const methods, const i32 cnt)
+        : Node(span, NODE_CLASS_DECL), methods(methods), cnt(cnt)
+    {
+    }
+};
+
 // TEMP remove when we add functions
 struct PrintNode : public Node {
     // span is `print`
@@ -218,4 +230,3 @@ public:
     void recover_block();
     static ModuleNode &parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr);
 };
-

@@ -66,11 +66,10 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
     CallFrame *frame = vm.call_stack;
     // TODO we can probably take things out of frame to avoid going through pointer
     frame->closure = &script;
-    // TODO some of these other things should probably be marked with register
     // also consider moving putting bp in its own var so I don't have to go through frame to reach bp each time
     frame->bp = sp;
     vm.call_cnt = 1;
-    const u8 *ip = frame->closure->fn->chunk.code().raw(); // FIXME!!! frame->closure->fn.;
+    const u8 *ip = frame->closure->fn->chunk.code().raw();
     while (true) {
         const u8 op = *ip;
         ip++;
@@ -468,7 +467,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // print_stack(vm, sp, frame->bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
-        // FIXME add back!!!
         collect_garbage(vm);
     }
 }

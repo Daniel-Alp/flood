@@ -90,7 +90,7 @@ void print_errarr(const Dynarr<ErrMsg> &errarr, const bool color)
     const i32 max_pad = num_digits(last_line);
 
     for (i32 i = 0; i < errarr.len(); i++) {
-        struct ErrMsg err = errarr[i];
+        const ErrMsg err = errarr[i];
 
         const i32 line = line_num(err.span.start);
         const i32 pad = num_digits(line);

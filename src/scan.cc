@@ -64,7 +64,7 @@ void Scanner::skip_comment()
 
 Token Scanner::mk_token(TokenTag tag) const
 {
-    const struct Token token = {
+    const Token token = {
         .span = {.start = start, .len = i32(current - start), .line = line},
         .tag = tag,
     };
@@ -91,7 +91,6 @@ Token Scanner::string()
         // TODO remove outdated TODO's >:)
         // TODO support multi-line strings zig style
         // TODO not increasing line if string contains newline, this is bad
-        // TODO meaningful error message during parsing, not just "expected expression"
         if (is_at_end()) {
             Token token = mk_token(TOKEN_ERR);
             errarr.push(ErrMsg{.span = token.span, .msg = "unterminated string"});
@@ -99,7 +98,7 @@ Token Scanner::string()
         }
     }
     bump();
-    const struct Token token = {
+    const Token token = {
         .span = {.start = start + 1, .len = i32(current - start - 2), .line = line},
         .tag = TOKEN_STRING,
     };
@@ -202,7 +201,7 @@ Token Scanner::next_token()
             }
             }
         } else {
-            struct Token token = mk_token(TOKEN_ERR);
+            const Token token = mk_token(TOKEN_ERR);
             errarr.push(ErrMsg{.span = token.span, .msg = "unexpected token"});
             return token;
         }

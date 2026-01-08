@@ -191,13 +191,15 @@ static void analyze_var_decl(SemaCtx &s, VarDeclNode &node)
         analyze_node(s, *node.init);
 }
 
-static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
+static void analyze_fn_decl(SemaCtx &s, FnDeclNode &node, const bool is_method)
 {
     node.parent = s.fn_node;
     s.fn_node = &node;
     const i32 local_cnt = s.local_cnt;
 
     s.depth++;
+    if (is_method && (node.arity == 0 || node.params[0].span != Span{.start = "self", .len = 4, .line = -1}))
+        s.errarr.push(ErrMsg{node.span, "`self` must be first argument"});
     for (i32 i = 0; i < node.arity; i++)
         node.params[i].id = declare_local(s, node.params[i].span, FLAG_NONE);
     node.body->local_cnt += node.arity;
@@ -209,6 +211,22 @@ static void analyze_fn_body(SemaCtx &s, FnDeclNode &node)
 
     for (i32 i = 0; i < node.parent_capture_cnt; i++)
         propagate_captures(s, node.parent_captures[i]);
+}
+
+static void analyze_class_decl(SemaCtx &s, ClassDeclNode &node)
+{
+    bool decl_init = false;
+    for (i32 i = 0; i < node.cnt; i++) {
+        FnDeclNode &method_decl = *node.methods[i];
+        u32 flags = FLAG_NONE;
+        if (method_decl.span == Span{.start = "init", .len = 4, .line = -1}) {
+            flags |= FLAG_INIT;
+            decl_init = true;
+        }
+        analyze_fn_decl(s, method_decl, true);
+    }
+    if (!decl_init)
+        s.errarr.push(ErrMsg{node.span, "class must have `init` method"});
 }
 
 static void analyze_node(SemaCtx &s, Node &node)
@@ -226,7 +244,7 @@ static void analyze_node(SemaCtx &s, Node &node)
     case NODE_FN_DECL: {
         FnDeclNode &fn_decl = static_cast<FnDeclNode&>(node);
         fn_decl.id = declare_local(s, fn_decl.span, FLAG_NONE);        
-        analyze_fn_body(s, fn_decl);
+        analyze_fn_decl(s, fn_decl, false);
         break;
     }
     case NODE_EXPR_STMT: analyze_expr_stmt(s, static_cast<ExprStmtNode&>(node)); break;
@@ -245,16 +263,19 @@ void SemaCtx::analyze(ModuleNode &node, Dynarr<Ident> &idarr, Dynarr<ErrMsg> &er
 {
     SemaCtx s(idarr, errarr);
 
-    // TODO I should probably be clearing the errorlist each time
-    // BlockNode& body = *static_cast<FnDeclNode&>(node).body;
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL) {
             FnDeclNode &fn_decl = static_cast<FnDeclNode &>(*node.decls[i]);
             fn_decl.id = declare_global(s, fn_decl.span, FLAG_NONE);
+        } else {
+            ClassDeclNode &class_decl = static_cast<ClassDeclNode &>(*node.decls[i]);
+            class_decl.id = declare_global(s, class_decl.span, FLAG_NONE);
         }
     }
     for (i32 i = 0; i < node.cnt; i++) {
         if (node.decls[i]->tag == NODE_FN_DECL)
-            analyze_fn_body(s, static_cast<FnDeclNode &>(*node.decls[i]));
+            analyze_fn_decl(s, static_cast<FnDeclNode &>(*node.decls[i]), false);
+        else
+            analyze_class_decl(s, static_cast<ClassDeclNode &>(*node.decls[i]));
     }
 }

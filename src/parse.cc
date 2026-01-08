@@ -271,7 +271,7 @@ static VarDeclNode *parse_var_decl(Parser &p)
 }
 
 // precondition: `fn` token consumed
-static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
+static FnDeclNode *parse_fn_decl(Parser &p)
 {
     const Span span = p.at().span;
     p.expect(TOKEN_IDENTIFIER, "expected identifier");
@@ -290,10 +290,6 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
             p.advance_with_err("expected identifier");
         }
     }
-    if (is_method) {
-        // TODO we should never need the line of `self` I believe
-        paramarr.push(IdentNode(Span{.start = "self", .len = 4, .line = 0}));
-    }
     p.expect(TOKEN_R_PAREN, "expected `)`");
     const i32 arity = paramarr.len();
     IdentNode *const params = move_dynarr(p.arena(), move(paramarr));
@@ -301,8 +297,29 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
     return alloc<FnDeclNode>(p.arena(), span, body, params, arity);
 }
 
+// precondition: `class` token consumed
+static ClassDeclNode *parse_class_decl(Parser &p)
+{
+    const Span span = p.prev().span;
+    p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    p.expect(TOKEN_L_BRACE, "expected `{`");
+
+    Dynarr<FnDeclNode *> nodearr;
+    while (p.at().tag != TOKEN_R_BRACE && p.at().tag != TOKEN_EOF) {
+        if (p.eat(TOKEN_FN)) {
+            p.set_panic(false);
+            nodearr.push(parse_fn_decl(p));
+        } else {
+            p.advance_with_err("expected method declaration");
+        }
+    }
+    p.expect(TOKEN_R_BRACE, "expected `}`");
+    const i32 cnt = nodearr.len();
+    return alloc<ClassDeclNode>(p.arena(), span, move_dynarr(p.arena(), move(nodearr)), cnt);
+}
+
 // precondition: `return` token consumed
-ReturnNode *parse_return(Parser &p)
+static ReturnNode *parse_return(Parser &p)
 {
     const Span span = p.prev().span;
     if (p.eat(TOKEN_SEMI))
@@ -314,7 +331,7 @@ ReturnNode *parse_return(Parser &p)
 
 // TEMP remove when we add functions
 // precondition: `print` token consumed
-PrintNode *parse_print(Parser &p)
+static PrintNode *parse_print(Parser &p)
 {
     const Span span = p.prev().span;
     PrintNode *node = alloc<PrintNode>(p.arena(), span, parse_expr(p, 1));
@@ -322,7 +339,7 @@ PrintNode *parse_print(Parser &p)
     return node;
 }
 
-BlockNode *parse_block(Parser &p)
+static BlockNode *parse_block(Parser &p)
 {
     const Span span = p.at().span;
     if (!p.expect(TOKEN_L_BRACE, "expected `{`"))
@@ -339,7 +356,7 @@ BlockNode *parse_block(Parser &p)
         } else if (p.eat(TOKEN_RETURN)) {
             node = parse_return(p);
         } else if (p.eat(TOKEN_FN)) {
-            node = parse_fn_decl(p, false);
+            node = parse_fn_decl(p);
         } else if (p.eat(TOKEN_PRINT)) {
             node = parse_print(p);
         } else if (expr_first(p.at().tag)) {
@@ -361,13 +378,16 @@ BlockNode *parse_block(Parser &p)
 
 // for now, a file is implicitly a fn except
 // the body can only contain fn and class decls and mutual recursion is allowed
-ModuleNode &parse_file(Parser &p)
+static ModuleNode &parse_file(Parser &p)
 {
     Dynarr<Node *> nodearr;
     while (p.at().tag != TOKEN_EOF) {
         if (p.eat(TOKEN_FN)) {
             p.set_panic(false);
-            nodearr.push(parse_fn_decl(p, false));
+            nodearr.push(parse_fn_decl(p));
+        } else if (p.eat(TOKEN_CLASS)) {
+            p.set_panic(false);
+            nodearr.push(parse_class_decl(p));
         } else {
             p.advance_with_err("expected declaration");
         }
@@ -378,7 +398,6 @@ ModuleNode &parse_file(Parser &p)
     return *alloc<ModuleNode>(p.arena(), span, decls, cnt);
 }
 
-// TODO consider parser owning Arena
 ModuleNode &Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
 {
     Parser p(source, arena, errarr);
