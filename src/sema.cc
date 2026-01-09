@@ -180,8 +180,11 @@ static void analyze_print(SemaCtx &s, const PrintNode &node)
 
 static void analyze_return(SemaCtx &s, const ReturnNode &node)
 {
-    if (node.expr)
+    if (node.expr) {
         analyze_node(s, *node.expr);
+        if (s.idarr[s.fn_node->id].flags & FLAG_INIT)
+            s.errarr.push(ErrMsg{node.span, "init implicitly returns `self` so return cannot have expression"});
+    }
 }
 
 static void analyze_var_decl(SemaCtx &s, VarDeclNode &node)
@@ -223,6 +226,8 @@ static void analyze_class_decl(SemaCtx &s, ClassDeclNode &node)
             flags |= FLAG_INIT;
             decl_init = true;
         }
+        method_decl.id = s.idarr.len();
+        s.idarr.push(Ident{.span = method_decl.span, .flags = flags, .depth = s.depth, .idx = -1});
         analyze_fn_decl(s, method_decl, true);
     }
     if (!decl_init)

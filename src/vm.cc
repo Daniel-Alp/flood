@@ -371,6 +371,53 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             vm.globals[idx] = sp[-1];
             break;
         }
+        // TODO symbols and interning to optimize
+        case OP_GET_FIELD: {
+            const u8 idx = *ip++;
+            StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants()[idx]);
+            Value val = sp[-1];
+            if (IS_INSTANCE(val)) {
+                InstanceObj *instance = AS_INSTANCE(val);
+                Value *val = instance->fields.find(*prop);
+                if (val != nullptr) {
+                    sp[-1] = *val;
+                    break;
+                }
+                runtime_err(
+                    ip, vm, "`%s` instance does not have field `%s`", instance->klass->name.chars(), prop->str.chars());
+                return INTERP_RUNTIME_ERR;
+            }
+            runtime_err(ip, vm, "cannot get field of non-user-instance");
+            return INTERP_RUNTIME_ERR;
+        }
+        // TODO should distinguish between setting prop outside or within the instance
+        case OP_SET_FIELD: {
+            const u8 idx = *ip++;
+            StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants()[idx]);
+            Value container = sp[-2];
+            if (IS_INSTANCE(container)) {
+                InstanceObj *instance = AS_INSTANCE(container);
+                Value *val = instance->fields.find(*prop);
+                if (val != nullptr) {
+                    *val = sp[-1];
+                } else {
+                    // TODO check if field exists. do not want to create field from outside
+                    // TODO make insert_val_table take hash to avoid recomputing it
+                    instance->fields.insert(*prop, sp[-1]);
+                }
+                sp[-2] = sp[-1];
+                sp--;
+                break;
+            }
+            runtime_err(ip, vm, "cannot set field of non-user-instance");
+            return INTERP_RUNTIME_ERR;
+        }
+        // TODO implement OP_INVOKE optimization
+        case OP_GET_METHOD: {
+            const u8 idx = *ip++;
+            runtime_err(ip, vm, "TODO");
+            return INTERP_RUNTIME_ERR;
+        }
         case OP_JUMP: {
             const u16 offset = (ip += 2, (ip[-2] << 8) | ip[-1]);
             ip += offset;
@@ -467,6 +514,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // print_stack(vm, sp, frame->bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
-        collect_garbage(vm);
+        // collect_garbage(vm);
     }
 }

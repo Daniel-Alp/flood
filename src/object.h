@@ -5,7 +5,17 @@
 #include "string_symbol.h"
 #include "value.h"
 
-enum ObjTag { OBJ_FOREIGN_FN, OBJ_FN, OBJ_HEAP_VAL, OBJ_CLOSURE, OBJ_LIST, OBJ_STRING };
+enum ObjTag {
+    OBJ_FOREIGN_FN,
+    OBJ_FN,
+    OBJ_HEAP_VAL,
+    OBJ_CLOSURE,
+    OBJ_LIST,
+    OBJ_STRING,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
+    OBJ_METHOD
+};
 
 struct Obj {
     ObjTag tag;
@@ -73,6 +83,24 @@ struct StringObj : public Obj {
     StringObj(String &&str) : Obj(OBJ_STRING), str(move(str)) {}
 };
 
+struct ClassObj : public Obj {
+    String name;
+    ValTable methods;
+    ClassObj(String &&name) : Obj(OBJ_CLASS), name(name) {}
+};
+
+struct InstanceObj : public Obj {
+    ClassObj *klass;
+    ValTable fields;
+    InstanceObj(ClassObj *klass) : Obj(OBJ_INSTANCE), klass(klass) {}
+};
+
+struct MethodObj : public Obj {
+    InstanceObj *self;
+    FnObj *fn;
+    MethodObj(InstanceObj *self, FnObj *fn) : Obj(OBJ_METHOD), self(self), fn(fn) {}
+};
+
 static inline bool is_obj_tag(Value val, enum ObjTag tag)
 {
     return IS_OBJ(val) && AS_OBJ(val)->tag == tag;
@@ -84,6 +112,9 @@ static inline bool is_obj_tag(Value val, enum ObjTag tag)
 #define IS_CLOSURE(val)    (is_obj_tag(val, OBJ_CLOSURE))
 #define IS_LIST(val)       (is_obj_tag(val, OBJ_LIST))
 #define IS_STRING(val)     (is_obj_tag(val, OBJ_STRING))
+#define IS_CLASS(val)      (is_obj_tag(val, OBJ_CLASS))
+#define IS_INSTANCE(val)   (is_obj_tag(val, OBJ_INSTANCE))
+#define IS_METHOD(val)     (is_obj_tag(val, OBJ_METHOD))
 
 #define AS_FOREIGN_FN(val) (static_cast<ForeignFnObj *>(AS_OBJ(val)))
 #define AS_FN(val)         (static_cast<FnObj *>(AS_OBJ(val)))
@@ -91,3 +122,6 @@ static inline bool is_obj_tag(Value val, enum ObjTag tag)
 #define AS_CLOSURE(val)    (static_cast<ClosureObj *>(AS_OBJ(val)))
 #define AS_LIST(val)       (static_cast<ListObj *>(AS_OBJ(val)))
 #define AS_STRING(val)     (static_cast<StringObj *>(AS_OBJ(val)))
+#define AS_CLASS(val)      (static_cast<ClassObj *>(AS_OBJ(val)))
+#define AS_INSTANCE(val)   (static_cast<InstanceObj *>(AS_OBJ(val)))
+#define AS_METHOD(val)     (static_cast<MethodObj *>(AS_OBJ(val)))

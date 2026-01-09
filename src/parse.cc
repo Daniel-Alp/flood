@@ -17,8 +17,9 @@ struct PrecLvl {
 };
 
 // returns precedence of infix operator
-static struct PrecLvl infix_prec(TokenTag tag)
+static struct PrecLvl infix_prec(const TokenTag tag)
 {
+    // clang-format off
     switch (tag) {
     case TOKEN_EQ:
     case TOKEN_PLUS_EQ:
@@ -26,42 +27,53 @@ static struct PrecLvl infix_prec(TokenTag tag)
     case TOKEN_STAR_EQ:
     case TOKEN_SLASH_EQ:
     case TOKEN_SLASH_SLASH_EQ:
-    case TOKEN_PERCENT_EQ: return {.curr = 1, .next = 2};
-    case TOKEN_OR: return {.curr = 3, .next = 3};
-    case TOKEN_AND: return {.curr = 5, .next = 5};
+    case TOKEN_PERCENT_EQ: 
+        return {.curr = 1, .next = 2};
+    case TOKEN_OR:
+    case TOKEN_AND: 
+        return {.curr = 5, .next = 5};
     case TOKEN_EQEQ:
-    case TOKEN_NEQ: return {.curr = 7, .next = 8};
+    case TOKEN_NEQ: 
+        return {.curr = 7, .next = 8};
     case TOKEN_LT:
     case TOKEN_LEQ:
     case TOKEN_GT:
-    case TOKEN_GEQ: return {.curr = 9, .next = 10};
+    case TOKEN_GEQ: 
+        return {.curr = 9, .next = 10};
     case TOKEN_PLUS:
-    case TOKEN_MINUS: return {.curr = 11, .next = 12};
+    case TOKEN_MINUS: 
+        return {.curr = 11, .next = 12};
     case TOKEN_STAR:
     case TOKEN_SLASH:
     case TOKEN_SLASH_SLASH:
-    case TOKEN_PERCENT: return {.curr = 13, .next = 14};
+    case TOKEN_PERCENT: 
+        return {.curr = 13, .next = 14};
     // we view `[` as binary operator lhs[rhs]
     // the old precedence is high because the operator binds tightly
     //      e.g. x * y[0] is parsed as x * (y[0])
     // but the expression within the [ ] should be parsed from the starting
     // precedence level, similar to how ( ) resets the precedence level
-    case TOKEN_L_SQUARE: return {.curr = 15, .next = 1};
-    default: return {.curr = 0, .next = 0};
+    case TOKEN_L_SQUARE: 
+        return {.curr = 15, .next = 1};
+    default: 
+        return {.curr = 0, .next = 0};
     }
+    // clang-format on
 }
 
 // e.g. given += return + and return -1 if cannot be desugared
 static i32 desugar(const TokenTag tag)
 {
+    // clang-format off
     switch (tag) {
-    case TOKEN_PLUS_EQ: return TOKEN_PLUS;
-    case TOKEN_MINUS_EQ: return TOKEN_MINUS;
-    case TOKEN_STAR_EQ: return TOKEN_STAR;
-    case TOKEN_SLASH_EQ: return TOKEN_SLASH;
+    case TOKEN_PLUS_EQ:        return TOKEN_PLUS;
+    case TOKEN_MINUS_EQ:       return TOKEN_MINUS;
+    case TOKEN_STAR_EQ:        return TOKEN_STAR;
+    case TOKEN_SLASH_EQ:       return TOKEN_SLASH;
     case TOKEN_SLASH_SLASH_EQ: return TOKEN_SLASH_SLASH;
-    case TOKEN_PERCENT_EQ: return TOKEN_PERCENT;
-    default: return -1;
+    case TOKEN_PERCENT_EQ:     return TOKEN_PERCENT;
+    default:                   return -1;
+        // clang-format on
     }
 }
 
@@ -300,8 +312,8 @@ static FnDeclNode *parse_fn_decl(Parser &p)
 // precondition: `class` token consumed
 static ClassDeclNode *parse_class_decl(Parser &p)
 {
-    const Span span = p.prev().span;
     p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    const Span span = p.prev().span;
     p.expect(TOKEN_L_BRACE, "expected `{`");
 
     Dynarr<FnDeclNode *> nodearr;
@@ -376,8 +388,6 @@ static BlockNode *parse_block(Parser &p)
     return alloc<BlockNode>(p.arena(), span, stmts, cnt);
 }
 
-// for now, a file is implicitly a fn except
-// the body can only contain fn and class decls and mutual recursion is allowed
 static ModuleNode &parse_file(Parser &p)
 {
     Dynarr<Node *> nodearr;

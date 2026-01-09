@@ -1,0 +1,11 @@
+fn main() {
+    var v = Vec2(3, 4);
+    #print v.x;
+}
+
+class Vec2 {
+    fn init(self, x, y) {
+        #self.x = x;
+        #self.y = y;
+    }
+}

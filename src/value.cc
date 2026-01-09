@@ -69,8 +69,60 @@ void print_val(const Value val)
             printf("%s", AS_STRING(val)->str.chars());
             break;
         }
+        case OBJ_CLASS: {
+            printf("<class %s>", AS_CLASS(val)->name.chars());
+            break;
+        }
+        case OBJ_INSTANCE: {
+            printf("<instance %s>", AS_INSTANCE(val)->klass->name.chars());
+            break;
+        }
+        case OBJ_METHOD: {
+            printf("<method %s>", AS_METHOD(val)->fn->name.chars());
+            break;
+        }
         }
         AS_OBJ(val)->printed = 0;
         break;
     }
+}
+
+Assoc &ValTable::find_slot(StringObj &key, Assoc *vals, const i32 cap)
+{
+    i32 i = key.str.hash() & (cap - 1);
+    while (true) {
+        Assoc &assoc = vals[i];
+        if (assoc.key == nullptr || key.str == assoc.key->str)
+            return assoc;
+        i = (i + 1) & (cap - 1);
+    }
+}
+
+void ValTable::insert(StringObj &key, Value val)
+{
+    if (cnt >= cap * TABLE_LOAD_FACTOR) {
+        Assoc *new_vals = new Assoc[cap * 2];
+        for (i32 i = 0; i < cap; i++) {
+            if (vals[i].key == nullptr)
+                continue;
+            Assoc &assoc = find_slot(*vals[i].key, new_vals, cap * 2);
+            assoc.key = vals[i].key;
+            assoc.val = vals[i].val;
+        }
+        delete[] vals;
+        vals = new_vals;
+        cap *= 2;
+    }
+    Assoc &assoc = find_slot(key, vals, cap);
+    assoc.key = &key;
+    assoc.val = val;
+    cnt++;
+}
+
+Value *ValTable::find(StringObj &key)
+{
+    Assoc &assoc = find_slot(key, vals, cap);
+    if (assoc.key == nullptr)
+        return nullptr;
+    return &assoc.val;
 }

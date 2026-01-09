@@ -33,8 +33,6 @@ const char *binop_str(const TokenTag tag)
     // clang-format on
 }
 
-// TODO change pointers to references
-
 static void print_atom(const AtomNode &node)
 {
     printf("Atom %.*s", node.span.len, node.span.start);

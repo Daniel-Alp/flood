@@ -1,7 +1,10 @@
 #include "compile.h"
 #include "chunk.h"
 #include "debug.h"
+#include "object.h"
 #include "parse.h"
+#include "sema.h"
+#include "value.h"
 #include <stdlib.h>
 
 static i32 emit_jump(CompileCtx &c, const OpCode op, const i32 line)
@@ -242,6 +245,10 @@ static void compile_return(CompileCtx &c, const ReturnNode &node)
     const i32 line = node.span.line;
     if (node.expr) {
         compile_node(c, *node.expr);
+    }
+    if (c.idarr[c.fn_node->id].flags & FLAG_INIT) {
+        c.chunk().emit_byte(OP_GET_LOCAL, line);
+        c.chunk().emit_byte(0, line);
     } else {
         c.chunk().emit_byte(OP_NULL, line);
     }
@@ -257,7 +264,6 @@ static void compile_print(CompileCtx &c, const PrintNode &node)
 static void compile_var_decl(CompileCtx &c, const VarDeclNode &node)
 {
     const i32 line = node.span.line;
-    // TODO var decls for class members
     const Ident &ident = c.idarr[node.id];
     if (node.init)
         compile_node(c, *node.init);
@@ -282,9 +288,13 @@ static void compile_fn_body(CompileCtx &c, const FnDeclNode &node)
         }
     }
     compile_block(c, *node.body);
-    c.chunk().emit_byte(OP_NULL, line);
+    if (c.idarr[node.id].flags & FLAG_INIT) {
+        c.chunk().emit_byte(OP_GET_LOCAL, line);
+        c.chunk().emit_byte(0, line);
+    } else {
+        c.chunk().emit_byte(OP_NULL, line);
+    }
     c.chunk().emit_byte(OP_RETURN, line);
-    // disassemble_chunk(c.chunk(), c.fn->name->str.chars());
 }
 
 static void compile_fn_decl(CompileCtx &c, const FnDeclNode &node)
@@ -362,6 +372,19 @@ ClosureObj *CompileCtx::compile(VM &vm, const Dynarr<Ident> &idarr, const Module
             vm.globals[c.idarr[c.fn_node->id].idx] = MK_OBJ(closure);
             if (fn_node.span == Span{"main", 4, 0})
                 main = closure;
+        } else {
+            const auto &class_node = static_cast<const ClassDeclNode &>(*node.decls[i]);
+            ClassObj *klass = alloc<ClassObj>(c.vm, class_node.span);
+            for (i32 i = 0; i < class_node.cnt; i++) {
+                const auto &fn_node = static_cast<const FnDeclNode &>(*node.decls[i]);
+                FnObj *fn = alloc<FnObj>(c.vm, fn_node.span, Chunk(), fn_node.arity);
+                c.fn_node = &fn_node;
+                c.fn = fn;
+                compile_fn_body(c, fn_node);
+                ClosureObj *closure = alloc<ClosureObj>(c.vm, fn, 0);
+                klass->methods.insert(*alloc<StringObj>(c.vm, fn_node.span), MK_OBJ(closure));
+            }
+            vm.globals[c.idarr[class_node.id].idx] = MK_OBJ(klass);
         }
     }
     return main;

@@ -6,7 +6,7 @@
 #define MAX_LOCALS (256)
 
 enum NodeTag {
-    NODE_ATOM, // null, true, false, TODO strings
+    NODE_ATOM, // null, true, false, strings
     NODE_LIST, // [foo, bar, baz]
     NODE_IDENT,
     NODE_UNARY,
@@ -192,7 +192,7 @@ struct ReturnNode : public Node {
 };
 
 struct ModuleNode : public Node {
-    // span is ??? (for now just dummy span) TODO
+    // span is filename
     Node *const *const decls;
     const i32 cnt;
     ModuleNode(const Span span, Node *const *const decls, const i32 cnt)

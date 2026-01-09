@@ -1,33 +1,6 @@
-#include <stdio.h>
-// #include "memory.h"
-#include "dynarr.h"
 #include "error.h"
-
-// void init_errarr(struct ErrArr *errarr)
-// {
-//     errarr->cnt = 0;
-//     errarr->cap = 8;
-//     errarr->errs = allocate(errarr->cap * sizeof(struct ErrMsg));
-// }
-
-// void release_errarr(struct ErrArr *errarr)
-// {
-//     errarr->cnt = 0;
-//     errarr->cap = 0;
-//     release(errarr->errs);
-//     errarr->errs = NULL;
-// }
-
-// void push_errarr(struct ErrArr *errarr, const struct Span span, const char *msg)
-// {
-//     const struct ErrMsg err = {.span = span, .msg = msg};
-//     if (errarr->cnt == errarr->cap) {
-//         errarr->cap *= 2;
-//         errarr->errs = reallocate(errarr->errs, errarr->cap * sizeof(struct ErrMsg));
-//     }
-//     errarr->errs[errarr->cnt] = err;
-//     errarr->cnt++;
-// }
+#include "dynarr.h"
+#include <stdio.h>
 
 // n != 0
 static i32 num_digits(i32 n)

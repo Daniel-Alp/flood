@@ -34,3 +34,27 @@ typedef struct {
 bool val_eq(const Value val1, const Value val2);
 
 void print_val(Value val);
+
+struct Assoc {
+    StringObj *key = nullptr;
+    Value val = MK_NULL;
+};
+
+class ValTable {
+    i32 cnt;
+    i32 cap;
+    Assoc *vals;
+
+    static Assoc &find_slot(StringObj &key, Assoc *vals, const i32 cap);
+
+public:
+    ValTable() : cnt(0), cap(8), vals(static_cast<Assoc *>(new Assoc[cap])){};
+    ~ValTable()
+    {
+        delete[] vals;
+    }
+
+    void insert(StringObj &key, Value val);
+
+    Value *find(StringObj &key);
+};
