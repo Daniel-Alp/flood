@@ -1,11 +1,19 @@
-fn main() {
-    print factorial(2);
-    print factorial(2);
+class Point {
+    fn init(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn hypot_sq(other) {
+        var dx = self.x - other.x;
+        var dy = self.y - other.y;
+        return dx*dx + dy*dy;
+    }
 }
 
-fn factorial(n) {
-    if (n == 0) {
-        return 1;
-    }
-    return n * factorial(n-1);
+fn main() {
+    var pt1 = Point(0, 0);
+    var pt2 = Point(3, 4);
+    print pt1:hypot_sq(pt2);
+    print pt2:hypot_sq(pt1);
 }

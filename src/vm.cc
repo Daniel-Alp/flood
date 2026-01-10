@@ -420,7 +420,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         // TODO implement OP_INVOKE optimization
         case OP_GET_METHOD: {
-            u8 idx = *ip++;
+            const u8 idx = *ip++;
             StringObj *prop = AS_STRING(cur_closure->fn->chunk.constants()[idx]);
             Value val = sp[-1];
             ClassObj *klass = nullptr;
@@ -431,7 +431,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 if (fn) {
                     if (AS_OBJ(*fn)->tag == OBJ_CLOSURE) {
                         // user-defined method, bind function to instance
-                        auto method = alloc<MethodObj>(vm, AS_INSTANCE(val), AS_CLOSURE(val));
+                        auto method = alloc<MethodObj>(vm, AS_INSTANCE(val), AS_CLOSURE(*fn));
                         sp[-1] = MK_OBJ(method);
                     } else {
                         runtime_err(ip, vm, "TODO");
@@ -474,8 +474,9 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         case OP_CALL: {
-            u8 arg_count = *ip++;
-            const Value val = sp[- arg_count - 1];
+            const u8 arg_cnt = *ip++;
+            u8 param_cnt = arg_cnt;
+            const Value val = sp[- arg_cnt - 1];
             ClosureObj *closure;
             if (IS_CLOSURE(val)) {
                 closure = AS_CLOSURE(val);
@@ -485,12 +486,18 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 closure = AS_CLOSURE(*instance->klass->methods.find(*alloc<StringObj>(vm, "init")));
                 sp[0] = MK_OBJ(instance); 
                 sp++;
-                arg_count++;
+                param_cnt++;
+            } else if (IS_METHOD(val)) {
+                MethodObj *method = AS_METHOD(val);
+                closure = method->closure;
+                sp[0] = MK_OBJ(method->self);
+                sp++;
+                param_cnt++;
             } else {
                 runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;
             }
-            if (closure->fn->arity != arg_count) {
+            if (closure->fn->arity != arg_cnt) {
                 runtime_err(ip, vm, "incorrect number of arguments provided");
                 return INTERP_RUNTIME_ERR;
             }
@@ -504,7 +511,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
 
             cur_closure = closure;
             frame->closure = cur_closure;
-            bp = sp - arg_count; // FIXME not quite right but close enough
+            bp = sp - param_cnt;
             ip = cur_closure->fn->chunk.code().raw();
             vm.call_cnt++;
             break;
