@@ -30,7 +30,8 @@ public:
         hash_ = 0;
     }
 
-    String(const char *chars) : cnt(strlen(chars) + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(chars, cnt-1))
+    String(const char *chars)
+        : cnt(strlen(chars) + 1), cap(cnt), chars_(new char[cap]), hash_(hash_string(chars, cnt - 1))
     {
         strcpy(this->chars_, chars);
     };

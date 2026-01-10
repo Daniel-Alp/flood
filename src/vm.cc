@@ -46,6 +46,8 @@ void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
 
 VM::VM() : call_stack(new CallFrame[MAX_CALL_FRAMES]), val_stack(new Value[MAX_STACK]), sp(val_stack), obj_list(nullptr)
 {
+    list_class = alloc<ClassObj>(*this, "List");
+    define_list_methods(*this);
 }
 
 VM::~VM()
@@ -75,7 +77,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
     vm.call_cnt = 1;
 
     const u8 *ip = cur_closure->fn->chunk.code().raw();
-    
+
     while (true) {
         const u8 op = *ip;
         ip++;
@@ -426,6 +428,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             ClassObj *klass = nullptr;
             if (IS_INSTANCE(val))
                 klass = AS_INSTANCE(val)->klass;
+            else if (IS_LIST(val))
+                klass = vm.list_class;
             if (klass) {
                 Value *fn = klass->methods.find(*prop);
                 if (fn) {
@@ -434,7 +438,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                         auto method = alloc<MethodObj>(vm, AS_INSTANCE(val), AS_CLOSURE(*fn));
                         sp[-1] = MK_OBJ(method);
                     } else {
-                        runtime_err(ip, vm, "TODO");
+                        auto method = alloc<ForeignMethodObj>(vm, AS_OBJ(val), AS_FOREIGN_FN(*fn));
+                        sp[-1] = MK_OBJ(method);
                     }
                     break;
                 }
@@ -476,7 +481,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         case OP_CALL: {
             const u8 arg_cnt = *ip++;
             u8 param_cnt = arg_cnt;
-            const Value val = sp[- arg_cnt - 1];
+            const Value val = sp[-arg_cnt - 1];
             ClosureObj *closure;
             if (IS_CLOSURE(val)) {
                 closure = AS_CLOSURE(val);
@@ -484,7 +489,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 ClassObj *klass = AS_CLASS(val);
                 InstanceObj *instance = alloc<InstanceObj>(vm, klass);
                 closure = AS_CLOSURE(*instance->klass->methods.find(*alloc<StringObj>(vm, "init")));
-                sp[0] = MK_OBJ(instance); 
+                sp[0] = MK_OBJ(instance);
                 sp++;
                 param_cnt++;
             } else if (IS_METHOD(val)) {
@@ -493,6 +498,21 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[0] = MK_OBJ(method->self);
                 sp++;
                 param_cnt++;
+            } else if (IS_FOREIGN_METHOD(val)) {
+                // TODO all of this is sketchy
+                ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
+                if (arg_cnt+1 != f_method->fn->arity) {
+                    runtime_err(ip, vm, "incorrect number of arguments provided");
+                    return INTERP_RUNTIME_ERR;
+                }
+                sp[0] = MK_OBJ(f_method->self);
+                sp++;
+                vm.sp = sp;
+                if (!f_method->fn->code(vm)) {
+                    return INTERP_RUNTIME_ERR;
+                }
+                sp -= arg_cnt+1; // TODO this is sketchy 
+                break;
             } else {
                 runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;

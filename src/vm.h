@@ -9,9 +9,9 @@ struct ClosureObj;
 struct ClassObj;
 
 struct CallFrame {
-    ClosureObj *closure; 
-    const u8 *ip;        
-    Value *bp;           
+    ClosureObj *closure;
+    const u8 *ip;
+    Value *bp;
 };
 
 enum InterpResult { INTERP_COMPILE_ERR, INTERP_RUNTIME_ERR, INTERP_OK };
@@ -19,7 +19,7 @@ enum InterpResult { INTERP_COMPILE_ERR, INTERP_RUNTIME_ERR, INTERP_OK };
 struct VM {
     // invariants:
     //      - call_stack[call_cnt-1]->closure is the currently executing closure
-    //      - if call_cnt >= 2 then call_stack[call_cnt-2]->ip is return ip 
+    //      - if call_cnt >= 2 then call_stack[call_cnt-2]->ip is return ip
     //      - if call_cnt >= 2 then call_stack[call_cnt-2]->bp is return bp
     //      - if runtime error occurs, every frame will have its ip set
     CallFrame *call_stack;
@@ -27,6 +27,8 @@ struct VM {
 
     Value *val_stack;
     Value *sp;
+
+    ClassObj *list_class;
 
     Dynarr<Value> globals;
 
@@ -38,6 +40,6 @@ struct VM {
     ~VM();
 };
 
-void runtime_err(u8 *ip, VM &vm, const char *format, ...);
+void runtime_err(const u8 *ip, VM &vm, const char *format, ...);
 
 InterpResult run_vm(VM &vm, ClosureObj &closure);

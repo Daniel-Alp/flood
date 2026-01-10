@@ -81,7 +81,7 @@ struct Span {
     bool operator==(const char *other) const
     {
         for (i32 i = 0; i < len; i++) {
-            if (start[i] != other[i]) 
+            if (start[i] != other[i])
                 return false;
         }
         return other[len] == '\0';
