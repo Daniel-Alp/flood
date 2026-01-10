@@ -1,11 +1,11 @@
 fn main() {
-    var v = Vec2(3, 4);
-    #print v.x;
+    print factorial(2);
+    print factorial(2);
 }
 
-class Vec2 {
-    fn init(self, x, y) {
-        #self.x = x;
-        #self.y = y;
+fn factorial(n) {
+    if (n == 0) {
+        return 1;
     }
+    return n * factorial(n-1);
 }

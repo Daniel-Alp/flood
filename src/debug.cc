@@ -314,7 +314,7 @@ void disassemble_chunk(const Chunk &chunk, const char *name)
     printf("\n");
 }
 
-void print_stack(const struct VM &vm, const Value *sp, const Value *bp)
+void print_stack(const VM &vm, const Value *sp, const Value *bp)
 {
     printf("    [value stack]\n");
     i32 i = 0;

@@ -62,14 +62,20 @@ VM::~VM()
 // TODO check if exceeding max stack size
 InterpResult run_vm(VM &vm, ClosureObj &script)
 {
+    ClosureObj *cur_closure = &script;
+
     Value *sp = vm.val_stack;
+    sp[0] = MK_OBJ(cur_closure);
+    sp++;
+    Value *bp = sp;
+
     CallFrame *frame = vm.call_stack;
-    // TODO we can probably take things out of frame to avoid going through pointer
-    frame->closure = &script;
-    // also consider moving putting bp in its own var so I don't have to go through frame to reach bp each time
-    frame->bp = sp;
+    frame->closure = cur_closure;
+    frame->bp = bp;
     vm.call_cnt = 1;
-    const u8 *ip = frame->closure->fn->chunk.code().raw();
+
+    const u8 *ip = cur_closure->fn->chunk.code().raw();
+    
     while (true) {
         const u8 op = *ip;
         ip++;
@@ -256,8 +262,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         case OP_HEAPVAL: {
             const u8 idx = *ip++;
-            HeapValObj *heap_val = alloc<HeapValObj>(vm, frame->bp[idx]);
-            frame->bp[idx] = MK_OBJ(heap_val);
+            HeapValObj *heap_val = alloc<HeapValObj>(vm, bp[idx]);
+            bp[idx] = MK_OBJ(heap_val);
             break;
         }
         case OP_CLOSURE: {
@@ -265,49 +271,49 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const u8 parent_captures = *ip++;
             ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), stack_captures + parent_captures);
             for (i32 i = 0; i < stack_captures; i++)
-                closure->captures[i] = AS_HEAP_VAL(frame->bp[*ip++]);
+                closure->captures[i] = AS_HEAP_VAL(bp[*ip++]);
             for (i32 i = 0; i < parent_captures; i++)
-                closure->captures[stack_captures + i] = frame->closure->captures[*ip++];
+                closure->captures[stack_captures + i] = cur_closure->captures[*ip++];
             sp[-1] = MK_OBJ(closure);
             break;
         }
         case OP_GET_CONST: {
             const u16 idx = *ip++;
-            sp[0] = frame->closure->fn->chunk.constants()[idx];
+            sp[0] = cur_closure->fn->chunk.constants()[idx];
             sp++;
             break;
         }
         case OP_GET_LOCAL: {
             const u8 idx = *ip++;
-            sp[0] = frame->bp[idx];
+            sp[0] = bp[idx];
             sp++;
             break;
         }
         case OP_SET_LOCAL: {
             const u8 idx = *ip++;
-            frame->bp[idx] = sp[-1];
+            bp[idx] = sp[-1];
             break;
         }
         case OP_GET_HEAPVAL: {
             const u8 idx = *ip++;
-            sp[0] = AS_HEAP_VAL(frame->bp[idx])->val;
+            sp[0] = AS_HEAP_VAL(bp[idx])->val;
             sp++;
             break;
         }
         case OP_SET_HEAPVAL: {
             const u8 idx = *ip++;
-            AS_HEAP_VAL(frame->bp[idx])->val = sp[-1];
+            AS_HEAP_VAL(bp[idx])->val = sp[-1];
             break;
         }
         case OP_GET_CAPTURED: {
             const u8 idx = *ip++;
-            sp[0] = frame->closure->captures[idx]->val;
+            sp[0] = cur_closure->captures[idx]->val;
             sp++;
             break;
         }
         case OP_SET_CAPTURED: {
             const u8 idx = *ip++;
-            frame->closure->captures[idx]->val = sp[-1];
+            cur_closure->captures[idx]->val = sp[-1];
             break;
         }
         case OP_GET_SUBSCR: {
@@ -374,7 +380,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // TODO symbols and interning to optimize
         case OP_GET_FIELD: {
             const u8 idx = *ip++;
-            StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants()[idx]);
+            StringObj *prop = AS_STRING(cur_closure->fn->chunk.constants()[idx]);
             Value val = sp[-1];
             if (IS_INSTANCE(val)) {
                 InstanceObj *instance = AS_INSTANCE(val);
@@ -393,7 +399,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // TODO should distinguish between setting prop outside or within the instance
         case OP_SET_FIELD: {
             const u8 idx = *ip++;
-            StringObj *prop = AS_STRING(frame->closure->fn->chunk.constants()[idx]);
+            StringObj *prop = AS_STRING(cur_closure->fn->chunk.constants()[idx]);
             Value container = sp[-2];
             if (IS_INSTANCE(container)) {
                 InstanceObj *instance = AS_INSTANCE(container);
@@ -414,8 +420,28 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         // TODO implement OP_INVOKE optimization
         case OP_GET_METHOD: {
-            const u8 idx = *ip++;
-            runtime_err(ip, vm, "TODO");
+            u8 idx = *ip++;
+            StringObj *prop = AS_STRING(cur_closure->fn->chunk.constants()[idx]);
+            Value val = sp[-1];
+            ClassObj *klass = nullptr;
+            if (IS_INSTANCE(val))
+                klass = AS_INSTANCE(val)->klass;
+            if (klass) {
+                Value *fn = klass->methods.find(*prop);
+                if (fn) {
+                    if (AS_OBJ(*fn)->tag == OBJ_CLOSURE) {
+                        // user-defined method, bind function to instance
+                        auto method = alloc<MethodObj>(vm, AS_INSTANCE(val), AS_CLOSURE(val));
+                        sp[-1] = MK_OBJ(method);
+                    } else {
+                        runtime_err(ip, vm, "TODO");
+                    }
+                    break;
+                }
+                runtime_err(ip, vm, "`%s` instance does not have method `%s`", klass->name.chars(), prop->str.chars());
+                return INTERP_RUNTIME_ERR;
+            }
+            runtime_err(ip, vm, "cannot get method of non-instance");
             return INTERP_RUNTIME_ERR;
         }
         case OP_JUMP: {
@@ -448,11 +474,18 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         case OP_CALL: {
-            const u8 arg_count = *ip++;
-            const Value val = sp[-1 - arg_count];
+            u8 arg_count = *ip++;
+            const Value val = sp[- arg_count - 1];
             ClosureObj *closure;
             if (IS_CLOSURE(val)) {
                 closure = AS_CLOSURE(val);
+            } else if (IS_CLASS(val)) {
+                ClassObj *klass = AS_CLASS(val);
+                InstanceObj *instance = alloc<InstanceObj>(vm, klass);
+                closure = AS_CLOSURE(*instance->klass->methods.find(*alloc<StringObj>(vm, "init")));
+                sp[0] = MK_OBJ(instance); 
+                sp++;
+                arg_count++;
             } else {
                 runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;
@@ -466,31 +499,28 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 return INTERP_RUNTIME_ERR;
             }
             frame->ip = ip;
-            vm.call_cnt++;
+            frame->bp = bp;
             frame++;
-            frame->bp = sp - arg_count;
-            frame->closure = closure;
-            ip = closure->fn->chunk.code().raw();
+
+            cur_closure = closure;
+            frame->closure = cur_closure;
+            bp = sp - arg_count; // FIXME not quite right but close enough
+            ip = cur_closure->fn->chunk.code().raw();
+            vm.call_cnt++;
             break;
         }
         case OP_RETURN: {
             vm.call_cnt--;
             if (vm.call_cnt == 0)
                 return INTERP_OK;
-            // NOTE:
-            // when a function returns the stack looks like this
-            // bp-> <function foo>
-            //      <arg>
-            //      ...
-            //      <arg>
-            //      <local>
-            //      ...
-            //      <local> <-return value
-            // sp->
-            frame->bp[-1] = sp[-1];
-            sp = frame->bp;
+
+            bp[-1] = sp[-1];
+            sp = bp;
+
             frame--;
             ip = frame->ip;
+            bp = frame->bp;
+            cur_closure = frame->closure;
             break;
         }
         case OP_POP: {
@@ -509,9 +539,14 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         }
-        vm.sp = sp;
+        // printf("%s\n", cur_closure->fn->name.chars());
+        // printf("%s\n", vm.call_stack[vm.call_cnt-1].closure->fn->name.chars());
         // printf("%s\n", opcode_str(OpCode(op)));
-        // print_stack(vm, sp, frame->bp);
+        // printf("functions on stack\n");
+        // for (i32 i = 0; i < vm.call_cnt; i++) {
+        //     printf("%s\n", vm.call_stack[i].closure->fn->name.chars());
+        // }
+        // print_stack(vm, sp, bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
         // collect_garbage(vm);

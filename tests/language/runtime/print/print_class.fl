@@ -1,8 +1,9 @@
-fn main() {
-    class Foo {
-        fn init() {
-            
-        }
+class Foo {
+    fn init() {
+        
     }
+}
+
+fn main() {
     print Foo;
 }

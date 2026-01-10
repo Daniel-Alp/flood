@@ -40,6 +40,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
+    // print_node(&node, 0);
+
     Dynarr<Ident> idarr;
     SemaCtx::analyze(node, idarr, errarr);
     if (errarr.len() > 0) {

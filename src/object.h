@@ -23,8 +23,10 @@ struct Obj {
     u8 printed;
     Obj *next;
     Obj(const ObjTag tag) : tag(tag), color(GC_WHITE), printed(0), next(nullptr) {}
-    virtual ~Obj(){};
+    virtual ~Obj() {}
 };
+
+struct ClassObj;
 
 // foreign fn returns true if function executed successfully, false otherwise
 // preconditions:
@@ -58,6 +60,7 @@ struct HeapValObj : public Obj {
     HeapValObj(Value val) : Obj(OBJ_HEAP_VAL), val(val) {}
 };
 
+// FIXME need to implement move constructor and copy constructor because the default one doesn't work
 struct ClosureObj : public Obj {
     FnObj *fn;
     // every element of this array is a pointer to a heap allocated Val
@@ -97,8 +100,8 @@ struct InstanceObj : public Obj {
 
 struct MethodObj : public Obj {
     InstanceObj *self;
-    FnObj *fn;
-    MethodObj(InstanceObj *self, FnObj *fn) : Obj(OBJ_METHOD), self(self), fn(fn) {}
+    ClosureObj *closure;
+    MethodObj(InstanceObj *self, ClosureObj *closure) : Obj(OBJ_METHOD), self(self), closure(closure) {}
 };
 
 static inline bool is_obj_tag(Value val, enum ObjTag tag)

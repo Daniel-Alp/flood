@@ -45,7 +45,7 @@ class ValTable {
     i32 cap;
     Assoc *vals;
 
-    static Assoc &find_slot(StringObj &key, Assoc *vals, const i32 cap);
+    static Assoc &find_slot(const StringObj &key, Assoc *vals, const i32 cap);
 
 public:
     ValTable() : cnt(0), cap(8), vals(static_cast<Assoc *>(new Assoc[cap])){};
@@ -56,5 +56,5 @@ public:
 
     void insert(StringObj &key, Value val);
 
-    Value *find(StringObj &key);
+    Value *find(const StringObj &key);
 };

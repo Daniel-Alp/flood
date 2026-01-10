@@ -127,7 +127,7 @@ static void analyze_binary(SemaCtx &s, const BinaryNode &node)
 {
     if (node.op_tag == TOKEN_EQ) {
         const bool ident = node.lhs->tag == NODE_IDENT;
-        const bool dot = node.lhs->tag == NODE_PROPERTY && static_cast<PropertyNode &>(*node.lhs).op_tag == TOKEN_DOT;
+        const bool dot = node.lhs->tag == NODE_PROPERTY && static_cast<PropertyNode &>(*node.lhs).span == ".";
         const bool list_elem =
             node.lhs->tag == NODE_BINARY && static_cast<BinaryNode &>(*node.lhs).op_tag == TOKEN_L_SQUARE;
         if (!ident && !dot && !list_elem)
@@ -201,11 +201,14 @@ static void analyze_fn_decl(SemaCtx &s, FnDeclNode &node, const bool is_method)
     const i32 local_cnt = s.local_cnt;
 
     s.depth++;
-    if (is_method && (node.arity == 0 || node.params[0].span != Span{.start = "self", .len = 4, .line = -1}))
-        s.errarr.push(ErrMsg{node.span, "`self` must be first argument"});
-    for (i32 i = 0; i < node.arity; i++)
+    for (i32 i = 0; i < node.arity; i++) {
+        if (is_method && node.params[i].span == "self")
+            s.errarr.push(ErrMsg{node.params[i].span, "redeclared variable"});
         node.params[i].id = declare_local(s, node.params[i].span, FLAG_NONE);
-    node.body->local_cnt += node.arity;
+    }
+    if (is_method)
+        declare_local(s, Span{"self", 4, -1}, FLAG_NONE);
+    node.body->local_cnt += node.arity + is_method;
     s.depth--;
     analyze_block(s, *node.body);
 
@@ -222,7 +225,7 @@ static void analyze_class_decl(SemaCtx &s, ClassDeclNode &node)
     for (i32 i = 0; i < node.cnt; i++) {
         FnDeclNode &method_decl = *node.methods[i];
         u32 flags = FLAG_NONE;
-        if (method_decl.span == Span{.start = "init", .len = 4, .line = -1}) {
+        if (method_decl.span == "init") {
             flags |= FLAG_INIT;
             decl_init = true;
         }

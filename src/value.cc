@@ -78,7 +78,7 @@ void print_val(const Value val)
             break;
         }
         case OBJ_METHOD: {
-            printf("<method %s>", AS_METHOD(val)->fn->name.chars());
+            printf("<method %s>", AS_METHOD(val)->closure->fn->name.chars());
             break;
         }
         }
@@ -87,7 +87,7 @@ void print_val(const Value val)
     }
 }
 
-Assoc &ValTable::find_slot(StringObj &key, Assoc *vals, const i32 cap)
+Assoc &ValTable::find_slot(const StringObj &key, Assoc *vals, const i32 cap)
 {
     i32 i = key.str.hash() & (cap - 1);
     while (true) {
@@ -119,7 +119,7 @@ void ValTable::insert(StringObj &key, Value val)
     cnt++;
 }
 
-Value *ValTable::find(StringObj &key)
+Value *ValTable::find(const StringObj &key)
 {
     Assoc &assoc = find_slot(key, vals, cap);
     if (assoc.key == nullptr)

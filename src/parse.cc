@@ -216,7 +216,7 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
         if (p.eat(TOKEN_DOT) || p.eat(TOKEN_COLON)) {
             const Token token = p.prev();
             p.expect(TOKEN_IDENTIFIER, "expected identifier");
-            lhs = alloc<PropertyNode>(p.arena(), token.span, lhs, p.prev().span, p.prev().tag);
+            lhs = alloc<PropertyNode>(p.arena(), token.span, lhs, p.prev().span, token.tag);
             continue;
         }
         // parse fn_call

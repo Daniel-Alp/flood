@@ -43,6 +43,7 @@ void collect_garbage(VM &vm)
         obj->color = GC_BLACK;
         vm.gray.pop();
 
+        // FIXME!!!
         switch (obj->tag) {
         case OBJ_FOREIGN_FN: {
             break;
