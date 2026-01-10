@@ -201,13 +201,8 @@ static void analyze_fn_decl(SemaCtx &s, FnDeclNode &node, const bool is_method)
     const i32 local_cnt = s.local_cnt;
 
     s.depth++;
-    for (i32 i = 0; i < node.arity; i++) {
-        if (is_method && node.params[i].span == "self")
-            s.errarr.push(ErrMsg{node.params[i].span, "redeclared variable"});
+    for (i32 i = 0; i < node.arity; i++)
         node.params[i].id = declare_local(s, node.params[i].span, FLAG_NONE);
-    }
-    if (is_method)
-        declare_local(s, Span{"self", 4, -1}, FLAG_NONE);
     node.body->local_cnt += node.arity + is_method;
     s.depth--;
     analyze_block(s, *node.body);

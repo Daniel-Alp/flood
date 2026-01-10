@@ -27,14 +27,13 @@ class Set {
             if (node.r == null) {
                 node.r = Node(k);
             } else {
-                # NOTE: since this function is calling itself we do not need `self:insert_node`
-                insert_node(node.r, k);
+                self:insert_node(node.r, k);
             }
         } else {
             if (node.l == null) {
                 node.l = Node(k);
             } else {
-                insert_node(node.l, k);
+                self:insert_node(node.l, k);
             }
         }
     }
@@ -51,9 +50,9 @@ class Set {
             return true;
         }
         if (k > node.k) {
-            return contains_node(node.r, k);
+            return self:contains_node(node.r, k);
         } else {
-            return contains_node(node.l, k);
+            return self:contains_node(node.l, k);
         }
     }
 
@@ -75,14 +74,14 @@ class Set {
             }
             var left_max = self:max_node(node.l);
             node.k = left_max;
-            node.l = remove_node(node.l, left_max);
+            node.l = self:remove_node(node.l, left_max);
             return node;
         } 
         if (k > node.k) {
-            node.r = remove_node(node.r, k);
+            node.r = self:remove_node(node.r, k);
             return node;
         } else {
-            node.l = remove_node(node.l, k);
+            node.l = self:remove_node(node.l, k);
             return node;
         }
     }
@@ -92,7 +91,7 @@ class Set {
         if (node.r == null) {
             return node.k;
         }
-        return max_node(node.r);
+        return self:max_node(node.r);
     }
 
     # precondition: node != null
@@ -100,7 +99,7 @@ class Set {
         if (node.l == null) {
             return node.k;
         }
-        return min_node(node.l);
+        return self:min_node(node.l);
     }
 
     fn insert_list(list) {

@@ -30,7 +30,7 @@ void print_val(const Value val)
             return;
         }
         AS_OBJ(val)->printed = 1;
-        enum ObjTag tag = AS_OBJ(val)->tag;
+        const ObjTag tag = AS_OBJ(val)->tag;
         switch (tag) {
         case OBJ_FOREIGN_FN: {
             const char *name = AS_FOREIGN_FN(val)->name.chars();
@@ -62,7 +62,9 @@ void print_val(const Value val)
             break;
         }
         case OBJ_HEAP_VAL: {
+            printf("<heapval ");
             print_val(AS_HEAP_VAL(val)->val);
+            printf(">");
             break;
         }
         case OBJ_STRING: {
@@ -79,6 +81,10 @@ void print_val(const Value val)
         }
         case OBJ_METHOD: {
             printf("<method %s>", AS_METHOD(val)->closure->fn->name.chars());
+            break;
+        }
+        case OBJ_FOREIGN_METHOD: {
+            printf("<foreign method %s>", AS_FOREIGN_METHOD(val)->fn->name.chars());
             break;
         }
         }

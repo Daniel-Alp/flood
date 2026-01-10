@@ -1,4 +1,0 @@
-fn main() {
-    var list = [3];
-    print list:pop();
-}

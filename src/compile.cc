@@ -279,9 +279,7 @@ static void compile_fn_body(CompileCtx &c, const FnDeclNode &node)
 {
     const i32 line = node.span.line;
     for (i32 i = 0; i < node.arity; i++) {
-        // FIXME!!!
-        i32 x = node.params[i].id;
-        const Ident &param = c.idarr[x];
+        const Ident &param = c.idarr[node.params[i].id];
         // move param on heap if it is captured
         if (param.flags & FLAG_CAPTURED) {
             c.chunk().emit_byte(OP_HEAPVAL, line);
@@ -291,7 +289,7 @@ static void compile_fn_body(CompileCtx &c, const FnDeclNode &node)
     compile_block(c, *node.body);
     if (c.idarr[node.id].flags & FLAG_INIT) {
         c.chunk().emit_byte(OP_GET_LOCAL, line);
-        c.chunk().emit_byte(c.fn_node->arity, line);
+        c.chunk().emit_byte(c.fn_node->arity - 1, line);
     } else {
         c.chunk().emit_byte(OP_NULL, line);
     }

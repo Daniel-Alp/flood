@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "arena.h"
 #include "chunk.h"
 #include "dynarr.h"
 #include "foreign.h"
@@ -272,11 +273,19 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const u8 stack_captures = *ip++;
             const u8 parent_captures = *ip++;
             ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), stack_captures + parent_captures);
-            for (i32 i = 0; i < stack_captures; i++)
-                closure->captures[i] = AS_HEAP_VAL(bp[*ip++]);
+            sp[-1] = MK_OBJ(closure);
+            for (i32 i = 0; i < stack_captures; i++) {
+                const i32 idx = *ip++;
+                if (bp + idx != sp - 1) {
+                    closure->captures[i] = AS_HEAP_VAL(bp[idx]);
+                } else {
+                    // the closure captures itself. the subsequent OP_HEAPVAL will move it on the heap
+                    // but it already needs a heapval pointing to itself TODO optimize
+                    closure->captures[i] = alloc<HeapValObj>(vm, bp[idx]);
+                }
+            }
             for (i32 i = 0; i < parent_captures; i++)
                 closure->captures[stack_captures + i] = cur_closure->captures[*ip++];
-            sp[-1] = MK_OBJ(closure);
             break;
         }
         case OP_GET_CONST: {
@@ -479,9 +488,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         case OP_CALL: {
-            const u8 arg_cnt = *ip++;
-            u8 param_cnt = arg_cnt;
-            const Value val = sp[-arg_cnt - 1];
+            u8 param_cnt = *ip++;
+            const Value val = sp[-param_cnt - 1];
             ClosureObj *closure;
             if (IS_CLOSURE(val)) {
                 closure = AS_CLOSURE(val);
@@ -501,23 +509,25 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             } else if (IS_FOREIGN_METHOD(val)) {
                 // TODO all of this is sketchy
                 ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
-                if (arg_cnt+1 != f_method->fn->arity) {
+                param_cnt += 1;
+                if (param_cnt != f_method->fn->arity) {
                     runtime_err(ip, vm, "incorrect number of arguments provided");
                     return INTERP_RUNTIME_ERR;
                 }
                 sp[0] = MK_OBJ(f_method->self);
                 sp++;
+                frame->ip = ip;
                 vm.sp = sp;
                 if (!f_method->fn->code(vm)) {
                     return INTERP_RUNTIME_ERR;
                 }
-                sp -= arg_cnt+1; // TODO this is sketchy 
+                sp -= param_cnt; // TODO this is sketchy
                 break;
             } else {
                 runtime_err(ip, vm, "attempt to call non-callable");
                 return INTERP_RUNTIME_ERR;
             }
-            if (closure->fn->arity != arg_cnt) {
+            if (closure->fn->arity != param_cnt) {
                 runtime_err(ip, vm, "incorrect number of arguments provided");
                 return INTERP_RUNTIME_ERR;
             }
@@ -568,12 +578,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         }
         // printf("%s\n", cur_closure->fn->name.chars());
         // printf("%s\n", vm.call_stack[vm.call_cnt-1].closure->fn->name.chars());
-        // printf("%s\n", opcode_str(OpCode(op)));
-        // printf("functions on stack\n");
-        // for (i32 i = 0; i < vm.call_cnt; i++) {
-        //     printf("%s\n", vm.call_stack[i].closure->fn->name.chars());
-        // }
-        // print_stack(vm, sp, bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
         // collect_garbage(vm);
