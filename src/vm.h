@@ -40,6 +40,6 @@ struct VM {
     ~VM();
 };
 
-void runtime_err(const u8 *ip, VM &vm, const char *format, ...);
+InterpResult runtime_err(const u8 *ip, VM &vm, const char *format, ...);
 
 InterpResult run_vm(VM &vm, ClosureObj &closure);

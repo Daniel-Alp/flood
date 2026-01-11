@@ -1,5 +1,4 @@
 #include "vm.h"
-#include "arena.h"
 #include "chunk.h"
 #include "dynarr.h"
 #include "foreign.h"
@@ -25,7 +24,7 @@ static i32 get_opcode_line(Dynarr<i32> const &lines, const i32 tgt_opcode_idx)
     }
 }
 
-void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
+InterpResult runtime_err(const u8 *ip, VM &vm, const char *format, ...)
 {
     // NOTE:
     // we put ip in a local variable for performance
@@ -43,6 +42,7 @@ void runtime_err(const u8 *ip, VM &vm, const char *format, ...)
         const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip - 1 - fn.chunk.code().raw());
         printf("[line %d] in %s\n", line, fn.name.chars());
     }
+    return INTERP_RUNTIME_ERR;
 }
 
 VM::VM() : call_stack(new CallFrame[MAX_CALL_FRAMES]), val_stack(new Value[MAX_STACK]), sp(val_stack), obj_list(nullptr)
@@ -105,8 +105,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(AS_NUM(lhs) + AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -117,8 +116,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(AS_NUM(lhs) - AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -129,8 +127,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(AS_NUM(lhs) * AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -141,8 +138,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(AS_NUM(lhs) / AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -153,8 +149,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(floor(AS_NUM(lhs) / AS_NUM(rhs)));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -165,8 +160,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_NUM(fmod(AS_NUM(lhs), AS_NUM(rhs)));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -177,8 +171,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_BOOL(AS_NUM(lhs) < AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -189,8 +182,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_BOOL(AS_NUM(lhs) <= AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -201,8 +193,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_BOOL(AS_NUM(lhs) > AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -213,8 +204,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[-2] = MK_BOOL(AS_NUM(lhs) >= AS_NUM(rhs));
                 sp--;
             } else {
-                runtime_err(ip, vm, "operands must be numbers");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operands must be numbers");
             }
             break;
         }
@@ -237,8 +227,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             if (IS_NUM(val)) {
                 sp[-1] = MK_NUM(-AS_NUM(val));
             } else {
-                runtime_err(ip, vm, "operand must be number");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operand must be number");
             }
             break;
         }
@@ -247,8 +236,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             if (IS_BOOL(val)) {
                 sp[-1] = MK_BOOL(!AS_BOOL(val));
             } else {
-                runtime_err(ip, vm, "operand must be boolean");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operand must be boolean");
             }
             break;
         }
@@ -336,18 +324,15 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                         sp[-2] = AS_LIST(container)->vals[u32(AS_NUM(idx))];
                         sp--;
                     } else {
-                        runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
+                        return runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
                             AS_LIST(container)->vals.len());
-                        return INTERP_RUNTIME_ERR;
                     }
 
                 } else {
-                    runtime_err(ip, vm, "list index must be number");
-                    return INTERP_RUNTIME_ERR;
+                    return runtime_err(ip, vm, "list index must be number");
                 }
             } else {
-                runtime_err(ip, vm, "object is not subscriptable");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "object is not subscriptable");
             }
             break;
         }
@@ -363,17 +348,14 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                         sp[-3] = sp[-1];
                         sp -= 2;
                     } else {
-                        runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
+                        return runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
                             i32(AS_LIST(container)->vals.len()));
-                        return INTERP_RUNTIME_ERR;
                     }
                 } else {
-                    runtime_err(ip, vm, "list index must be number");
-                    return INTERP_RUNTIME_ERR;
+                    return runtime_err(ip, vm, "list index must be number");
                 }
             } else {
-                runtime_err(ip, vm, "object is not subscriptable");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "object is not subscriptable");
             }
             break;
         }
@@ -400,12 +382,10 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     sp[-1] = *val;
                     break;
                 }
-                runtime_err(
+                return runtime_err(
                     ip, vm, "`%s` instance does not have field `%s`", instance->klass->name.chars(), prop->str.chars());
-                return INTERP_RUNTIME_ERR;
             }
-            runtime_err(ip, vm, "cannot get field of non-user-instance");
-            return INTERP_RUNTIME_ERR;
+            return runtime_err(ip, vm, "cannot get field of non-user-instance");
         }
         // TODO should distinguish between setting prop outside or within the instance
         case OP_SET_FIELD: {
@@ -419,15 +399,14 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     *val = sp[-1];
                 } else {
                     // TODO check if field exists. do not want to create field from outside
-                    // TODO make insert_val_table take hash to avoid recomputing it
+                    // TODO make // need insert_val_table take hash to avoid recomputing it
                     instance->fields.insert(*prop, sp[-1]);
                 }
                 sp[-2] = sp[-1];
                 sp--;
                 break;
             }
-            runtime_err(ip, vm, "cannot set field of non-user-instance");
-            return INTERP_RUNTIME_ERR;
+            return runtime_err(ip, vm, "cannot set field of non-user-instance");
         }
         // TODO implement OP_INVOKE optimization
         case OP_GET_METHOD: {
@@ -452,11 +431,10 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     }
                     break;
                 }
-                runtime_err(ip, vm, "`%s` instance does not have method `%s`", klass->name.chars(), prop->str.chars());
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(
+                    ip, vm, "`%s` instance does not have method `%s`", klass->name.chars(), prop->str.chars());
             }
-            runtime_err(ip, vm, "cannot get method of non-instance");
-            return INTERP_RUNTIME_ERR;
+            return runtime_err(ip, vm, "cannot get method of non-instance");
         }
         case OP_JUMP: {
             const u16 offset = (ip += 2, (ip[-2] << 8) | ip[-1]);
@@ -470,8 +448,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 if (!AS_BOOL(val))
                     ip += offset;
             } else {
-                runtime_err(ip, vm, "operand must be boolean");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operand must be boolean");
             }
             break;
         }
@@ -482,8 +459,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 if (AS_BOOL(val))
                     ip += offset;
             } else {
-                runtime_err(ip, vm, "operand must be boolean");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "operand must be boolean");
             }
             break;
         }
@@ -496,6 +472,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             } else if (IS_CLASS(val)) {
                 ClassObj *klass = AS_CLASS(val);
                 InstanceObj *instance = alloc<InstanceObj>(vm, klass);
+                // TODO this is gross
                 closure = AS_CLOSURE(*instance->klass->methods.find(*alloc<StringObj>(vm, "init")));
                 sp[0] = MK_OBJ(instance);
                 sp++;
@@ -510,31 +487,23 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 // TODO all of this is sketchy
                 ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
                 param_cnt += 1;
-                if (param_cnt != f_method->fn->arity) {
-                    runtime_err(ip, vm, "incorrect number of arguments provided");
-                    return INTERP_RUNTIME_ERR;
-                }
+                if (param_cnt != f_method->fn->arity)
+                    return runtime_err(ip, vm, "incorrect number of arguments provided");
                 sp[0] = MK_OBJ(f_method->self);
                 sp++;
                 frame->ip = ip;
                 vm.sp = sp;
-                if (!f_method->fn->code(vm)) {
+                if (!f_method->fn->code(vm))
                     return INTERP_RUNTIME_ERR;
-                }
                 sp -= param_cnt; // TODO this is sketchy
                 break;
             } else {
-                runtime_err(ip, vm, "attempt to call non-callable");
-                return INTERP_RUNTIME_ERR;
+                return runtime_err(ip, vm, "attempt to call non-callable");
             }
-            if (closure->fn->arity != param_cnt) {
-                runtime_err(ip, vm, "incorrect number of arguments provided");
-                return INTERP_RUNTIME_ERR;
-            }
-            if (vm.call_cnt + 1 >= MAX_CALL_FRAMES) {
-                runtime_err(ip, vm, "stack overflow");
-                return INTERP_RUNTIME_ERR;
-            }
+            if (closure->fn->arity != param_cnt)
+                return runtime_err(ip, vm, "incorrect number of arguments provided");
+            if (vm.call_cnt + 1 >= MAX_CALL_FRAMES)
+                return runtime_err(ip, vm, "stack overflow");
             frame->ip = ip;
             frame->bp = bp;
             frame++;
