@@ -6,15 +6,7 @@
 #include "value.h"
 #include "vm.h"
 
-// Obj*
-// ObjForeignFn*
-// ObjFn*
-// ObjHeapVal*
-// ObjString*
-// ObjClass*
-// ObjInstance*
-// ObjMethod*
-// ObjForeignMethod*
+// TODO other objects (specifically ObjInstance * and some others)
 
 template <typename T, typename U>
 constexpr bool is_same = false;
@@ -57,46 +49,16 @@ struct MakeIdxSeq<0, I...> {
 
 template <typename T>
 T convert_from(Value val);
-
 template <>
-inline Value convert_from(Value val)
-{
-    return val;
-}
-
+Value convert_from(Value val);
 template <>
-inline double convert_from(Value val)
-{
-    if (IS_NUM(val))
-        return AS_NUM(val);
-    if (IS_HEAP_VAL(val) && IS_NUM(AS_HEAP_VAL(val)->val))
-        return AS_NUM(AS_HEAP_VAL(val)->val);
-    throw "error: double";
-}
-
+double convert_from(Value val);
 template <>
-inline bool convert_from(Value val)
-{
-    if (IS_BOOL(val))
-        return AS_BOOL(val);
-    throw "error: bool";
-}
-
+bool convert_from(Value val);
 template <>
-inline ListObj *convert_from(Value val)
-{
-    if (IS_LIST(val))
-        return AS_LIST(val);
-    throw "error: ListObj*";
-}
-
+ListObj *convert_from(Value val);
 template <>
-inline StringObj *convert_from(Value val)
-{
-    if (IS_STRING(val))
-        return AS_STRING(val);
-    throw "error: StringObj*";
-}
+StringObj *convert_from(Value val);
 
 inline Value convert_to(Value val)
 {
