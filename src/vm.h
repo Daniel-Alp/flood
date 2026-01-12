@@ -14,9 +14,18 @@ struct CallFrame {
     Value *bp;
 };
 
-enum InterpResult { INTERP_COMPILE_ERR, INTERP_RUNTIME_ERR, INTERP_OK };
+enum InterpResultTag { INTERP_OK, INTERP_ERR };
+
+struct InterpResult {
+    InterpResultTag tag;
+    union {
+        const Value val;
+        const char *message;
+    };
+};
 
 struct VM {
+    // TODO delete this is probably outdated
     // invariants:
     //      - call_stack[call_cnt-1]->closure is the currently executing closure
     //      - if call_cnt >= 2 then call_stack[call_cnt-2]->ip is return ip

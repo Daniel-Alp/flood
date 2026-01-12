@@ -4,6 +4,7 @@
 #include "gc.h"
 #include "string_symbol.h"
 #include "value.h"
+#include "vm.h"
 
 enum ObjTag {
     OBJ_FOREIGN_FN,
@@ -29,21 +30,22 @@ struct Obj {
 
 struct ClassObj;
 
+// TODO out of date
 // foreign fn returns true if function executed successfully, false otherwise
 // preconditions:
 //      - sp stored into vm->sp
 //      - ip stored into frame->ip (top frame of call stack)
 //      - correct number of arguments given
-typedef bool (*ForeignFn)(VM &vm);
+typedef InterpResult (*ForeignFnWrapper)(Value *value);
 
 struct StringObj;
 
 struct ForeignFnObj : public Obj {
     String name;
-    ForeignFn code;
+    ForeignFnWrapper wrap;
     i32 arity;
-    ForeignFnObj(String &&name, ForeignFn code, i32 arity)
-        : Obj(OBJ_FOREIGN_FN), name(move(name)), code(code), arity(arity)
+    ForeignFnObj(String &&name, ForeignFnWrapper wrap, i32 arity)
+        : Obj(OBJ_FOREIGN_FN), name(move(name)), wrap(wrap), arity(arity)
     {
     }
 };

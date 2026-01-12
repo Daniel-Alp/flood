@@ -1,7 +1,7 @@
 #include "vm.h"
+#include "../foreign/listobj_foreign.h"
 #include "chunk.h"
 #include "dynarr.h"
-#include "foreign.h"
 #include "gc.h"
 #include "object.h"
 #include "value.h"
@@ -42,7 +42,7 @@ InterpResult runtime_err(const u8 *ip, VM &vm, const char *format, ...)
         const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip - 1 - fn.chunk.code().raw());
         printf("[line %d] in %s\n", line, fn.name.chars());
     }
-    return INTERP_RUNTIME_ERR;
+    return {.tag = INTERP_ERR, .message = ""}; // FIXME!!!
 }
 
 VM::VM() : call_stack(new CallFrame[MAX_CALL_FRAMES]), val_stack(new Value[MAX_STACK]), sp(val_stack), obj_list(nullptr)
@@ -492,10 +492,12 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp[0] = MK_OBJ(f_method->self);
                 sp++;
                 frame->ip = ip;
-                vm.sp = sp;
-                if (!f_method->fn->code(vm))
-                    return INTERP_RUNTIME_ERR;
-                sp -= param_cnt; // TODO this is sketchy
+                InterpResult res = f_method->fn->wrap(sp - param_cnt);
+                if (res.tag == INTERP_ERR)
+                    return runtime_err(ip, vm, res.message);
+                sp -= param_cnt;
+                sp[0] = res.val;
+                sp++;
                 break;
             } else {
                 return runtime_err(ip, vm, "attempt to call non-callable");
@@ -518,7 +520,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         case OP_RETURN: {
             vm.call_cnt--;
             if (vm.call_cnt == 0)
-                return INTERP_OK;
+                return {.tag = INTERP_OK, .val = sp[-1]};
 
             bp[-1] = sp[-1];
             sp = bp;
