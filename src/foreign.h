@@ -6,17 +6,10 @@
 #include "value.h"
 #include "vm.h"
 
-// need:
-// Value
-// double
-// bool
-// void
 // Obj*
 // ObjForeignFn*
 // ObjFn*
 // ObjHeapVal*
-// ObjClosure*
-// ObjList*
 // ObjString*
 // ObjClass*
 // ObjInstance*

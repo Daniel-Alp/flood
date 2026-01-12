@@ -496,8 +496,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 if (res.tag == INTERP_ERR)
                     return runtime_err(ip, vm, res.message);
                 sp -= param_cnt;
-                sp[0] = res.val;
-                sp++;
+                sp[-1] = res.val;
                 break;
             } else {
                 return runtime_err(ip, vm, "attempt to call non-callable");
@@ -547,8 +546,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         }
-        // printf("%s\n", cur_closure->fn->name.chars());
-        // printf("%s\n", vm.call_stack[vm.call_cnt-1].closure->fn->name.chars());
+        // printf("%s\n", opcode_str(OpCode(op)));
+        // print_stack(vm, sp, bp);
         // TODO don't run gc after every op, enable that only for testing
         // run it each iteration only if we define smth
         // collect_garbage(vm);
