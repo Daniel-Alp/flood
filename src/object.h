@@ -16,7 +16,7 @@ enum ObjTag {
     OBJ_CLASS,
     OBJ_INSTANCE,
     OBJ_METHOD,
-    OBJ_FOREIGN_METHOD
+    OBJ_FOREIGN_METHOD,
 };
 
 struct Obj {

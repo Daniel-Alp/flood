@@ -25,12 +25,6 @@ struct InterpResult {
 };
 
 struct VM {
-    // TODO delete this is probably outdated
-    // invariants:
-    //      - call_stack[call_cnt-1]->closure is the currently executing closure
-    //      - if call_cnt >= 2 then call_stack[call_cnt-2]->ip is return ip
-    //      - if call_cnt >= 2 then call_stack[call_cnt-2]->bp is return bp
-    //      - if runtime error occurs, every frame will have its ip set
     CallFrame *call_stack;
     u16 call_cnt;
 

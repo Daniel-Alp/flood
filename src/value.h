@@ -42,13 +42,13 @@ struct Assoc {
 
 class ValTable {
     i32 cnt;
-    i32 cap;
+    i32 _cap;
     Assoc *vals;
 
     static Assoc &find_slot(const StringObj &key, Assoc *vals, const i32 cap);
 
 public:
-    ValTable() : cnt(0), cap(8), vals(static_cast<Assoc *>(new Assoc[cap])){};
+    ValTable() : cnt(0), _cap(8), vals(static_cast<Assoc *>(new Assoc[_cap])){};
     ~ValTable()
     {
         delete[] vals;
@@ -57,4 +57,7 @@ public:
     void insert(StringObj &key, Value val);
 
     Value *find(const StringObj &key);
+
+    Assoc &slot(const i32 idx);
+    i32 cap() const;
 };

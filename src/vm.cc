@@ -549,7 +549,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // printf("%s\n", opcode_str(OpCode(op)));
         // print_stack(vm, sp, bp);
         // TODO don't run gc after every op, enable that only for testing
-        // run it each iteration only if we define smth
-        // collect_garbage(vm);
+        vm.sp = sp;
+        collect_garbage(vm);
     }
 }

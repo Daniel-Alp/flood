@@ -106,20 +106,20 @@ Assoc &ValTable::find_slot(const StringObj &key, Assoc *vals, const i32 cap)
 
 void ValTable::insert(StringObj &key, Value val)
 {
-    if (cnt >= cap * TABLE_LOAD_FACTOR) {
-        Assoc *new_vals = new Assoc[cap * 2];
-        for (i32 i = 0; i < cap; i++) {
+    if (cnt >= _cap * TABLE_LOAD_FACTOR) {
+        Assoc *new_vals = new Assoc[_cap * 2];
+        for (i32 i = 0; i < _cap; i++) {
             if (vals[i].key == nullptr)
                 continue;
-            Assoc &assoc = find_slot(*vals[i].key, new_vals, cap * 2);
+            Assoc &assoc = find_slot(*vals[i].key, new_vals, _cap * 2);
             assoc.key = vals[i].key;
             assoc.val = vals[i].val;
         }
         delete[] vals;
         vals = new_vals;
-        cap *= 2;
+        _cap *= 2;
     }
-    Assoc &assoc = find_slot(key, vals, cap);
+    Assoc &assoc = find_slot(key, vals, _cap);
     assoc.key = &key;
     assoc.val = val;
     cnt++;
@@ -127,8 +127,18 @@ void ValTable::insert(StringObj &key, Value val)
 
 Value *ValTable::find(const StringObj &key)
 {
-    Assoc &assoc = find_slot(key, vals, cap);
+    Assoc &assoc = find_slot(key, vals, _cap);
     if (assoc.key == nullptr)
         return nullptr;
     return &assoc.val;
+}
+
+Assoc &ValTable::slot(const i32 idx)
+{
+    return vals[idx];
+}
+
+i32 ValTable::cap() const
+{
+    return _cap;
 }
