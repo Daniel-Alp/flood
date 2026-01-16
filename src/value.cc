@@ -33,18 +33,15 @@ void print_val(const Value val)
         const ObjTag tag = AS_OBJ(val)->tag;
         switch (tag) {
         case OBJ_FOREIGN_FN: {
-            const char *name = AS_FOREIGN_FN(val)->name.chars();
-            printf("<foreign function %s>", name);
+            printf("<foreign function %s>", AS_FOREIGN_FN(val)->name->str.chars());
             break;
         }
         case OBJ_FN: {
-            const char *name = AS_FN(val)->name.chars();
-            printf("<function %s>", name);
+            printf("<function %s>", AS_FN(val)->name->str.chars());
             break;
         }
         case OBJ_CLOSURE: {
-            const char *name = AS_CLOSURE(val)->fn->name.chars();
-            printf("<closure %s>", name);
+            printf("<closure %s>", AS_CLOSURE(val)->fn->name->str.chars());
             break;
         }
         case OBJ_LIST: {
@@ -72,19 +69,19 @@ void print_val(const Value val)
             break;
         }
         case OBJ_CLASS: {
-            printf("<class %s>", AS_CLASS(val)->name.chars());
+            printf("<class %s>", AS_CLASS(val)->name->str.chars());
             break;
         }
         case OBJ_INSTANCE: {
-            printf("<instance %s>", AS_INSTANCE(val)->klass->name.chars());
+            printf("<instance %s>", AS_INSTANCE(val)->klass->name->str.chars());
             break;
         }
         case OBJ_METHOD: {
-            printf("<method %s>", AS_METHOD(val)->closure->fn->name.chars());
+            printf("<method %s>", AS_METHOD(val)->closure->fn->name->str.chars());
             break;
         }
         case OBJ_FOREIGN_METHOD: {
-            printf("<foreign method %s>", AS_FOREIGN_METHOD(val)->fn->name.chars());
+            printf("<foreign method %s>", AS_FOREIGN_METHOD(val)->fn->name->str.chars());
             break;
         }
         }

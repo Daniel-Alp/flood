@@ -30,35 +30,27 @@ struct Obj {
 
 struct ClassObj;
 
-// TODO out of date
-// foreign fn returns true if function executed successfully, false otherwise
-// preconditions:
-//      - sp stored into vm->sp
-//      - ip stored into frame->ip (top frame of call stack)
-//      - correct number of arguments given
 typedef InterpResult (*ForeignFnWrapper)(Value *value);
 
 struct StringObj;
 
 struct ForeignFnObj : public Obj {
-    String name;
+    StringObj *name;
     ForeignFnWrapper wrap;
     i32 arity;
-    ForeignFnObj(String &&name, ForeignFnWrapper wrap, i32 arity)
-        : Obj(OBJ_FOREIGN_FN), name(move(name)), wrap(wrap), arity(arity)
+    ForeignFnObj(StringObj *name, ForeignFnWrapper wrap, i32 arity)
+        : Obj(OBJ_FOREIGN_FN), name(name), wrap(wrap), arity(arity)
     {
     }
 };
 
 struct FnObj : public Obj {
-    String name;
-    // StringObj *name;
+    StringObj *name;
     Chunk chunk;
     i32 arity;
-    FnObj(String &&name, Chunk &&chunk, i32 arity) : Obj(OBJ_FN), name(move(name)), chunk(move(chunk)), arity(arity) {}
+    FnObj(StringObj *name, Chunk &&chunk, i32 arity) : Obj(OBJ_FN), name(name), chunk(move(chunk)), arity(arity) {}
 };
 
-// TODO for f_method and method consider storing a copy fn instead of a pointer
 struct ForeignMethodObj : public Obj {
     Obj *self;
     ForeignFnObj *fn;
@@ -70,10 +62,9 @@ struct HeapValObj : public Obj {
     HeapValObj(Value val) : Obj(OBJ_HEAP_VAL), val(val) {}
 };
 
-// FIXME need to implement move constructor and copy constructor because the default one doesn't work
+// FIXME should implement move constructor and copy constructor because the default won't work
 struct ClosureObj : public Obj {
     FnObj *fn;
-    // every element of this array is a pointer to a heap allocated Val
     u8 capture_cnt;
     HeapValObj **captures;
     ClosureObj(FnObj *fn, u8 capture_cnt)
@@ -97,9 +88,9 @@ struct StringObj : public Obj {
 };
 
 struct ClassObj : public Obj {
-    String name;
+    StringObj *name;
     ValTable methods;
-    ClassObj(String &&name) : Obj(OBJ_CLASS), name(name) {}
+    ClassObj(StringObj *name) : Obj(OBJ_CLASS), name(name) {}
 };
 
 struct InstanceObj : public Obj {

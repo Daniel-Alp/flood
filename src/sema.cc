@@ -203,7 +203,7 @@ static void analyze_fn_decl(SemaCtx &s, FnDeclNode &node, const bool is_method)
     s.depth++;
     for (i32 i = 0; i < node.arity; i++)
         node.params[i].id = declare_local(s, node.params[i].span, FLAG_NONE);
-    node.body->local_cnt += node.arity + is_method;
+    node.body->local_cnt += node.arity;
     s.depth--;
     analyze_block(s, *node.body);
 

@@ -108,7 +108,7 @@ template <auto F>
 void define_foreign_method(VM &vm, ClassObj &klass, const String &name)
 {
     constexpr int N = FunctionArity<decltype(F)>::value;
-    ForeignFnObj *f_fn = alloc<ForeignFnObj>(vm, name, wrap_foreign_fn<F>, N);
     StringObj *string = alloc<StringObj>(vm, name);
+    ForeignFnObj *f_fn = alloc<ForeignFnObj>(vm, string, wrap_foreign_fn<F>, N);
     klass.methods.insert(*string, MK_OBJ(f_fn));
 }

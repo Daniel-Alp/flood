@@ -1,4 +1,5 @@
 #include "gc.h"
+#include "debug.h"
 #include "object.h"
 #include "value.h"
 
@@ -15,9 +16,8 @@ static void mark_table(VM &vm, ValTable &tab)
     for (i32 i = 0; i < tab.cap(); i++) {
         auto &assoc = tab.slot(i);
         if (assoc.key != nullptr && IS_OBJ(assoc.val)) {
-            // FIXME we're not marking the keys (string obj's of the table because it's not clear who owns them)
-            // we could mark them but that's not exactly right, the table doesn't own them, need to think a bit
             push_gray_stack(vm, AS_OBJ(assoc.val));
+            push_gray_stack(vm, assoc.key);
         }
     }
 }
@@ -64,6 +64,7 @@ void collect_garbage(VM &vm)
         }
         case OBJ_FN: {
             FnObj *const fn = static_cast<FnObj *>(obj);
+            push_gray_stack(vm, fn->name);
             // lo != nullptr because chunk.constants.cap >= 8
             const Value *const lo = fn->chunk.constants().raw();
             const Value *const hi = lo + fn->chunk.constants().len();
@@ -108,13 +109,13 @@ void collect_garbage(VM &vm)
         }
         case OBJ_CLASS: {
             ClassObj *const klass = static_cast<ClassObj *>(obj);
-            push_gray_stack(vm, klass);
+            push_gray_stack(vm, klass->name);
             mark_table(vm, klass->methods);
             break;
         }
         case OBJ_INSTANCE: {
             InstanceObj *const inst = static_cast<InstanceObj *>(obj);
-            push_gray_stack(vm, inst);
+            push_gray_stack(vm, inst->klass);
             mark_table(vm, inst->fields);
             break;
         }

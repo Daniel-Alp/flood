@@ -40,14 +40,14 @@ InterpResult runtime_err(const u8 *ip, VM &vm, const char *format, ...)
     for (i32 i = vm.call_cnt - 1; i >= 0; i--) {
         const FnObj &fn = *vm.call_stack[i].closure->fn;
         const i32 line = get_opcode_line(fn.chunk.lines(), vm.call_stack[i].ip - 1 - fn.chunk.code().raw());
-        printf("[line %d] in %s\n", line, fn.name.chars());
+        printf("[line %d] in %s\n", line, fn.name->str.chars());
     }
     return {.tag = INTERP_ERR, .message = ""}; // FIXME!!!
 }
 
 VM::VM() : call_stack(new CallFrame[MAX_CALL_FRAMES]), val_stack(new Value[MAX_STACK]), sp(val_stack), obj_list(nullptr)
 {
-    list_class = alloc<ClassObj>(*this, "List");
+    list_class = alloc<ClassObj>(*this, alloc<StringObj>(*this, "List"));
     define_list_methods(*this);
 }
 
@@ -382,8 +382,8 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     sp[-1] = *val;
                     break;
                 }
-                return runtime_err(
-                    ip, vm, "`%s` instance does not have field `%s`", instance->klass->name.chars(), prop->str.chars());
+                return runtime_err(ip, vm, "`%s` instance does not have field `%s`", instance->klass->name->str.chars(),
+                    prop->str.chars());
             }
             return runtime_err(ip, vm, "cannot get field of non-user-instance");
         }
@@ -432,7 +432,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     break;
                 }
                 return runtime_err(
-                    ip, vm, "`%s` instance does not have method `%s`", klass->name.chars(), prop->str.chars());
+                    ip, vm, "`%s` instance does not have method `%s`", klass->name->str.chars(), prop->str.chars());
             }
             return runtime_err(ip, vm, "cannot get method of non-instance");
         }
@@ -551,5 +551,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // TODO don't run gc after every op, enable that only for testing
         vm.sp = sp;
         collect_garbage(vm);
+        // collect_garbage(vm);
     }
 }
