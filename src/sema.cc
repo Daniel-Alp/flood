@@ -127,7 +127,7 @@ static void analyze_binary(SemaCtx &s, const BinaryNode &node)
 {
     if (node.op_tag == TOKEN_EQ) {
         const bool ident = node.lhs->tag == NODE_IDENT;
-        const bool dot = node.lhs->tag == NODE_PROPERTY && static_cast<PropertyNode &>(*node.lhs).span == ".";
+        const bool dot = node.lhs->tag == NODE_SELECTOR && static_cast<SelectorNode &>(*node.lhs).span == ".";
         const bool list_elem =
             node.lhs->tag == NODE_BINARY && static_cast<BinaryNode &>(*node.lhs).op_tag == TOKEN_L_SQUARE;
         if (!ident && !dot && !list_elem)
@@ -137,7 +137,7 @@ static void analyze_binary(SemaCtx &s, const BinaryNode &node)
     analyze_node(s, *node.rhs);
 }
 
-static void analyze_property(SemaCtx &s, const PropertyNode &node)
+static void analyze_selector(SemaCtx &s, const SelectorNode &node)
 {
     analyze_node(s, *node.lhs);
 }
@@ -241,7 +241,7 @@ static void analyze_node(SemaCtx &s, Node &node)
     case NODE_IDENT:     analyze_ident(s, static_cast<IdentNode&>(node)); break;
     case NODE_UNARY:     analyze_unary(s, static_cast<UnaryNode&>(node)); break;
     case NODE_BINARY:    analyze_binary(s, static_cast<BinaryNode&>(node)); break;
-    case NODE_PROPERTY:  analyze_property(s, static_cast<PropertyNode&>(node)); break;
+    case NODE_SELECTOR:  analyze_selector(s, static_cast<SelectorNode&>(node)); break;
     case NODE_CALL:      analyze_fn_call(s, static_cast<CallNode&>(node)); break;
     case NODE_VAR_DECL:  analyze_var_decl(s, static_cast<VarDeclNode&>(node)); break;
     case NODE_FN_DECL: {

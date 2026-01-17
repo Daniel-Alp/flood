@@ -67,9 +67,9 @@ static void print_binary(const BinaryNode &node, const i32 offset)
     print_node(node.rhs, offset + 2);
 }
 
-static void print_dot(const PropertyNode &node, const i32 offset)
+static void print_selector(const SelectorNode &node, const i32 offset)
 {
-    printf("Property");
+    printf("Selector");
     print_node(node.lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
     printf("%.*s", node.sym.len, node.sym.start);
@@ -172,9 +172,25 @@ static void print_print(const PrintNode &node, const i32 offset)
 
 static void print_module(const ModuleNode &node, const i32 offset)
 {
-    printf("ModuleNode");
+    printf("Module");
     for (i32 i = 0; i < node.cnt; i++)
         print_node(node.decls[i], offset + 2);
+}
+
+static void print_import(const ImportNode &node, const i32 offset)
+{
+    printf("Import\n");
+    printf("%*s", offset + 2, "");
+    printf("parts: ");
+    for (i32 i = 0; i < node.cnt - 1; i++) {
+        printf("%.*s", node.parts[i].len, node.parts[i].start);
+        printf(", ");
+    }
+    printf("%.*s", node.parts[node.cnt - 1].len, node.parts[node.cnt - 1].start);
+    if (node.alias) {
+        printf("\n");
+        printf("alias: %.*s", node.alias->len, node.alias->start);
+    }
 }
 
 void print_node(const Node *const node, const i32 offset)
@@ -189,7 +205,7 @@ void print_node(const Node *const node, const i32 offset)
     case NODE_IDENT:        print_ident(static_cast<const IdentNode &>(*node)); break;
     case NODE_UNARY:        print_unary(static_cast<const UnaryNode &>(*node), offset); break;
     case NODE_BINARY:       print_binary(static_cast<const BinaryNode &>(*node), offset); break;
-    case NODE_PROPERTY:     print_dot(static_cast<const PropertyNode &>(*node), offset); break;
+    case NODE_SELECTOR:     print_selector(static_cast<const SelectorNode &>(*node), offset); break;
     case NODE_CALL:         print_call(static_cast<const CallNode &>(*node), offset); break;
     case NODE_BLOCK:        print_block(static_cast<const BlockNode &>(*node), offset); break;
     case NODE_IF:           print_if(static_cast<const IfNode &>(*node), offset); break;
@@ -201,6 +217,7 @@ void print_node(const Node *const node, const i32 offset)
     // TEMP remove when we add functions
     case NODE_PRINT:        print_print(static_cast<const PrintNode &>(*node), offset); break;
     case NODE_MODULE:       print_module(static_cast<const ModuleNode &>(*node), offset); break;
+    case NODE_IMPORT:       print_import(static_cast<const ImportNode &>(*node), offset); break;
     }
     // clang-format on
     printf(")");

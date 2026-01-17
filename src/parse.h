@@ -13,7 +13,7 @@ enum NodeTag {
     // +, -, *, /, and, or, [
     // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
     NODE_BINARY,
-    NODE_PROPERTY, // foo.bar for field and foo:bar for method
+    NODE_SELECTOR, // foo.bar for field and foo:bar for method
     NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
@@ -24,6 +24,7 @@ enum NodeTag {
     NODE_RETURN,
     // TEMP remove when we add functions
     NODE_PRINT,
+    NODE_IMPORT,
     NODE_MODULE
 };
 
@@ -78,15 +79,15 @@ struct BinaryNode : public Node {
     }
 };
 
-struct PropertyNode : public Node {
+struct SelectorNode : public Node {
     // span is `.` or `:`
     Node *const lhs;
     //      foo.bar
     //          ^~~ sym
     const Span sym;
     const TokenTag op_tag;
-    PropertyNode(const Span span, Node *const lhs, const Span sym, const TokenTag op_tag)
-        : Node(span, NODE_PROPERTY), lhs(lhs), sym(sym), op_tag(op_tag)
+    SelectorNode(const Span span, Node *const lhs, const Span sym, const TokenTag op_tag)
+        : Node(span, NODE_SELECTOR), lhs(lhs), sym(sym), op_tag(op_tag)
     {
     }
 };
@@ -189,6 +190,17 @@ struct ReturnNode : public Node {
     // span is `return`
     Node *const expr;
     ReturnNode(const Span span, Node *const expr) : Node(span, NODE_RETURN), expr(expr) {}
+};
+
+struct ImportNode : public Node {
+    // span is `import`
+    Span *const parts;
+    const i32 cnt;
+    Span *const alias;
+    ImportNode(const Span span, Span *const parts, const i32 cnt, Span *const alias)
+        : Node(span, NODE_IMPORT), parts(parts), cnt(cnt), alias(alias)
+    {
+    }
 };
 
 struct ModuleNode : public Node {

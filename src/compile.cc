@@ -140,9 +140,9 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
             compile_expr(c, *lhs.rhs);
             compile_expr(c, *node.rhs);
             c.chunk().emit_byte(OP_SET_SUBSCR, line);
-        } else if (node.lhs->tag == NODE_PROPERTY) {
+        } else if (node.lhs->tag == NODE_SELECTOR) {
             // field set
-            const auto &lhs = static_cast<const PropertyNode &>(*node.lhs);
+            const auto &lhs = static_cast<const SelectorNode &>(*node.lhs);
             // TODO assert lhs.op_tag == TOKEN_DOT
             compile_expr(c, *lhs.lhs);
             compile_expr(c, *node.rhs);
@@ -179,7 +179,7 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
     }
 }
 
-static void compile_get_property(CompileCtx &c, const PropertyNode &node)
+static void compile_selector(CompileCtx &c, const SelectorNode &node)
 {
     const i32 line = node.span.line;
     compile_expr(c, *node.lhs);
@@ -328,7 +328,7 @@ static void compile_expr(CompileCtx &c, const Node &node)
     case NODE_IDENT:      compile_ident(c, static_cast<const IdentNode&>(node)); break;
     case NODE_UNARY:      compile_unary(c, static_cast<const UnaryNode&>(node)); break;
     case NODE_BINARY:     compile_binary(c, static_cast<const BinaryNode&>(node)); break;
-    case NODE_PROPERTY:   compile_get_property(c, static_cast<const PropertyNode&>(node)); break;
+    case NODE_SELECTOR:   compile_selector(c, static_cast<const SelectorNode&>(node)); break;
     case NODE_CALL:       compile_call(c, static_cast<const CallNode&>(node)); break;
     case NODE_VAR_DECL:   compile_var_decl(c, static_cast<const VarDeclNode&>(node)); break;
     default:              break;
@@ -347,7 +347,7 @@ static void compile_block(CompileCtx &c, const BlockNode &node, const bool fn_bo
         case NODE_IDENT:        compile_ident(c, *static_cast<IdentNode*>(node.stmts[i])); break;
         case NODE_UNARY:        compile_unary(c, *static_cast<UnaryNode*>(node.stmts[i])); break;
         case NODE_BINARY:       compile_binary(c, *static_cast<BinaryNode*>(node.stmts[i])); break;
-        case NODE_PROPERTY:     compile_get_property(c, *static_cast<PropertyNode*>(node.stmts[i])); break;
+        case NODE_SELECTOR:     compile_selector(c, *static_cast<SelectorNode*>(node.stmts[i])); break;
         case NODE_CALL:         compile_call(c, *static_cast<CallNode*>(node.stmts[i])); break;
         case NODE_VAR_DECL:     compile_var_decl(c, *static_cast<VarDeclNode*>(node.stmts[i])); break;
         case NODE_FN_DECL:      compile_fn_decl(c, *static_cast<FnDeclNode*>(node.stmts[i])); break;

@@ -15,7 +15,6 @@ bool val_eq(const Value val1, const Value val2)
     case VAL_OBJ:  return AS_OBJ(val1) == AS_OBJ(val2); // TODO proper string comparison (?)
     }
     // clang-format on
-    // TODO should never reach this case
 }
 
 void print_val(const Value val)

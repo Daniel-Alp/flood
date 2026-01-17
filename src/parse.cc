@@ -216,7 +216,7 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
         if (p.eat(TOKEN_DOT) || p.eat(TOKEN_COLON)) {
             const Token token = p.prev();
             p.expect(TOKEN_IDENTIFIER, "expected identifier");
-            lhs = alloc<PropertyNode>(p.arena(), token.span, lhs, p.prev().span, token.tag);
+            lhs = alloc<SelectorNode>(p.arena(), token.span, lhs, p.prev().span, token.tag);
             continue;
         }
         // parse fn_call
@@ -390,6 +390,27 @@ static BlockNode *parse_block(Parser &p)
     return alloc<BlockNode>(p.arena(), span, stmts, cnt);
 }
 
+// precondition: `import` token consumed
+static ImportNode *parse_import(Parser &p)
+{
+    const Span span = p.prev().span;
+    Dynarr<Span> parts;
+    p.expect(TOKEN_IDENTIFIER, "expected identifier");
+    parts.push(p.prev().span);
+    while (p.eat(TOKEN_SLASH)) {
+        p.expect(TOKEN_IDENTIFIER, "expected identifier");
+        parts.push(p.prev().span);
+    }
+    Span *alias = nullptr;
+    if (p.eat(TOKEN_AS)) {
+        p.expect(TOKEN_IDENTIFIER, "expected identifier");
+        alias = alloc<Span>(p.arena(), p.prev().span);
+    }
+    const i32 cnt = parts.len();
+    p.expect(TOKEN_SEMI, "expected `;`");
+    return alloc<ImportNode>(p.arena(), span, move_dynarr(p.arena(), move(parts)), cnt, alias);
+}
+
 static ModuleNode &parse_file(Parser &p)
 {
     Dynarr<Node *> nodearr;
@@ -400,6 +421,9 @@ static ModuleNode &parse_file(Parser &p)
         } else if (p.eat(TOKEN_CLASS)) {
             p.set_panic(false);
             nodearr.push(parse_class_decl(p));
+        } else if (p.eat(TOKEN_IMPORT)) {
+            p.set_panic(false);
+            nodearr.push(parse_import(p));
         } else {
             p.advance_with_err("expected declaration");
         }

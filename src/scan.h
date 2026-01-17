@@ -48,7 +48,6 @@ enum TokenTag {
     TOKEN_IDENTIFIER,
     TOKEN_STRING,
 
-    // TODO handle these keywords
     TOKEN_IMPORT,
     TOKEN_AS,
 

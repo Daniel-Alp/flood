@@ -399,7 +399,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     *val = sp[-1];
                 } else {
                     // TODO check if field exists. do not want to create field from outside
-                    // TODO make // need insert_val_table take hash to avoid recomputing it
+                    // TODO need insert_val_table take hash to avoid recomputing it
                     instance->fields.insert(*prop, sp[-1]);
                 }
                 sp[-2] = sp[-1];
@@ -484,7 +484,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                 sp++;
                 param_cnt++;
             } else if (IS_FOREIGN_METHOD(val)) {
-                // TODO all of this is sketchy
                 ForeignMethodObj *f_method = AS_FOREIGN_METHOD(val);
                 param_cnt += 1;
                 if (param_cnt != f_method->fn->arity)
