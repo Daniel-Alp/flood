@@ -4,35 +4,6 @@
 #include "scan.h"
 #include <stdio.h>
 
-// we cannot use the token span for printing the binary operator because
-//      x += 3;
-// is desugared into
-//      x = x + 3;
-const char *binop_str(const TokenTag tag)
-{
-    // clang-format off
-    switch(tag) {
-    case TOKEN_PLUS:        return "+";
-    case TOKEN_MINUS:       return "-";
-    case TOKEN_STAR:        return "*";
-    case TOKEN_SLASH:       return "/";
-    case TOKEN_SLASH_SLASH: return "//"; 
-    case TOKEN_PERCENT:     return "%";
-    case TOKEN_LT:          return "<";
-    case TOKEN_LEQ:         return "<=";
-    case TOKEN_GT:          return ">";
-    case TOKEN_GEQ:         return ">=";
-    case TOKEN_EQEQ:        return "==";
-    case TOKEN_NEQ:         return "!=";
-    case TOKEN_AND:         return "and";
-    case TOKEN_OR:          return "or";
-    case TOKEN_EQ:          return "=";
-    case TOKEN_L_SQUARE:    return "[]";
-    default:                return nullptr;
-    }
-    // clang-format on
-}
-
 static void print_atom(const AtomNode &node)
 {
     printf("Atom %.*s", node.span.len, node.span.start);
@@ -62,7 +33,7 @@ static void print_binary(const BinaryNode &node, const i32 offset)
 {
     printf("Binary\n");
     printf("%*s", offset + 2, "");
-    printf("%s", binop_str(node.op_tag));
+    printf("%.*s", node.span.len, node.span.start);
     print_node(node.lhs, offset + 2);
     print_node(node.rhs, offset + 2);
 }
@@ -73,6 +44,22 @@ static void print_selector(const SelectorNode &node, const i32 offset)
     print_node(node.lhs, offset + 2);
     printf("\n%*s", offset + 2, "");
     printf("%.*s", node.sym.len, node.sym.start);
+}
+
+static void print_subscr(const SubscrNode &node, const i32 offset)
+{
+    printf("Subscr");
+    print_node(node.lhs, offset + 2);
+    print_node(node.rhs, offset + 2);
+}
+
+static void print_assign(const AssignNode &node, const i32 offset)
+{
+    printf("Assign\n");
+    printf("%*s", offset + 2, "");
+    printf("%.*s", node.span.len, node.span.start);
+    print_node(node.lvalue, offset + 2);
+    print_node(node.rhs, offset + 2);
 }
 
 static void print_call(const CallNode &node, const i32 offset)
@@ -206,6 +193,8 @@ void print_node(const Node *const node, const i32 offset)
     case NODE_UNARY:        print_unary(static_cast<const UnaryNode &>(*node), offset); break;
     case NODE_BINARY:       print_binary(static_cast<const BinaryNode &>(*node), offset); break;
     case NODE_SELECTOR:     print_selector(static_cast<const SelectorNode &>(*node), offset); break;
+    case NODE_SUBSCR:       print_subscr(static_cast<const SubscrNode &>(*node), offset); break;
+    case NODE_ASSIGN:       print_assign(static_cast<const AssignNode &>(*node), offset); break;
     case NODE_CALL:         print_call(static_cast<const CallNode &>(*node), offset); break;
     case NODE_BLOCK:        print_block(static_cast<const BlockNode &>(*node), offset); break;
     case NODE_IF:           print_if(static_cast<const IfNode &>(*node), offset); break;

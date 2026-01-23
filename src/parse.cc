@@ -16,19 +16,11 @@ struct PrecLvl {
     const i32 next;
 };
 
-// returns precedence of infix operator
-static struct PrecLvl infix_prec(const TokenTag tag)
+// returns precedence of binary operator
+static struct PrecLvl binary_prec(const TokenTag tag)
 {
     // clang-format off
     switch (tag) {
-    case TOKEN_EQ:
-    case TOKEN_PLUS_EQ:
-    case TOKEN_MINUS_EQ:
-    case TOKEN_STAR_EQ:
-    case TOKEN_SLASH_EQ:
-    case TOKEN_SLASH_SLASH_EQ:
-    case TOKEN_PERCENT_EQ: 
-        return {.curr = 1, .next = 2};
     case TOKEN_OR:
     case TOKEN_AND: 
         return {.curr = 5, .next = 5};
@@ -48,33 +40,10 @@ static struct PrecLvl infix_prec(const TokenTag tag)
     case TOKEN_SLASH_SLASH:
     case TOKEN_PERCENT: 
         return {.curr = 13, .next = 14};
-    // we view `[` as binary operator lhs[rhs]
-    // the old precedence is high because the operator binds tightly
-    //      e.g. x * y[0] is parsed as x * (y[0])
-    // but the expression within the [ ] should be parsed from the starting
-    // precedence level, similar to how ( ) resets the precedence level
-    case TOKEN_L_SQUARE: 
-        return {.curr = 15, .next = 1};
     default: 
         return {.curr = 0, .next = 0};
     }
     // clang-format on
-}
-
-// e.g. given += return + and return -1 if cannot be desugared
-static i32 desugar(const TokenTag tag)
-{
-    // clang-format off
-    switch (tag) {
-    case TOKEN_PLUS_EQ:        return TOKEN_PLUS;
-    case TOKEN_MINUS_EQ:       return TOKEN_MINUS;
-    case TOKEN_STAR_EQ:        return TOKEN_STAR;
-    case TOKEN_SLASH_EQ:       return TOKEN_SLASH;
-    case TOKEN_SLASH_SLASH_EQ: return TOKEN_SLASH_SLASH;
-    case TOKEN_PERCENT_EQ:     return TOKEN_PERCENT;
-    default:                   return -1;
-        // clang-format on
-    }
 }
 
 Arena &Parser::arena() const
@@ -213,13 +182,22 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
     default: p.emit_err("expected expression"); return nullptr;
     }
     while (true) {
+        // parse selector
         if (p.eat(TOKEN_DOT) || p.eat(TOKEN_COLON)) {
             const Token token = p.prev();
             p.expect(TOKEN_IDENTIFIER, "expected identifier");
             lhs = alloc<SelectorNode>(p.arena(), token.span, lhs, p.prev().span, token.tag);
             continue;
         }
-        // parse fn_call
+        // parse subscr
+        if (p.eat(TOKEN_L_SQUARE)) {
+            const Span span = p.prev().span;
+            Node *const rhs = parse_expr(p, 1);
+            p.expect(TOKEN_R_SQUARE, "expected `]`");
+            lhs = alloc<SubscrNode>(p.arena(), span, lhs, rhs);
+            continue;
+        }
+        // parse fn call
         if (p.eat(TOKEN_L_PAREN)) {
             const Span fn_call_span = p.prev().span;
             Dynarr<Node *> nodearr = parse_arg_list(p, TOKEN_R_PAREN);
@@ -229,25 +207,32 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
             lhs = alloc<CallNode>(p.arena(), fn_call_span, lhs, args, cnt);
             continue;
         }
-        token = p.at();
-        const PrecLvl prec = infix_prec(token.tag);
-        if (prec.curr < prec_lvl) {
-            break;
+        // parse assignment
+        if (p.at().tag == TOKEN_EQ 
+            || p.at().tag == TOKEN_PLUS_EQ 
+            || p.at().tag == TOKEN_MINUS_EQ
+            || p.at().tag == TOKEN_STAR_EQ
+            || p.at().tag == TOKEN_SLASH_EQ
+            || p.at().tag == TOKEN_PERCENT_EQ) {
+            const Token token = p.at();
+            if (!(lhs->tag == NODE_IDENT  
+                || (lhs->tag == NODE_SELECTOR && static_cast<SelectorNode*>(lhs)->op_tag == TOKEN_DOT)
+                || lhs->tag == NODE_SUBSCR)) {
+                p.emit_err("cannot assign to left-hand expression");
+            }
+            p.bump();
+            Node *rhs = parse_expr(p, 1);
+            lhs = alloc<AssignNode>(p.arena(), token.span, lhs, rhs, token.tag);
+            continue;
         }
+        // parse binary ops
+        token = p.at();
+        const PrecLvl prec = binary_prec(token.tag);
+        if (prec.curr < prec_lvl)
+            break;
         p.bump();
         Node *rhs = parse_expr(p, prec.next);
-        // since we view `[` as a binary operator we have to consume `]` after parsing idx expr
-        if (token.tag == TOKEN_L_SQUARE)
-            p.expect(TOKEN_R_SQUARE, "expected `]`");
-
-        enum TokenTag tag = token.tag;
-        // desugar +=, -=, *=, /=, //=, and %=
-        const i32 desugared = desugar(tag);
-        if (desugared != -1) {
-            rhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, TokenTag(desugared));
-            tag = TOKEN_EQ;
-        }
-        lhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, tag);
+        lhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, token.tag);
     }
     return lhs;
 }

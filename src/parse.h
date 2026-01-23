@@ -6,15 +6,15 @@
 #define MAX_LOCALS (256)
 
 enum NodeTag {
-    NODE_ATOM, // null, true, false, strings
-    NODE_LIST, // [foo, bar, baz]
-    NODE_IDENT,
-    NODE_UNARY,
-    // +, -, *, /, and, or, [
-    // the index operator foo[bar] can be viewed as a high-precedence left-associative binop
-    NODE_BINARY,
-    NODE_SELECTOR, // foo.bar for field and foo:bar for method
-    NODE_CALL,
+    NODE_ATOM,         
+    NODE_LIST,         
+    NODE_IDENT,         
+    NODE_UNARY,         
+    NODE_BINARY,        
+    NODE_SELECTOR,  
+    NODE_SUBSCR,      
+    NODE_ASSIGN,       
+    NODE_CALL,           
     NODE_VAR_DECL,
     NODE_FN_DECL,
     NODE_CLASS_DECL,
@@ -92,9 +92,29 @@ struct SelectorNode : public Node {
     }
 };
 
+struct SubscrNode : public Node {
+    // span is `[`
+    Node *const lhs;
+    Node *const rhs;
+    SubscrNode(const Span span, Node *const lhs, Node *const rhs)
+        : Node(span, NODE_SUBSCR), lhs(lhs), rhs(rhs)
+    {
+    }
+};
+
+struct AssignNode : public Node {
+    // span is `=`, `+=`, ...
+    Node *const lvalue;
+    Node *const rhs;
+    const TokenTag op_tag;
+    AssignNode(const Span span, Node *const lvalue, Node *const rhs, const TokenTag op_tag)
+        : Node(span, NODE_ASSIGN), lvalue(lvalue), rhs(rhs), op_tag(op_tag)
+    {
+    }
+};
+
 struct CallNode : public Node {
     // span is `(`
-    // the expression that is being called
     Node *const lhs;
     Node *const *const args;
     const i32 arity;
