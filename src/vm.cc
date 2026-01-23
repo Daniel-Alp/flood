@@ -337,15 +337,14 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         case OP_SET_SUBSCR: {
-            const Value container = sp[-3];
-            const Value idx = sp[-2];
-            const Value val = sp[-1];
+            const Value val = sp[-3];
+            const Value container = sp[-2];
+            const Value idx = sp[-1];
             if (IS_LIST(container)) {
                 if (IS_NUM(idx)) {
                     if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->vals.len()) {
                         AS_LIST(container)->vals[i32(AS_NUM(idx))] = val;
                         // TODO consider making assignment a statement rather than an expression
-                        sp[-3] = sp[-1];
                         sp -= 2;
                     } else {
                         return runtime_err(ip, vm, "index %d out of bounds for list of size %d", i32(AS_NUM(idx)),
@@ -391,18 +390,17 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         case OP_SET_FIELD: {
             const u8 idx = *ip++;
             StringObj *prop = AS_STRING(cur_closure->fn->chunk.constants()[idx]);
-            Value container = sp[-2];
+            Value container = sp[-1];
             if (IS_INSTANCE(container)) {
                 InstanceObj *instance = AS_INSTANCE(container);
                 Value *val = instance->fields.find(*prop);
                 if (val != nullptr) {
-                    *val = sp[-1];
+                    *val = sp[-2];
                 } else {
                     // TODO check if field exists. do not want to create field from outside
                     // TODO need insert_val_table take hash to avoid recomputing it
-                    instance->fields.insert(*prop, sp[-1]);
+                    instance->fields.insert(*prop, sp[-2]);
                 }
-                sp[-2] = sp[-1];
                 sp--;
                 break;
             }

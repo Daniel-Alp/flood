@@ -6,15 +6,15 @@
 #define MAX_LOCALS (256)
 
 enum NodeTag {
-    NODE_ATOM,         
-    NODE_LIST,         
-    NODE_IDENT,         
-    NODE_UNARY,         
-    NODE_BINARY,        
-    NODE_SELECTOR,  
-    NODE_SUBSCR,      
-    NODE_ASSIGN,       
-    NODE_CALL,           
+    NODE_ATOM,
+    NODE_LIST,
+    NODE_IDENT,
+    NODE_UNARY,
+    NODE_BINARY,
+    NODE_SELECTOR,
+    NODE_SUBSCR,
+    NODE_ASSIGN,
+    NODE_CALL,
     NODE_VAR_DECL,
     NODE_FN_DECL,
     NODE_CLASS_DECL,
@@ -96,19 +96,16 @@ struct SubscrNode : public Node {
     // span is `[`
     Node *const lhs;
     Node *const rhs;
-    SubscrNode(const Span span, Node *const lhs, Node *const rhs)
-        : Node(span, NODE_SUBSCR), lhs(lhs), rhs(rhs)
-    {
-    }
+    SubscrNode(const Span span, Node *const lhs, Node *const rhs) : Node(span, NODE_SUBSCR), lhs(lhs), rhs(rhs) {}
 };
 
 struct AssignNode : public Node {
-    // span is `=`, `+=`, ...
-    Node *const lvalue;
+    // span is `=`, `+=`, `-=`, `*=`, `/=`, `//=`, `%=`
+    Node *const lhs;
     Node *const rhs;
     const TokenTag op_tag;
-    AssignNode(const Span span, Node *const lvalue, Node *const rhs, const TokenTag op_tag)
-        : Node(span, NODE_ASSIGN), lvalue(lvalue), rhs(rhs), op_tag(op_tag)
+    AssignNode(const Span span, Node *const lhs, Node *const rhs, const TokenTag op_tag)
+        : Node(span, NODE_ASSIGN), lhs(lhs), rhs(rhs), op_tag(op_tag)
     {
     }
 };

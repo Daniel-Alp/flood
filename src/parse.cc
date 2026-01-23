@@ -21,6 +21,14 @@ static struct PrecLvl binary_prec(const TokenTag tag)
 {
     // clang-format off
     switch (tag) {
+    case TOKEN_EQ:
+    case TOKEN_PLUS_EQ:
+    case TOKEN_MINUS_EQ:
+    case TOKEN_STAR_EQ:
+    case TOKEN_SLASH_EQ:
+    case TOKEN_SLASH_SLASH_EQ:
+    case TOKEN_PERCENT_EQ:
+        return {.curr = 1, .next = 2};
     case TOKEN_OR:
     case TOKEN_AND: 
         return {.curr = 5, .next = 5};
@@ -207,32 +215,27 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
             lhs = alloc<CallNode>(p.arena(), fn_call_span, lhs, args, cnt);
             continue;
         }
-        // parse assignment
-        if (p.at().tag == TOKEN_EQ 
-            || p.at().tag == TOKEN_PLUS_EQ 
-            || p.at().tag == TOKEN_MINUS_EQ
-            || p.at().tag == TOKEN_STAR_EQ
-            || p.at().tag == TOKEN_SLASH_EQ
-            || p.at().tag == TOKEN_PERCENT_EQ) {
-            const Token token = p.at();
-            if (!(lhs->tag == NODE_IDENT  
-                || (lhs->tag == NODE_SELECTOR && static_cast<SelectorNode*>(lhs)->op_tag == TOKEN_DOT)
+        // parse binary ops and assignment
+        const Span span = p.at().span;
+        const TokenTag tag = p.at().tag;
+        const PrecLvl prec = binary_prec(tag);
+        if (prec.curr < prec_lvl)
+            break;
+        if (tag == TOKEN_EQ || tag == TOKEN_PLUS_EQ || tag == TOKEN_MINUS_EQ ||
+            tag == TOKEN_STAR_EQ || tag == TOKEN_SLASH_EQ  || tag == TOKEN_SLASH_SLASH_EQ || tag == TOKEN_PERCENT_EQ) {
+            if (!(lhs->tag == NODE_IDENT 
+                || (lhs->tag == NODE_SELECTOR && static_cast<SelectorNode *>(lhs)->op_tag == TOKEN_DOT) 
                 || lhs->tag == NODE_SUBSCR)) {
                 p.emit_err("cannot assign to left-hand expression");
             }
             p.bump();
-            Node *rhs = parse_expr(p, 1);
-            lhs = alloc<AssignNode>(p.arena(), token.span, lhs, rhs, token.tag);
-            continue;
+            Node *rhs = parse_expr(p, prec.next);
+            lhs = alloc<AssignNode>(p.arena(), span, lhs, rhs, tag);
+        } else {
+            p.bump();
+            Node *rhs = parse_expr(p, prec.next);
+            lhs = alloc<BinaryNode>(p.arena(), span, lhs, rhs, tag);
         }
-        // parse binary ops
-        token = p.at();
-        const PrecLvl prec = binary_prec(token.tag);
-        if (prec.curr < prec_lvl)
-            break;
-        p.bump();
-        Node *rhs = parse_expr(p, prec.next);
-        lhs = alloc<BinaryNode>(p.arena(), token.span, lhs, rhs, token.tag);
     }
     return lhs;
 }

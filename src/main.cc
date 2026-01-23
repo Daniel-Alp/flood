@@ -40,29 +40,29 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    print_node(&node, 0);
+    // print_node(&node, 0);
 
-    // Dynarr<Ident> idarr;
-    // SemaCtx::analyze(node, idarr, errarr);
-    // if (errarr.len() > 0) {
-    //     print_errarr(errarr, flag_color);
-    //     delete[] buf;
-    //     fclose(fp);
-    //     return 1;
-    // }
+    Dynarr<Ident> idarr;
+    SemaCtx::analyze(node, idarr, errarr);
+    if (errarr.len() > 0) {
+        print_errarr(errarr, flag_color);
+        delete[] buf;
+        fclose(fp);
+        return 1;
+    }
 
-    // // print_node(&node, 0);
-    // VM vm;
-    // ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);
-    // if (errarr.len() > 0) {
-    //     print_errarr(errarr, flag_color);
-    //     delete[] buf;
-    //     fclose(fp);
-    //     return 1;
-    // }
+    // print_node(&node, 0);
+    VM vm;
+    ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);
+    if (errarr.len() > 0) {
+        print_errarr(errarr, flag_color);
+        delete[] buf;
+        fclose(fp);
+        return 1;
+    }
 
-    // if (script)
-    //     run_vm(vm, *script);
+    if (script)
+        run_vm(vm, *script);
 
     delete[] buf;
     fclose(fp);

@@ -58,7 +58,7 @@ static void print_assign(const AssignNode &node, const i32 offset)
     printf("Assign\n");
     printf("%*s", offset + 2, "");
     printf("%.*s", node.span.len, node.span.start);
-    print_node(node.lvalue, offset + 2);
+    print_node(node.lhs, offset + 2);
     print_node(node.rhs, offset + 2);
 }
 

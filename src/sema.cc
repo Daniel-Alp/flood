@@ -125,14 +125,6 @@ static void analyze_unary(SemaCtx &s, const UnaryNode &node)
 
 static void analyze_binary(SemaCtx &s, const BinaryNode &node)
 {
-    if (node.op_tag == TOKEN_EQ) {
-        const bool ident = node.lhs->tag == NODE_IDENT;
-        const bool dot = node.lhs->tag == NODE_SELECTOR && static_cast<SelectorNode &>(*node.lhs).span == ".";
-        const bool list_elem =
-            node.lhs->tag == NODE_BINARY && static_cast<BinaryNode &>(*node.lhs).op_tag == TOKEN_L_SQUARE;
-        if (!ident && !dot && !list_elem)
-            s.errarr.push(ErrMsg{node.span, "cannot assign to left-hand expression"});
-    }
     analyze_node(s, *node.lhs);
     analyze_node(s, *node.rhs);
 }
@@ -140,6 +132,18 @@ static void analyze_binary(SemaCtx &s, const BinaryNode &node)
 static void analyze_selector(SemaCtx &s, const SelectorNode &node)
 {
     analyze_node(s, *node.lhs);
+}
+
+static void analyze_subscr(SemaCtx &s, const SubscrNode &node)
+{
+    analyze_node(s, *node.lhs);
+    analyze_node(s, *node.rhs);
+}
+
+static void analyze_assign(SemaCtx &s, const AssignNode &node)
+{
+    analyze_node(s, *node.lhs);
+    analyze_node(s, *node.rhs);
 }
 
 static void analyze_fn_call(SemaCtx &s, const CallNode &node)
@@ -242,6 +246,8 @@ static void analyze_node(SemaCtx &s, Node &node)
     case NODE_UNARY:     analyze_unary(s, static_cast<UnaryNode&>(node)); break;
     case NODE_BINARY:    analyze_binary(s, static_cast<BinaryNode&>(node)); break;
     case NODE_SELECTOR:  analyze_selector(s, static_cast<SelectorNode&>(node)); break;
+    case NODE_SUBSCR:    analyze_subscr(s, static_cast<SubscrNode&>(node)); break;
+    case NODE_ASSIGN:    analyze_assign(s, static_cast<AssignNode&>(node)); break;
     case NODE_CALL:      analyze_fn_call(s, static_cast<CallNode&>(node)); break;
     case NODE_VAR_DECL:  analyze_var_decl(s, static_cast<VarDeclNode&>(node)); break;
     case NODE_FN_DECL: {
@@ -256,8 +262,6 @@ static void analyze_node(SemaCtx &s, Node &node)
     case NODE_RETURN:    analyze_return(s, static_cast<ReturnNode&>(node)); break;
     // TEMP remove when we add functions
     case NODE_PRINT:     analyze_print(s, static_cast<PrintNode&>(node)); break;
-    // PROBABLY BETTER TO DO SOMETHING LIKE assert(false) or exit(1) TODO. see compile.cc for similar case 
-    default:             s.errarr.push(ErrMsg{node.span, "default case of analyze_node reached"});
     }
     // clang-format on
 }

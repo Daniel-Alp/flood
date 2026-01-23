@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "object.h"
 #include "parse.h"
+#include "scan.h"
 #include "sema.h"
 #include "value.h"
 #include <stdlib.h>
@@ -126,56 +127,82 @@ static void compile_binary(CompileCtx &c, const BinaryNode &node)
 {
     const i32 line = node.span.line;
     const TokenTag op_tag = node.op_tag;
-    if (op_tag == TOKEN_EQ) {
-        if (node.lhs->tag == NODE_IDENT) {
-            // ident set
-            const auto &lhs = static_cast<const IdentNode &>(*node.lhs);
-            compile_expr(c, *node.rhs);
-            compile_ident_get_or_set(c, lhs.id, false, lhs.span.line);
-        } else if (node.lhs->tag == NODE_BINARY) {
-            // list set
-            const auto &lhs = static_cast<const BinaryNode &>(*node.lhs);
-            // TODO assert lhs.op_tag == TOKEN_L_SQUARE
-            compile_expr(c, *lhs.lhs);
-            compile_expr(c, *lhs.rhs);
-            compile_expr(c, *node.rhs);
-            c.chunk().emit_byte(OP_SET_SUBSCR, line);
-        } else if (node.lhs->tag == NODE_SELECTOR) {
-            // field set
-            const auto &lhs = static_cast<const SelectorNode &>(*node.lhs);
-            // TODO assert lhs.op_tag == TOKEN_DOT
-            compile_expr(c, *lhs.lhs);
-            compile_expr(c, *node.rhs);
-            c.chunk().emit_byte(OP_SET_FIELD, line);
-            c.chunk().emit_byte(c.chunk().add_constant(MK_OBJ(alloc<StringObj>(c.vm, lhs.sym))), line);
-        }
-    } else if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
+    if (op_tag == TOKEN_AND || op_tag == TOKEN_OR) {
         compile_expr(c, *node.lhs);
         const i32 offset = emit_jump(c, op_tag == TOKEN_AND ? OP_JUMP_IF_FALSE : OP_JUMP_IF_TRUE, line);
         c.chunk().emit_byte(OP_POP, line);
         compile_expr(c, *node.rhs);
         patch_jump(c, node.span, offset);
-    } else {
+        return;
+    }
+    compile_expr(c, *node.lhs);
+    compile_expr(c, *node.rhs);
+    // clang-format off
+    switch (op_tag) {
+    case TOKEN_PLUS:        c.chunk().emit_byte(OP_ADD, line); break;
+    case TOKEN_MINUS:       c.chunk().emit_byte(OP_SUB, line); break;
+    case TOKEN_STAR:        c.chunk().emit_byte(OP_MUL, line); break;
+    case TOKEN_SLASH:       c.chunk().emit_byte(OP_DIV, line); break;
+    case TOKEN_SLASH_SLASH: c.chunk().emit_byte(OP_FLOORDIV, line); break;
+    case TOKEN_PERCENT:     c.chunk().emit_byte(OP_MOD, line); break;
+    case TOKEN_LT:          c.chunk().emit_byte(OP_LT, line); break;
+    case TOKEN_LEQ:         c.chunk().emit_byte(OP_LEQ, line); break;
+    case TOKEN_GT:          c.chunk().emit_byte(OP_GT, line); break;
+    case TOKEN_GEQ:         c.chunk().emit_byte(OP_GEQ, line); break;
+    case TOKEN_EQEQ:        c.chunk().emit_byte(OP_EQEQ, line); break;
+    case TOKEN_NEQ:         c.chunk().emit_byte(OP_NEQ, line); break;
+    }
+    // clang-format on
+}
+
+static void compile_subscr(CompileCtx &c, const SubscrNode &node)
+{
+    const i32 line = node.span.line;
+    compile_expr(c, *node.lhs);
+    compile_expr(c, *node.rhs);
+    c.chunk().emit_byte(OP_GET_SUBSCR, line);
+}
+
+static u8 desugar_assign(const TokenTag tag)
+{
+    switch(tag) {
+    case TOKEN_PLUS_EQ:         return OP_ADD;
+    case TOKEN_MINUS_EQ:        return OP_SUB;
+    case TOKEN_STAR_EQ:         return OP_MUL;
+    case TOKEN_SLASH_EQ:        return OP_DIV;
+    case TOKEN_SLASH_SLASH_EQ:  return OP_FLOORDIV;
+    case TOKEN_PERCENT_EQ:      return OP_MOD;
+    default:                    return 0;
+    }
+}
+
+static void compile_assign(CompileCtx &c, const AssignNode &node)
+{
+    const i32 line = node.span.line;
+    // handle `+=`, `-=`, `*=`, `/=`, `//=`, `%=`
+    const TokenTag op_tag = node.op_tag;
+    if (op_tag != TOKEN_EQ)
         compile_expr(c, *node.lhs);
-        compile_expr(c, *node.rhs);
-        // clang-format off
-        switch (op_tag) {
-        case TOKEN_PLUS:        c.chunk().emit_byte(OP_ADD, line); break;
-        case TOKEN_MINUS:       c.chunk().emit_byte(OP_SUB, line); break;
-        case TOKEN_STAR:        c.chunk().emit_byte(OP_MUL, line); break;
-        case TOKEN_SLASH:       c.chunk().emit_byte(OP_DIV, line); break;
-        case TOKEN_SLASH_SLASH: c.chunk().emit_byte(OP_FLOORDIV, line); break;
-        case TOKEN_PERCENT:     c.chunk().emit_byte(OP_MOD, line); break;
-        case TOKEN_LT:          c.chunk().emit_byte(OP_LT, line); break;
-        case TOKEN_LEQ:         c.chunk().emit_byte(OP_LEQ, line); break;
-        case TOKEN_GT:          c.chunk().emit_byte(OP_GT, line); break;
-        case TOKEN_GEQ:         c.chunk().emit_byte(OP_GEQ, line); break;
-        case TOKEN_EQEQ:        c.chunk().emit_byte(OP_EQEQ, line); break;
-        case TOKEN_NEQ:         c.chunk().emit_byte(OP_NEQ, line); break;
-        case TOKEN_L_SQUARE:    c.chunk().emit_byte(OP_GET_SUBSCR, line); break;
-        default:                c.errarr.push(ErrMsg{node.span, "default case of compile_binary reached"});
-        }
-        // clang-format on
+    compile_expr(c, *node.rhs);
+    if (op_tag != TOKEN_EQ)
+        c.chunk().emit_byte(desugar_assign(op_tag), line);
+
+    if (node.lhs->tag == NODE_IDENT) {
+        // ident set
+        const auto &lhs = static_cast<const IdentNode &>(*node.lhs);
+        compile_ident_get_or_set(c, lhs.id, false, lhs.span.line);
+    } else if (node.lhs->tag == NODE_SUBSCR) {
+        // subscr set
+        const auto &lhs = static_cast<const SubscrNode &>(*node.lhs);
+        compile_expr(c, *lhs.lhs);
+        compile_expr(c, *lhs.rhs);
+        c.chunk().emit_byte(OP_SET_SUBSCR, line);
+    } else if (node.lhs->tag == NODE_SELECTOR) {
+        // field set
+        const auto &lhs = static_cast<const SelectorNode &>(*node.lhs);
+        compile_expr(c, *lhs.lhs);
+        c.chunk().emit_byte(OP_SET_FIELD, line);
+        c.chunk().emit_byte(c.chunk().add_constant(MK_OBJ(alloc<StringObj>(c.vm, lhs.sym))), line);
     }
 }
 
@@ -328,6 +355,8 @@ static void compile_expr(CompileCtx &c, const Node &node)
     case NODE_IDENT:      compile_ident(c, static_cast<const IdentNode&>(node)); break;
     case NODE_UNARY:      compile_unary(c, static_cast<const UnaryNode&>(node)); break;
     case NODE_BINARY:     compile_binary(c, static_cast<const BinaryNode&>(node)); break;
+    case NODE_SUBSCR:     compile_subscr(c, static_cast<const SubscrNode&>(node)); break;
+    case NODE_ASSIGN:     compile_assign(c, static_cast<const AssignNode&>(node)); break;
     case NODE_SELECTOR:   compile_selector(c, static_cast<const SelectorNode&>(node)); break;
     case NODE_CALL:       compile_call(c, static_cast<const CallNode&>(node)); break;
     case NODE_VAR_DECL:   compile_var_decl(c, static_cast<const VarDeclNode&>(node)); break;
