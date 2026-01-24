@@ -2,7 +2,7 @@
 #include "arena.h"
 #include "gc.h"
 #include "object.h"
-#include "string_symbol.h"
+#include "fl_string.h"
 #include "value.h"
 #include "vm.h"
 
