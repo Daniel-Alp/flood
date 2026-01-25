@@ -1,8 +1,8 @@
 #pragma once
 #include "arena.h"
+#include "fl_string.h"
 #include "gc.h"
 #include "object.h"
-#include "fl_string.h"
 #include "value.h"
 #include "vm.h"
 

@@ -1,5 +1,6 @@
 #include "parse.h"
 #include "arena.h"
+#include "ast.h"
 #include "dynarr.h"
 #include "scan.h"
 
@@ -221,11 +222,11 @@ static Node *parse_expr(Parser &p, const i32 prec_lvl)
         const PrecLvl prec = binary_prec(tag);
         if (prec.curr < prec_lvl)
             break;
-        if (tag == TOKEN_EQ || tag == TOKEN_PLUS_EQ || tag == TOKEN_MINUS_EQ ||
-            tag == TOKEN_STAR_EQ || tag == TOKEN_SLASH_EQ  || tag == TOKEN_SLASH_SLASH_EQ || tag == TOKEN_PERCENT_EQ) {
-            if (!(lhs->tag == NODE_IDENT 
-                || (lhs->tag == NODE_SELECTOR && static_cast<SelectorNode *>(lhs)->op_tag == TOKEN_DOT) 
-                || lhs->tag == NODE_SUBSCR)) {
+        if (tag == TOKEN_EQ || tag == TOKEN_PLUS_EQ || tag == TOKEN_MINUS_EQ || tag == TOKEN_STAR_EQ ||
+            tag == TOKEN_SLASH_EQ || tag == TOKEN_SLASH_SLASH_EQ || tag == TOKEN_PERCENT_EQ) {
+            if (!(lhs->tag == NODE_IDENT ||
+                    (lhs->tag == NODE_SELECTOR && static_cast<SelectorNode *>(lhs)->op_tag == TOKEN_DOT) ||
+                    lhs->tag == NODE_SUBSCR)) {
                 p.emit_err("cannot assign to left-hand expression");
             }
             p.bump();
@@ -276,10 +277,10 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
     const Span span = p.at().span;
     p.expect(TOKEN_IDENTIFIER, "expected identifier");
     p.expect(TOKEN_L_PAREN, "expected `(`");
-    Dynarr<IdentNode> paramarr;
+    Dynarr<VarDeclNode> paramarr;
     while (p.at().tag != TOKEN_R_PAREN && p.at().tag != TOKEN_EOF) {
         if (p.eat(TOKEN_IDENTIFIER)) {
-            paramarr.push(IdentNode(p.prev().span));
+            paramarr.push(VarDeclNode(p.prev().span, nullptr));
             if (p.at().tag != TOKEN_R_PAREN)
                 p.expect(TOKEN_COMMA, "expected `,`");
         } else if (p.at().tag == TOKEN_FN || p.at().tag == TOKEN_CLASS || p.at().tag == TOKEN_L_BRACE ||
@@ -291,10 +292,10 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
         }
     }
     if (is_method)
-        paramarr.push(IdentNode(Span{"self", 4, -1}));
+        paramarr.push(VarDeclNode(Span{"self", 4, -1}, nullptr));
     p.expect(TOKEN_R_PAREN, "expected `)`");
     const i32 arity = paramarr.len();
-    IdentNode *const params = move_dynarr(p.arena(), move(paramarr));
+    VarDeclNode *const params = move_dynarr(p.arena(), move(paramarr));
     BlockNode *const body = parse_block(p);
     return alloc<FnDeclNode>(p.arena(), span, body, params, arity);
 }
@@ -401,7 +402,7 @@ static ImportNode *parse_import(Parser &p)
 
 static ModuleNode &parse_file(Parser &p)
 {
-    Dynarr<Node *> nodearr;
+    Dynarr<DeclNode *> nodearr;
     while (p.at().tag != TOKEN_EOF) {
         if (p.eat(TOKEN_FN)) {
             p.set_panic(false);
@@ -417,7 +418,7 @@ static ModuleNode &parse_file(Parser &p)
         }
     }
     const i32 cnt = nodearr.len();
-    Node *const *const decls = move_dynarr(p.arena(), move(nodearr));
+    DeclNode *const *const decls = move_dynarr(p.arena(), move(nodearr));
     const Span span = {.start = "module", .len = 7, .line = 1};
     return *alloc<ModuleNode>(p.arena(), span, decls, cnt);
 }

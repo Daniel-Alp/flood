@@ -1,9 +1,8 @@
 #pragma once
 #include "arena.h"
+#include "ast.h"
 #include "dynarr.h"
 #include "error.h"
-#include "ast.h"
-
 
 class Parser {
     Arena &arena_;

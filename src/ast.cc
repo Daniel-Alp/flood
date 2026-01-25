@@ -1,18 +1,14 @@
 #include "ast.h"
 
-void AstVisitor::visit_atom(AtomNode &node)
-{
-}
+void AstVisitor::visit_atom(AtomNode &node) {}
 
 void AstVisitor::visit_list(ListNode &node)
 {
-    for (i32 i = 0; i < node.cnt; i++) 
+    for (i32 i = 0; i < node.cnt; i++)
         visit_expr(*node.items[i]);
 }
 
-void AstVisitor::visit_ident(IdentNode &node)
-{
-}
+void AstVisitor::visit_ident(IdentNode &node) {}
 
 void AstVisitor::visit_unary(UnaryNode &node)
 {
@@ -55,6 +51,7 @@ void AstVisitor::visit_expr(Node &node)
     switch(node.tag) {
     case NODE_ATOM:     visit_atom(static_cast<AtomNode&>(node)); return;
     case NODE_LIST:     visit_list(static_cast<ListNode&>(node)); return;
+    case NODE_IDENT:    visit_ident(static_cast<IdentNode&>(node)); return;
     case NODE_UNARY:    visit_unary(static_cast<UnaryNode&>(node)); return;
     case NODE_BINARY:   visit_binary(static_cast<BinaryNode&>(node)); return;
     case NODE_SELECTOR: visit_selector(static_cast<SelectorNode&>(node)); return;
@@ -72,6 +69,12 @@ void AstVisitor::visit_var_decl(VarDeclNode &node)
         visit_expr(*node.init);
 }
 
+void AstVisitor::visit_fn_decl(FnDeclNode &node)
+{
+    // TODO visit params (?)
+    visit_block(*node.body);
+}
+
 void AstVisitor::visit_class_decl(ClassDeclNode &node)
 {
     for (i32 i = 0; i < node.cnt; i++)
@@ -79,6 +82,11 @@ void AstVisitor::visit_class_decl(ClassDeclNode &node)
 }
 
 void AstVisitor::visit_expr_stmt(ExprStmtNode &node)
+{
+    visit_expr(*node.expr);
+}
+
+void AstVisitor::visit_return(ReturnNode &node)
 {
     visit_expr(*node.expr);
 }
@@ -109,6 +117,8 @@ void AstVisitor::visit_stmt(Node &node)
     case NODE_FN_DECL:    visit_fn_decl(static_cast<FnDeclNode&>(node)); return;
     case NODE_CLASS_DECL: visit_class_decl(static_cast<ClassDeclNode&>(node)); return;
     case NODE_EXPR_STMT:  visit_expr_stmt(static_cast<ExprStmtNode&>(node)); return;
+    case NODE_RETURN:     visit_return(static_cast<ReturnNode&>(node)); return;
+    case NODE_BLOCK:      visit_block(static_cast<BlockNode&>(node)); return;
     case NODE_IF:         visit_if(static_cast<IfNode&>(node)); return;
     case NODE_PRINT:      visit_print(static_cast<PrintNode&>(node)); return;
     default:              return; // TODO assert(false)?

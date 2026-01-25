@@ -1,8 +1,8 @@
 #pragma once
 #include "chunk.h"
 #include "dynarr.h"
-#include "gc.h"
 #include "fl_string.h"
+#include "gc.h"
 #include "value.h"
 #include "vm.h"
 

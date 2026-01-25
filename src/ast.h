@@ -1,6 +1,10 @@
 #pragma once
 #include "scan.h"
-#define MAX_LOCALS (256)
+#define MAX_LOCALS    (256)
+#define FLAG_NONE     (0)
+#define FLAG_CAPTURED (1 << 1)
+#define FLAG_METHOD   (1 << 2)
+#define FLAG_INIT     (1 << 3)
 
 enum NodeTag {
     NODE_ATOM,
@@ -16,9 +20,9 @@ enum NodeTag {
     NODE_FN_DECL,
     NODE_CLASS_DECL,
     NODE_EXPR_STMT,
+    NODE_RETURN,
     NODE_BLOCK,
     NODE_IF,
-    NODE_RETURN,
     // TEMP remove when we add functions
     NODE_PRINT,
     NODE_IMPORT,
@@ -33,7 +37,7 @@ struct Node {
     const Span span;
     const NodeTag tag;
     Node(Span span, NodeTag tag) : span(span), tag(tag) {}
-};    
+};
 
 struct AtomNode : public Node {
     const TokenTag atom_tag;
@@ -49,10 +53,20 @@ struct ListNode : public Node {
     }
 };
 
+enum LocTag { LOC_LOCAL, LOC_GLOBAL, LOC_STACK_HEAPVAL, LOC_CAPTURED_HEAPVAL };
+
+struct Loc {
+    LocTag tag;
+    i32 idx;
+};
+
+struct DeclNode;
+
 struct IdentNode : public Node {
     // span is identifier
-    i32 id;
-    IdentNode(const Span span) : Node(span, NODE_IDENT), id(-1) {}
+    DeclNode *decl; // VarDeclNode, FnDeclNode, or ClassDeclNode
+    Loc loc;
+    IdentNode(const Span span) : Node(span, NODE_IDENT), decl(nullptr) {}
 };
 
 struct UnaryNode : public Node {
@@ -118,49 +132,44 @@ struct CallNode : public Node {
     }
 };
 
-struct VarDeclNode : public Node {
-    // span is identifier
-    Node *const init;
-    i32 id;
-    VarDeclNode(const Span span, Node *const init) : Node(span, NODE_VAR_DECL), init(init), id(-1) {}
+struct DeclNode : public Node {
+    i32 fn_depth;
+    u32 flags;
+    DeclNode(const Span span, const NodeTag tag) : Node(span, tag), fn_depth(0), flags(FLAG_NONE) {};
 };
 
-struct FnDeclNode : public Node {
+struct VarDeclNode : public DeclNode {
+    // span is identifier
+    Node *const init;
+    VarDeclNode(const Span span, Node *const init) : DeclNode(span, NODE_VAR_DECL), init(init) {}
+};
+
+struct Capture {
+    DeclNode *decl;
+    Loc loc;
+};
+
+struct FnDeclNode : public DeclNode {
     // span is identifier
     BlockNode *const body;
-    IdentNode *const params;
+    VarDeclNode *const params;
     const i32 arity;
-    i32 id;
-    // NOTE:
-    // when a closure is created at runtime there are two ways to get a ptr to a captured value
-    //      (1) the ptr is in the current stack frame
-    //      (2) the ptr is in the parent closure's ptr list
-    // in both cases the ptr is copied to the new closure's ptr list
-    i32 stack_capture_cnt;
-    i32 stack_captures[MAX_LOCALS];
-    i32 parent_capture_cnt;
-    i32 parent_captures[MAX_LOCALS];
-    FnDeclNode *parent;
-    FnDeclNode(const Span span, BlockNode *const body, IdentNode *const params, const i32 arity)
-        : Node(span, NODE_FN_DECL)
-        , body(body)
-        , params(params)
-        , arity(arity)
-        , id(-1)
-        , stack_capture_cnt(0)
-        , parent_capture_cnt(0)
-        , parent(nullptr)
+
+    i32 capture_cnt;
+    Capture captures[MAX_LOCALS];
+
+    FnDeclNode(const Span span, BlockNode *const body, VarDeclNode *const params, const i32 arity)
+        : DeclNode(span, NODE_FN_DECL), body(body), params(params), arity(arity)
     {
     }
 };
 
-struct ClassDeclNode : public Node {
+struct ClassDeclNode : public DeclNode {
     // span is identifier
     FnDeclNode *const *const methods;
     const i32 cnt;
-    i32 id;
     ClassDeclNode(const Span span, FnDeclNode *const *const methods, const i32 cnt)
-        : Node(span, NODE_CLASS_DECL), methods(methods), cnt(cnt)
+        : DeclNode(span, NODE_CLASS_DECL), methods(methods), cnt(cnt)
     {
     }
 };
@@ -206,45 +215,48 @@ struct ReturnNode : public Node {
     ReturnNode(const Span span, Node *const expr) : Node(span, NODE_RETURN), expr(expr) {}
 };
 
-struct ImportNode : public Node {
+struct ImportNode : public DeclNode {
     // span is `import`
     Span *const parts;
     const i32 cnt;
     Span *const alias;
     ImportNode(const Span span, Span *const parts, const i32 cnt, Span *const alias)
-        : Node(span, NODE_IMPORT), parts(parts), cnt(cnt), alias(alias)
+        : DeclNode(span, NODE_IMPORT), parts(parts), cnt(cnt), alias(alias)
     {
     }
 };
 
 struct ModuleNode : public Node {
     // span is filename
-    Node *const *const decls;
+    DeclNode *const *const decls;
     const i32 cnt;
-    ModuleNode(const Span span, Node *const *const decls, const i32 cnt)
+    ModuleNode(const Span span, DeclNode *const *const decls, const i32 cnt)
         : Node(span, NODE_MODULE), decls(decls), cnt(cnt)
     {
     }
 };
 
 struct AstVisitor {
-    void visit_atom(AtomNode &node);
-    void visit_list(ListNode &node);
-    void visit_ident(IdentNode &node);
-    void visit_unary(UnaryNode &node);
-    void visit_binary(BinaryNode &node);
-    void visit_selector(SelectorNode &node);
-    void visit_subscr(SubscrNode &node);
-    void visit_assign(AssignNode &node);
-    void visit_call(CallNode &node);
-    void visit_expr(Node &node);
+    virtual void visit_atom(AtomNode &node);
+    virtual void visit_list(ListNode &node);
+    virtual void visit_ident(IdentNode &node);
+    virtual void visit_unary(UnaryNode &node);
+    virtual void visit_binary(BinaryNode &node);
+    virtual void visit_selector(SelectorNode &node);
+    virtual void visit_subscr(SubscrNode &node);
+    virtual void visit_assign(AssignNode &node);
+    virtual void visit_call(CallNode &node);
+    virtual void visit_expr(Node &node);
 
-    void visit_var_decl(VarDeclNode &node);
-    void visit_fn_decl(FnDeclNode &node);
-    void visit_class_decl(ClassDeclNode &node);
-    void visit_expr_stmt(ExprStmtNode &node);
-    void visit_block(BlockNode &node);
-    void visit_if(IfNode &node);
-    void visit_print(PrintNode &node);
-    void visit_stmt(Node &Node);
+    virtual void visit_var_decl(VarDeclNode &node);
+    virtual void visit_fn_decl(FnDeclNode &node);
+    virtual void visit_class_decl(ClassDeclNode &node);
+    virtual void visit_expr_stmt(ExprStmtNode &node);
+    virtual void visit_return(ReturnNode &node);
+    virtual void visit_block(BlockNode &node);
+    virtual void visit_if(IfNode &node);
+    virtual void visit_print(PrintNode &node);
+    virtual void visit_stmt(Node &node);
+
+    virtual ~AstVisitor(){};
 };
