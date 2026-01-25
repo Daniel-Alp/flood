@@ -2,24 +2,23 @@
 #include "ast.h"
 #include <stdio.h>
 
-const char *loc_tag_str(const LocTag tag){
+const char *loc_tag_str(const LocTag tag)
+{
     // clang-format off
     switch(tag) {
-    case LOC_LOCAL:             return "LOC_LOCAL";
-    case LOC_GLOBAL:            return "LOC_GLOBAL";
-    case LOC_STACK_HEAPVAL:     return "LOC_STACK_HEAPVAL";
-    case LOC_CAPTURED_HEAPVAL:  return "LOC_CAPTURED_HEAPVAL";
-    }    
+    case LOC_LOCAL:             return "local";
+    case LOC_GLOBAL:            return "global";
+    case LOC_STACK_HEAPVAL:     return "stack_heapval";
+    case LOC_CAPTURED_HEAPVAL:  return "captured_heapval";
+    }
     // clang-format on
     return nullptr;
-} 
+}
 
 struct AstPrinter final : public AstVisitor {
     i32 offset;
     const bool verbose;
-    AstPrinter(const bool verbose) : offset(0), verbose(verbose)
-    {
-    }
+    AstPrinter(const bool verbose) : offset(0), verbose(verbose) {}
 
     void visit_atom(AtomNode &node) override
     {
@@ -37,7 +36,7 @@ struct AstPrinter final : public AstVisitor {
     {
         printf("Ident %.*s", node.span.len, node.span.start);
         if (verbose)
-            printf(": %p, tag: %s, idx: %d", node.decl, loc_tag_str(node.loc.tag), node.loc.idx);
+            printf(": %p", node.decl);
     }
 
     void visit_unary(UnaryNode &node) override
@@ -100,24 +99,16 @@ struct AstPrinter final : public AstVisitor {
 
     void visit_var_decl(VarDeclNode &node) override
     {
-        printf("VarDecl");
+        printf("Var %.*s", node.span.len, node.span.start);
         if (verbose)
-            printf(": %p", &node);
-        printf("\n");
-        printf("%*s", offset, "");
-        printf("%.*s", node.span.len, node.span.start);
+            printf(": %p, %s, %d", &node, loc_tag_str(node.loc.tag), node.loc.idx);
         if (node.init)
             visit_expr(*node.init);
     }
 
     void visit_fn_decl(FnDeclNode &node) override
     {
-        printf("FnDeclNode");
-        if (verbose)
-            printf(": %p", &node);
-        printf("\n");
-        printf("%*s", offset, "");
-        printf("%.*s(", node.span.len, node.span.start);
+        printf("Fn %.*s(", node.span.len, node.span.start);
         for (i32 i = 0; i < node.arity - 1; i++) {
             const VarDeclNode param = node.params[i];
             printf("%.*s, ", param.span.len, param.span.start);
@@ -127,29 +118,28 @@ struct AstPrinter final : public AstVisitor {
             printf("%.*s", param.span.len, param.span.start);
         }
         printf(")");
+        if (verbose)
+            printf(": %p, %s, %d", &node, loc_tag_str(node.loc.tag), node.loc.idx);
         if (verbose && node.capture_cnt > 0) {
-            printf("\n%*s", offset, "");
-            printf("captures:");
-            for (i32 i = 0; i < node.capture_cnt-1; i++) {
-                const Capture capt = node.captures[i];
-                printf("\n%*s", offset+2, "");
-                printf("(%p, tag: %s, idx: %d)", capt.decl, loc_tag_str(capt.loc.tag), capt.loc.idx);
+            for (i32 i = 0; i < node.capture_cnt - 1; i++) {
+                const CaptureDecl *capt = node.captures[i];
+                printf("\n%*s", offset, "");
+                printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, 
+                    capt, loc_tag_str(capt->loc.tag), capt->loc.idx);
             }
-            const Capture capt = node.captures[node.capture_cnt-1];
-            printf("\n%*s", offset+2, "");
-            printf("(%p, tag: %s, idx: %d)", capt.decl, loc_tag_str(capt.loc.tag), capt.loc.idx);
+            const CaptureDecl *capt = node.captures[node.capture_cnt - 1];
+            printf("\n%*s", offset, "");
+            printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, 
+                capt, loc_tag_str(capt->loc.tag), capt->loc.idx);
         }
         visit_stmt(*node.body);
     }
 
     void visit_class_decl(ClassDeclNode &node) override
     {
-        printf("ClassDeclNode");
+        printf("Class %.*s", node.span.len, node.span.start);
         if (verbose)
-            printf(": %p", &node);
-        printf("\n");
-        printf("%*s", offset, "");
-        printf("%.*s", node.span.len, node.span.start);
+            printf(": %p, %s, %d", &node, loc_tag_str(node.loc.tag), node.loc.idx);
         for (i32 i = 0; i < node.cnt; i++)
             visit_stmt(*node.methods[i]);
     }

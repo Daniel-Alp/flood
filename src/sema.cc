@@ -1,16 +1,15 @@
 #include "sema.h"
+#include "../libflood/arena.h"
 #include "../libflood/dynarr.h"
 #include "ast.h"
 
-#include <stdio.h>
-
 struct ResolveIdents final : public AstVisitor {
     Dynarr<DeclNode *> live_idents;
-    i32 fn_depth;
-    FnDeclNode *fn_node;
+    Dynarr<FnDeclNode *> fn_nodes;
     Dynarr<ErrMsg> &errarr;
+    Arena &arena;
 
-    ResolveIdents(Dynarr<ErrMsg> &errarr) : fn_depth(0), fn_node(nullptr), errarr(errarr){};
+    ResolveIdents(Dynarr<ErrMsg> &errarr, Arena &arena) : errarr(errarr), arena(arena){};
 
     void decl_ident(DeclNode &node)
     {
@@ -20,29 +19,40 @@ struct ResolveIdents final : public AstVisitor {
                 break;
             }
         }
-        node.fn_depth = fn_depth;
+        node.fn_depth = fn_nodes.len();
         live_idents.push(&node);
     }
 
-    void bubble_capture(DeclNode &node)
+    DeclNode *resolve_ident_rec(Span span, const i32 fn_depth, i32 i)
     {
-        // if declared in function body or declared globally, don't capture
-        if (node.fn_depth >= fn_depth || node.fn_depth == 0)
-            return;
-        for (i32 i = 0; i < fn_node->capture_cnt; i++) {
-            if (&node == fn_node->captures[i].decl)
-                return;
+        // if fn_depth > 0, check in fn_nodes[fn_depth-1] locals
+        // if fn_depth = 0, check in globals
+        for (; i >= 0 && live_idents[i]->fn_depth >= fn_depth; i--) {
+            if (live_idents[i]->span == span)
+                return live_idents[i];
         }
-        node.flags |= FLAG_CAPTURED;
-        fn_node->captures[fn_node->capture_cnt] = {
-            .decl = &node,
-            .loc =
-                {
-                    .tag = node.fn_depth == fn_depth - 1 ? LOC_STACK_HEAPVAL : LOC_CAPTURED_HEAPVAL,
-                    .idx = 0,
-                },
-        };
-        fn_node->capture_cnt++;
+        if (fn_depth == 0)
+            return nullptr;
+        // check function's captures
+        FnDeclNode *node = fn_nodes[fn_depth - 1];
+        for (i32 i = 0; i < node->capture_cnt; i++) {
+            if (node->captures[i]->span == span)
+                return node->captures[i];
+        }
+        // check in parent
+        DeclNode *decl = resolve_ident_rec(span, fn_depth - 1, i);
+        if (decl == nullptr || decl->fn_depth == 0)
+            return decl;
+        decl->flags |= FLAG_CAPTURED;
+        node->captures[node->capture_cnt] = alloc<CaptureDecl>(arena, span, decl);
+        node->captures[node->capture_cnt]->fn_depth = fn_depth;
+        node->capture_cnt++;
+        return node->captures[node->capture_cnt - 1];
+    }
+
+    DeclNode *resolve_ident(Span span)
+    {
+        return resolve_ident_rec(span, fn_nodes.len(), live_idents.len() - 1);
     }
 
     void visit_var_decl(VarDeclNode &node) override
@@ -53,12 +63,10 @@ struct ResolveIdents final : public AstVisitor {
     void visit_fn_decl(FnDeclNode &node) override
     {
         // fn_depth == 0 if node is a method (do not declare ident) or global (already declared ident)
-        if (fn_depth > 0)
+        if (fn_nodes.len() > 0)
             decl_ident(node);
 
-        fn_depth++;
-        FnDeclNode *saved_fn_node = fn_node;
-        fn_node = &node;
+        fn_nodes.push(&node);
         const i32 n_live_idents = live_idents.len();
         for (i32 i = 0; i < node.arity; i++)
             decl_ident(node.params[i]);
@@ -66,15 +74,9 @@ struct ResolveIdents final : public AstVisitor {
         node.body->local_cnt += node.arity;
         visit_block(*node.body);
 
-        for (i32 i = live_idents.len(); i >= n_live_idents; i--)
+        for (i32 i = live_idents.len(); i > n_live_idents; i--)
             live_idents.pop();
-        fn_node = saved_fn_node;
-        fn_depth--;
-
-        for (i32 i = 0; i < node.capture_cnt; i++) {
-            if (node.captures[i].loc.tag == LOC_CAPTURED_HEAPVAL)
-                bubble_capture(*node.captures[i].decl);
-        }
+        fn_nodes.pop();
     }
 
     void visit_class_decl(ClassDeclNode &node) override
@@ -98,14 +100,9 @@ struct ResolveIdents final : public AstVisitor {
 
     void visit_ident(IdentNode &node) override
     {
-        for (i32 i = live_idents.len() - 1; i >= 0; i--) {
-            if (live_idents[i]->span == node.span) {
-                node.decl = live_idents[i];
-                bubble_capture(*node.decl);
-                return;
-            }
-        }
-        errarr.push({node.span, "not found in this scope"}); // TODO change error message
+        node.decl = resolve_ident(node.span);
+        if (node.decl == nullptr)
+            errarr.push({node.span, "not found in this scope"}); // TODO change error message
     }
 
     void visit_block(BlockNode &node) override
@@ -127,34 +124,17 @@ struct ResolveIdents final : public AstVisitor {
 };
 
 struct ResolveLoc final : public AstVisitor {
-    // TODO use hashtable instead of dynarray
-    // almost definitely faster, but implementing templated hashtable is difficult
-    struct Assoc {
-        DeclNode *decl;
-        Loc loc;
-    };
-    Dynarr<Assoc> locs;
     i32 n_locals;
     i32 fn_depth;
 
     ResolveLoc() : n_locals(0), fn_depth(0){};
 
-    Assoc *find_assoc(DeclNode *node)
-    {
-        // order of iteration should not matter but going backwards should be faster
-        for (i32 i = locs.len() - 1; i >= 0; i--) {
-            if (locs[i].decl == node)
-                return &locs[i];
-        }
-        return nullptr;
-    }
-
     void decl_local(DeclNode &node)
     {
-        LocTag tag = node.flags & FLAG_CAPTURED ? LOC_STACK_HEAPVAL : LOC_LOCAL;
-        printf("TAG IS %d\n", tag);
-        printf("n_locals = %d\n", n_locals);
-        locs.push({.decl = &node, .loc = {.tag = tag, .idx = n_locals}});
+        node.loc = {
+            .tag = node.flags & FLAG_CAPTURED ? LOC_STACK_HEAPVAL : LOC_LOCAL,
+            .idx = n_locals,
+        };
         n_locals++;
     }
 
@@ -167,48 +147,39 @@ struct ResolveLoc final : public AstVisitor {
     {
         if (fn_depth > 0)
             decl_local(node);
-
-        Dynarr<Assoc> saved_locs;
-        for (i32 i = 0; i < node.capture_cnt; i++) {
-            Assoc *assoc = find_assoc(node.captures[i].decl);
-            saved_locs.push(*assoc);
-            node.captures[i].loc = assoc->loc;
-            
-            assoc->loc = {.tag = LOC_CAPTURED_HEAPVAL, .idx = i};
-        }
+        for (i32 i = 0; i < node.capture_cnt; i++)
+            node.captures[i]->loc = {.tag = LOC_CAPTURED_HEAPVAL, .idx = i};
         fn_depth++;
         const i32 saved_n_locals = n_locals;
         n_locals = 0;
-
         for (i32 i = 0; i < node.arity; i++)
             decl_local(node.params[i]);
         visit_block(*node.body);
-
         n_locals = saved_n_locals;
         fn_depth--;
-        for (i32 i = 0; i < node.capture_cnt; i++)
-            find_assoc(saved_locs[i].decl)->loc = saved_locs[i].loc;
     }
 
-    void visit_ident(IdentNode &node) override
+    void visit_block(BlockNode &node) override
     {
-        node.loc = find_assoc(node.decl)->loc;
+        const i32 saved_n_locals = n_locals;
+        AstVisitor::visit_block(node);
+        n_locals = saved_n_locals;
     }
 
     void visit(ModuleNode &node)
     {
         for (i32 i = 0; i < node.cnt; i++) {
             if (node.decls[i]->tag == NODE_FN_DECL || node.decls[i]->tag == NODE_CLASS_DECL)
-                locs.push({.decl = *node.decls, .loc = {.tag = LOC_GLOBAL, .idx = i}});
+                node.decls[i]->loc = {.tag = LOC_GLOBAL, .idx = i};
         }
         for (i32 i = 0; i < node.cnt; i++)
             visit_stmt(*node.decls[i]);
     }
 };
 
-void analyze(ModuleNode &node, Dynarr<ErrMsg> &errarr)
+void analyze(ModuleNode &node, Dynarr<ErrMsg> &errarr, Arena &arena)
 {
-    ResolveIdents pass0(errarr);
+    ResolveIdents pass0(errarr, arena);
     pass0.visit(node);
     if (errarr.len() > 0)
         return;

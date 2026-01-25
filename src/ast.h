@@ -19,6 +19,7 @@ enum NodeTag {
     NODE_VAR_DECL,
     NODE_FN_DECL,
     NODE_CLASS_DECL,
+    NODE_CAPTURE_DECL,
     NODE_EXPR_STMT,
     NODE_RETURN,
     NODE_BLOCK,
@@ -65,7 +66,6 @@ struct DeclNode;
 struct IdentNode : public Node {
     // span is identifier
     DeclNode *decl; // VarDeclNode, FnDeclNode, or ClassDeclNode
-    Loc loc;
     IdentNode(const Span span) : Node(span, NODE_IDENT), decl(nullptr) {}
 };
 
@@ -135,6 +135,7 @@ struct CallNode : public Node {
 struct DeclNode : public Node {
     i32 fn_depth;
     u32 flags;
+    Loc loc;
     DeclNode(const Span span, const NodeTag tag) : Node(span, tag), fn_depth(0), flags(FLAG_NONE){};
 };
 
@@ -144,9 +145,10 @@ struct VarDeclNode : public DeclNode {
     VarDeclNode(const Span span, Node *const init) : DeclNode(span, NODE_VAR_DECL), init(init) {}
 };
 
-struct Capture {
-    DeclNode *decl;
-    Loc loc;
+struct CaptureDecl : public DeclNode {
+    DeclNode *const decl_original; // declaration of the variable that is captured
+    CaptureDecl(const Span span, DeclNode *const decl_original)
+        : DeclNode(span, NODE_CAPTURE_DECL), decl_original(decl_original){};
 };
 
 struct FnDeclNode : public DeclNode {
@@ -154,12 +156,10 @@ struct FnDeclNode : public DeclNode {
     BlockNode *const body;
     VarDeclNode *const params;
     const i32 arity;
-
     i32 capture_cnt;
-    Capture captures[MAX_LOCALS];
-
+    CaptureDecl *captures[MAX_LOCALS];
     FnDeclNode(const Span span, BlockNode *const body, VarDeclNode *const params, const i32 arity)
-        : DeclNode(span, NODE_FN_DECL), body(body), params(params), arity(arity), capture_cnt(0)
+        : DeclNode(span, NODE_FN_DECL), body(body), params(params), arity(arity), capture_cnt(0), captures{}
     {
     }
 };

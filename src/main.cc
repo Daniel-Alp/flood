@@ -1,3 +1,4 @@
+#include "compile.h"
 #include "debug.h"
 #include "parse.h"
 #include "sema.h"
@@ -32,8 +33,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    analyze(node, errarr);
-    
+    analyze(node, errarr, arena);
+
     if (errarr.len() > 0) {
         print_errarr(errarr, flag_color);
         delete[] buf;
@@ -43,9 +44,8 @@ int main(int argc, const char **argv)
 
     print_module(node, true);
 
-
     // VM vm;
-    // ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);
+    // ClosureObj *script = compile(vm, node, errarr);
     // if (errarr.len() > 0) {
     //     print_errarr(errarr, flag_color);
     //     delete[] buf;
