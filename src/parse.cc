@@ -1,8 +1,4 @@
 #include "parse.h"
-#include "arena.h"
-#include "ast.h"
-#include "dynarr.h"
-#include "scan.h"
 
 // returns whether token can start an expression
 static bool expr_first(const TokenTag tag)

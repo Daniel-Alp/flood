@@ -1,10 +1,8 @@
 #pragma once
+#include "../libflood/dynarr.h"
+#include "../libflood/string.h"
 #include "chunk.h"
-#include "dynarr.h"
-#include "fl_string.h"
 #include "gc.h"
-#include "value.h"
-#include "vm.h"
 
 enum ObjTag {
     OBJ_FOREIGN_FN,

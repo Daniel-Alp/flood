@@ -1,5 +1,4 @@
 #include "gc.h"
-#include "debug.h"
 #include "object.h"
 #include "value.h"
 

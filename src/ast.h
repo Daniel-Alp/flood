@@ -135,7 +135,7 @@ struct CallNode : public Node {
 struct DeclNode : public Node {
     i32 fn_depth;
     u32 flags;
-    DeclNode(const Span span, const NodeTag tag) : Node(span, tag), fn_depth(0), flags(FLAG_NONE) {};
+    DeclNode(const Span span, const NodeTag tag) : Node(span, tag), fn_depth(0), flags(FLAG_NONE){};
 };
 
 struct VarDeclNode : public DeclNode {

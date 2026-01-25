@@ -1,5 +1,4 @@
 #pragma once
-#include "dynarr.h"
 #include "scan.h"
 
 struct ErrMsg {

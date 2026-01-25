@@ -3,6 +3,7 @@
 #include "dynarr.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <type_traits>
 
 #define ARENA_SIZE (1 << 30)
 

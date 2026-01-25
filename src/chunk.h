@@ -1,6 +1,5 @@
 #pragma once
-#include "common.h"
-#include "dynarr.h"
+#include "../libflood/dynarr.h"
 #include "value.h"
 
 // TODO add LONG equivalents for GET/SET bytecodes

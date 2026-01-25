@@ -6,7 +6,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-add_executable(flood src/arena.cc src/ast.cc src/chunk.cc src/compile.cc src/debug.cc src/error.cc src/foreign.cc
+add_executable(flood libflood/arena.cc src/ast.cc src/chunk.cc src/compile.cc src/debug.cc src/error.cc src/foreign.cc
     src/gc.cc src/main.cc src/parse.cc src/scan.cc src/sema.cc src/value.cc src/vm.cc foreign/listobj_foreign.cc foreign/stringobj_foreign.cc)
 
 target_compile_options(flood PRIVATE

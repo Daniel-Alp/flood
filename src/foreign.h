@@ -1,10 +1,5 @@
 #pragma once
-#include "arena.h"
-#include "fl_string.h"
-#include "gc.h"
 #include "object.h"
-#include "value.h"
-#include "vm.h"
 
 // TODO other objects (specifically ObjInstance * and some others)
 

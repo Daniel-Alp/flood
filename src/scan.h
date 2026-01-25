@@ -1,8 +1,5 @@
 #pragma once
-#include "arena.h"
-#include "common.h"
-#include "dynarr.h"
-#include <string.h>
+#include "../libflood/dynarr.h"
 
 struct ErrMsg;
 
@@ -73,18 +70,8 @@ struct Span {
     const char *start;
     i32 len;
     i32 line;
-    bool operator==(Span other) const
-    {
-        return len == other.len && memcmp(start, other.start, len) == 0;
-    }
-    bool operator==(const char *other) const
-    {
-        for (i32 i = 0; i < len; i++) {
-            if (start[i] != other[i])
-                return false;
-        }
-        return other[len] == '\0';
-    }
+    bool operator==(Span other) const;
+    bool operator==(const char *other) const;
 };
 
 struct Token {

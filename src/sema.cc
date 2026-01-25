@@ -1,8 +1,4 @@
 #include "sema.h"
-#include "ast.h"
-#include "dynarr.h"
-#include "error.h"
-#include "scan.h"
 
 struct ResolveIdents final : public AstVisitor {
     Dynarr<DeclNode *> live_idents;
@@ -17,7 +13,7 @@ struct ResolveIdents final : public AstVisitor {
         for (i32 i = live_idents.len() - 1; i >= 0; i--) {
             if (live_idents[i]->span == node.span) {
                 errarr.push(ErrMsg{node.span, "redeclared variable"});
-                return;
+                break;
             }
         }
         node.fn_depth = fn_depth;
@@ -33,6 +29,7 @@ struct ResolveIdents final : public AstVisitor {
             if (&node == fn_node->captures[i].decl)
                 return;
         }
+        node.flags |= FLAG_CAPTURED;
         fn_node->captures[fn_node->capture_cnt] = {
             .decl = &node,
             .loc =
@@ -58,16 +55,18 @@ struct ResolveIdents final : public AstVisitor {
         fn_depth++;
         FnDeclNode *saved_fn_node = fn_node;
         fn_node = &node;
-
+        const i32 n_live_idents = live_idents.len();
         for (i32 i = 0; i < node.arity; i++)
             decl_ident(node.params[i]);
+
         node.body->local_cnt += node.arity;
         visit_block(*node.body);
-        for (i32 i = 0; i < node.arity; i++)
-            live_idents.pop();
 
+        for (i32 i = live_idents.len(); i >= n_live_idents; i--)
+            live_idents.pop();
         fn_node = saved_fn_node;
         fn_depth--;
+
         if (!fn_node)
             return;
         for (i32 i = 0; i < fn_node->capture_cnt; i++) {
@@ -125,9 +124,24 @@ struct ResolveIdents final : public AstVisitor {
     }
 };
 
+struct ResolveLoc final : public AstVisitor {
+    void visit_var_decl(VarDeclNode &node) override {}
+
+    void visit_fn_decl(FnDeclNode &node) override {}
+
+    void visit_ident(IdentNode &node) override {}
+
+    void visit(ModuleNode &node)
+    {
+        for (i32 i = 0; i < node.cnt; i++)
+            visit_stmt(*node.decls[i]);
+    }
+};
 
 void analyze(ModuleNode &node, Dynarr<ErrMsg> &errarr)
 {
     ResolveIdents pass0(errarr);
     pass0.visit(node);
+    ResolveLoc pass1;
+    pass1.visit(node);
 }

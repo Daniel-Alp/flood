@@ -1,5 +1,4 @@
 #include "error.h"
-#include "dynarr.h"
 #include <stdio.h>
 
 // n != 0

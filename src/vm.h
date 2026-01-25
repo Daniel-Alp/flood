@@ -1,7 +1,5 @@
 #pragma once
-#include "arena.h"
 #include "chunk.h"
-#include "dynarr.h"
 #define MAX_CALL_FRAMES (1024) // TODO implement tail call optimization
 #define MAX_STACK       (MAX_CALL_FRAMES * 256)
 

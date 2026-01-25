@@ -1,14 +1,6 @@
-#include "arena.h"
-#include "common.h"
-#include "compile.h"
 #include "debug.h"
-#include "dynarr.h"
-#include "error.h"
 #include "parse.h"
-#include "scan.h"
 #include "sema.h"
-#include "vm.h"
-#include <stdio.h>
 #include <unistd.h> // for isatty()
 
 int main(int argc, const char **argv)

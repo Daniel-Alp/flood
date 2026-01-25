@@ -1,5 +1,4 @@
 #include "value.h"
-#include "dynarr.h"
 #include "object.h"
 #include <stdio.h>
 

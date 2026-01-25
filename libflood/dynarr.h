@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "templates.h"
 #include <new>
 
 template <typename T>
@@ -18,6 +19,7 @@ class Dynarr {
             operator delete(vals);
             vals = new_vals;
             cap *= 2;
+            
         }
     }
 

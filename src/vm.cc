@@ -1,15 +1,9 @@
 #include "vm.h"
 #include "../foreign/listobj_foreign.h"
-#include "chunk.h"
-#include "dynarr.h"
-#include "gc.h"
 #include "object.h"
-#include "value.h"
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-#include "debug.h"
 
 static i32 get_opcode_line(Dynarr<i32> const &lines, const i32 tgt_opcode_idx)
 {
@@ -340,6 +334,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             const Value val = sp[-3];
             const Value container = sp[-2];
             const Value idx = sp[-1];
+
             if (IS_LIST(container)) {
                 if (IS_NUM(idx)) {
                     if (AS_NUM(idx) >= 0 && AS_NUM(idx) < AS_LIST(container)->vals.len()) {

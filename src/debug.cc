@@ -1,8 +1,7 @@
 #include "debug.h"
 #include <stdio.h>
 
-struct AstPrinter final : public AstVisitor
-{
+struct AstPrinter final : public AstVisitor {
     i32 offset = 0;
     void visit_atom(AtomNode &node) override
     {
@@ -127,14 +126,12 @@ struct AstPrinter final : public AstVisitor
             visit_expr(*node.expr);
     }
 
-
     void visit_block(BlockNode &node) override
     {
         printf("Block");
         for (i32 i = 0; i < node.cnt; i++)
             visit_stmt(*node.stmts[i]);
     }
-
 
     void visit_if(IfNode &node) override
     {
@@ -166,9 +163,9 @@ struct AstPrinter final : public AstVisitor
         printf("(Module");
         offset += 2;
         for (i32 i = 0; i < node.cnt; i++)
-            visit_stmt(*node.decls[i]);  
+            visit_stmt(*node.decls[i]);
         offset -= 2;
-        printf(")\n");  
+        printf(")\n");
     }
 };
 
