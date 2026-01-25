@@ -33,6 +33,8 @@ int main(int argc, const char **argv)
         return 1;
     }
 
+    // print_module(node, false);
+
     analyze(node, errarr, arena);
 
     if (errarr.len() > 0) {

@@ -88,7 +88,8 @@ void AstVisitor::visit_expr_stmt(ExprStmtNode &node)
 
 void AstVisitor::visit_return(ReturnNode &node)
 {
-    visit_expr(*node.expr);
+    if (node.expr)
+        visit_expr(*node.expr);
 }
 
 void AstVisitor::visit_block(BlockNode &node)
@@ -101,7 +102,8 @@ void AstVisitor::visit_if(IfNode &node)
 {
     visit_expr(*node.cond);
     visit_block(*node.thn);
-    visit_block(*node.els);
+    if (node.els)
+        visit_block(*node.els);
 }
 
 void AstVisitor::visit_print(PrintNode &node)

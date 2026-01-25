@@ -193,7 +193,7 @@ struct Compiler final : AstVisitor {
         chunk().emit_byte(chunk().add_constant(MK_OBJ(str)), line);
     }
 
-    void compile_call(CallNode &node)
+    void visit_call(CallNode &node) override
     {
         const i32 line = node.span.line;
         visit_expr(*node.lhs);
@@ -267,7 +267,7 @@ struct Compiler final : AstVisitor {
         }
     }
 
-    ClosureObj *compile_fn_body(FnDeclNode &node)
+    FnObj *compile_fn_body(FnDeclNode &node)
     {
         FnObj *parent = this->fn;
         FnDeclNode *parent_node = this->fn_node;
@@ -291,7 +291,7 @@ struct Compiler final : AstVisitor {
         }
         chunk().emit_byte(OP_RETURN, line);
         // disassemble_chunk(chunk(), fn->name->str.chars());
-        ClosureObj *result = alloc<ClosureObj>(vm, this->fn, this->fn_node->capture_cnt);
+        FnObj *result = this->fn;
         this->fn = parent;
         this->fn_node = parent_node;
         return result;
@@ -341,8 +341,8 @@ struct Compiler final : AstVisitor {
             vm.globals.push(MK_NULL);
         for (i32 i = 0; i < node.cnt; i++) {
             if (node.decls[i]->tag == NODE_FN_DECL) {
-                auto &fn_node = static_cast<FnDeclNode &>(*node.decls[i]);
-                ClosureObj *closure = compile_fn_body(fn_node);
+                FnDeclNode &fn_node = static_cast<FnDeclNode &>(*node.decls[i]);
+                ClosureObj *closure = alloc<ClosureObj>(vm, compile_fn_body(fn_node), fn_node.capture_cnt);
                 vm.globals[fn_node.loc.idx] = MK_OBJ(closure);
                 if (fn_node.span == "main")
                     main = closure;
@@ -350,8 +350,9 @@ struct Compiler final : AstVisitor {
                 auto &class_node = static_cast<ClassDeclNode &>(*node.decls[i]);
                 ClassObj *klass = alloc<ClassObj>(vm, alloc<StringObj>(vm, class_node.span));
                 for (i32 i = 0; i < class_node.cnt; i++) {
-                    auto &fn_node = static_cast<FnDeclNode &>(*class_node.methods[i]);
-                    klass->methods.insert(*alloc<StringObj>(vm, fn_node.span), MK_OBJ(compile_fn_body(fn_node)));
+                    FnDeclNode &fn_node = static_cast<FnDeclNode &>(*class_node.methods[i]);
+                    ClosureObj *closure = alloc<ClosureObj>(vm, compile_fn_body(fn_node), fn_node.capture_cnt);
+                    klass->methods.insert(*alloc<StringObj>(vm, fn_node.span), MK_OBJ(closure));
                 }
                 vm.globals[class_node.loc.idx] = MK_OBJ(klass);
             }

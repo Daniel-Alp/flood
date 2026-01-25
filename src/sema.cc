@@ -57,6 +57,7 @@ struct ResolveIdents final : public AstVisitor {
 
     void visit_var_decl(VarDeclNode &node) override
     {
+        AstVisitor::visit_var_decl(node);
         decl_ident(node);
     }
 
@@ -140,6 +141,7 @@ struct ResolveLoc final : public AstVisitor {
 
     void visit_var_decl(VarDeclNode &node) override
     {
+        AstVisitor::visit_var_decl(node);
         decl_local(node);
     }
 
