@@ -1,9 +1,4 @@
 
 fn main() {
-    var x;
-    fn bar() {
-        fn baz() {
-            print x;
-        }
-    }
+    print 3 + 4 + 5;
 }

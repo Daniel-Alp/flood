@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "../foreign/listobj_foreign.h"
+#include "ast.h"
 #include "object.h"
 #include <math.h>
 #include <stdarg.h>
@@ -252,13 +253,15 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
             break;
         }
         case OP_CLOSURE: {
-            const u8 stack_captures = *ip++;
-            const u8 parent_captures = *ip++;
-            ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), stack_captures + parent_captures);
+            const u8 captures = *ip++;
+            ClosureObj *closure = alloc<ClosureObj>(vm, AS_FN(sp[-1]), captures);
             sp[-1] = MK_OBJ(closure);
-            for (i32 i = 0; i < stack_captures; i++) {
+            for (i32 i = 0; i < captures; i++) {
+                const LocTag tag = LocTag(*ip++);
                 const i32 idx = *ip++;
-                if (bp + idx != sp - 1) {
+                if (tag == LOC_CAPTURED_HEAPVAL) {
+                    closure->captures[i] = cur_closure->captures[idx];
+                } else if (bp + idx != sp - 1) {
                     closure->captures[i] = AS_HEAP_VAL(bp[idx]);
                 } else {
                     // the closure captures itself. the subsequent OP_HEAPVAL will move it on the heap
@@ -266,8 +269,6 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
                     closure->captures[i] = alloc<HeapValObj>(vm, bp[idx]);
                 }
             }
-            for (i32 i = 0; i < parent_captures; i++)
-                closure->captures[stack_captures + i] = cur_closure->captures[*ip++];
             break;
         }
         case OP_GET_CONST: {

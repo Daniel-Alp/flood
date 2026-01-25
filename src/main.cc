@@ -42,19 +42,21 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    print_module(node, true);
+    // print_module(node, true);
 
-    // VM vm;
-    // ClosureObj *script = compile(vm, node, errarr);
-    // if (errarr.len() > 0) {
-    //     print_errarr(errarr, flag_color);
-    //     delete[] buf;
-    //     fclose(fp);
-    //     return 1;
-    // }
+    VM vm;
+    ClosureObj *script = compile(vm, node, errarr);
+    if (errarr.len() > 0) {
+        print_errarr(errarr, flag_color);
+        delete[] buf;
+        fclose(fp);
+        return 1;
+    }
+    // FIXME closures at runtime
+    // FIXME fnbody blocks popping `self` before it can be grabbed
 
-    // if (script)
-    //     run_vm(vm, *script);
+    if (script)
+        run_vm(vm, *script);
 
     delete[] buf;
     fclose(fp);
