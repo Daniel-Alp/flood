@@ -159,7 +159,7 @@ struct FnDeclNode : public DeclNode {
     Capture captures[MAX_LOCALS];
 
     FnDeclNode(const Span span, BlockNode *const body, VarDeclNode *const params, const i32 arity)
-        : DeclNode(span, NODE_FN_DECL), body(body), params(params), arity(arity)
+        : DeclNode(span, NODE_FN_DECL), body(body), params(params), arity(arity), capture_cnt(0)
     {
     }
 };

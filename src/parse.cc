@@ -94,7 +94,7 @@ bool Parser::eat(TokenTag tag)
 void Parser::emit_err(const char *msg)
 {
     if (!panic_)
-        errarr.push(ErrMsg{at_.span, msg});
+        errarr.push({at_.span, msg});
     panic_ = true;
 }
 

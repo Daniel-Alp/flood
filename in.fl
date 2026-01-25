@@ -1,18 +1,9 @@
 fn main() {
+    var y = 4;
     var x = 3;
-    var x = 3;
-    {
-        var x = 3;
-    }
-    print y;
-}
-
-class Foo {
-    fn m1() {
-
-    }
-
-    fn m1() {
-        
+    var z = 4;
+    print x;
+    fn foo() {
+        print x + y + z;
     }
 }

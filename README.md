@@ -7,7 +7,7 @@ mkdir build
 cd build
 cmake ..
 cd ..
-cmake --build build
+cmake --build build -j$(nproc)
 ```
 then do 
 ```

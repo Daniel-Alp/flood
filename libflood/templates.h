@@ -36,3 +36,9 @@ void swap(T &a, T &b)
     a = move(b);
     b = move(tmp);
 }
+
+template <typename T, typename U>
+constexpr bool is_same = false;
+
+template <typename T>
+constexpr bool is_same<T, T> = true;

@@ -32,15 +32,17 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    print_module(node);
-
     analyze(node, errarr);
+    
     if (errarr.len() > 0) {
         print_errarr(errarr, flag_color);
         delete[] buf;
         fclose(fp);
         return 1;
     }
+
+    print_module(node, true);
+
 
     // VM vm;
     // ClosureObj *script = CompileCtx::compile(vm, idarr, node, errarr);

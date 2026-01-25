@@ -3,12 +3,6 @@
 
 // TODO other objects (specifically ObjInstance * and some others)
 
-template <typename T, typename U>
-constexpr bool is_same = false;
-
-template <typename T>
-constexpr bool is_same<T, T> = true;
-
 template <typename T>
 constexpr bool is_foreign_fn_arg = (is_same<T, Value>            // unchecked Value
                                     || is_same<T, double>        // VAL_NUM

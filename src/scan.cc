@@ -107,7 +107,7 @@ Token Scanner::string()
         // TODO not increasing line if string contains newline, this is bad
         if (is_at_end()) {
             Token token = mk_token(TOKEN_ERR);
-            errarr.push(ErrMsg{.span = token.span, .msg = "unterminated string"});
+            errarr.push({.span = token.span, .msg = "unterminated string"});
             return token;
         }
     }
@@ -216,7 +216,7 @@ Token Scanner::next_token()
             }
         } else {
             const Token token = mk_token(TOKEN_ERR);
-            errarr.push(ErrMsg{.span = token.span, .msg = "unexpected token"});
+            errarr.push({.span = token.span, .msg = "unexpected token"});
             return token;
         }
     };

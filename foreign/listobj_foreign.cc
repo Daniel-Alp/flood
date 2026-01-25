@@ -9,7 +9,7 @@ static Value list_pop(ListObj *self)
 {
     if (self->vals.len() == 0)
         throw "pop from empty list";
-    Value val = self->vals[self->vals.len()-1];
+    Value val = self->vals[self->vals.len() - 1];
     self->vals.pop();
     return val;
 }

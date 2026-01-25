@@ -1,7 +1,7 @@
 #pragma once
+#include "../src/scan.h" // FIXME
 #include "common.h"
 #include "dynarr.h" // consider putting slice into its own thing
-#include "../src/scan.h" // FIXME
 #include <string.h>
 
 inline u32 hash_string(const char *chars, i32 cnt)

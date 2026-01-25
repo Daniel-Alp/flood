@@ -19,7 +19,6 @@ class Dynarr {
             operator delete(vals);
             vals = new_vals;
             cap *= 2;
-            
         }
     }
 
