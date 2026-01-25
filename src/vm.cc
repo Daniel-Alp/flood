@@ -545,7 +545,7 @@ InterpResult run_vm(VM &vm, ClosureObj &script)
         // print_stack(vm, sp, bp);
         // TODO don't run gc after every op, enable that only for testing
         vm.sp = sp;
-        // collect_garbage(vm); FIXME!!! need to fix blocks
-        // collect_garbage(vm);
+        collect_garbage(vm); // FIXME!!! need to fix blocks
+        collect_garbage(vm);
     }
 }

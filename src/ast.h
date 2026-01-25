@@ -191,9 +191,10 @@ struct BlockNode : public Node {
     // span is `{`
     Node *const *const stmts;
     const i32 cnt;
+    const bool is_fn_body;
     i32 local_cnt; // locals declared in block, including params if block is fn body
-    BlockNode(const Span span, Node *const *const stmts, const i32 cnt)
-        : Node(span, NODE_BLOCK), stmts(stmts), cnt(cnt), local_cnt(0)
+    BlockNode(const Span span, Node *const *const stmts, const i32 cnt, const bool is_fn_body)
+        : Node(span, NODE_BLOCK), stmts(stmts), cnt(cnt), is_fn_body(is_fn_body), local_cnt(0)
     {
     }
 };

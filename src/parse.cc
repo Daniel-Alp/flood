@@ -133,7 +133,7 @@ void Parser::recover_block()
 }
 
 static Node *parse_expr(Parser &p, const i32 prec_lvl);
-static BlockNode *parse_block(Parser &p);
+static BlockNode *parse_block(Parser &p, const bool is_fn_body);
 
 // precondition: `[` or `(` token consumed
 // parses arguments and fills the ptr array provided
@@ -244,10 +244,10 @@ static IfNode *parse_if(Parser &p)
     p.expect(TOKEN_L_PAREN, "expected `(`");
     Node *const cond = parse_expr(p, 1);
     p.expect(TOKEN_R_PAREN, "expected `)`");
-    BlockNode *const thn = parse_block(p);
+    BlockNode *const thn = parse_block(p, false);
     BlockNode *els = nullptr;
     if (p.eat(TOKEN_ELSE))
-        els = parse_block(p);
+        els = parse_block(p, false);
     return alloc<IfNode>(p.arena(), span, cond, thn, els);
 }
 
@@ -292,7 +292,7 @@ static FnDeclNode *parse_fn_decl(Parser &p, const bool is_method)
     p.expect(TOKEN_R_PAREN, "expected `)`");
     const i32 arity = paramarr.len();
     VarDeclNode *const params = move_dynarr(p.arena(), move(paramarr));
-    BlockNode *const body = parse_block(p);
+    BlockNode *const body = parse_block(p, true);
     return alloc<FnDeclNode>(p.arena(), span, body, params, arity);
 }
 
@@ -338,7 +338,7 @@ static PrintNode *parse_print(Parser &p)
     return node;
 }
 
-static BlockNode *parse_block(Parser &p)
+static BlockNode *parse_block(Parser &p, const bool is_fn_body)
 {
     const Span span = p.at().span;
     if (!p.expect(TOKEN_L_BRACE, "expected `{`"))
@@ -347,7 +347,7 @@ static BlockNode *parse_block(Parser &p)
     while (p.at().tag != TOKEN_R_BRACE && p.at().tag != TOKEN_EOF) {
         Node *node = nullptr;
         if (p.at().tag == TOKEN_L_BRACE) {
-            node = parse_block(p);
+            node = parse_block(p, false);
         } else if (p.eat(TOKEN_IF)) {
             node = parse_if(p);
         } else if (p.eat(TOKEN_VAR)) {
@@ -372,7 +372,7 @@ static BlockNode *parse_block(Parser &p)
     p.expect(TOKEN_R_BRACE, "expected `}`");
     const i32 cnt = nodearr.len();
     Node *const *const stmts = move_dynarr(p.arena(), move(nodearr));
-    return alloc<BlockNode>(p.arena(), span, stmts, cnt);
+    return alloc<BlockNode>(p.arena(), span, stmts, cnt, is_fn_body);
 }
 
 // precondition: `import` token consumed

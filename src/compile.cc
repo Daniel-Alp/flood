@@ -322,9 +322,10 @@ struct Compiler final : AstVisitor {
         const i32 line = node.span.line;
         for (i32 i = 0; i < node.cnt; i++)
             visit_stmt(*node.stmts[i]);
-        // don't pop locals in a function body, the return will pop locals
-        // if (fn_body) // FIXME
-        //     return;
+        // an implicit return is added at the end of the function body
+        // if we pop locals before this implicit return then gc will collect them
+        if (node.is_fn_body)
+            return;
         // TODO handle more than 256 locals
         if (node.local_cnt == 1) {
             chunk().emit_byte(OP_POP, line);
