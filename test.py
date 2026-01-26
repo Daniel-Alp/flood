@@ -61,6 +61,7 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--diff", action="store_true")
     group.add_argument("--upgrade", action="store_true")
+    group.add_argument("--upgrade-single", type=str)
     group.add_argument("--clean", action="store_true")
     group.add_argument("--leak-check", action="store_true")
     args = parser.parse_args()
@@ -70,6 +71,16 @@ def main() -> None:
 
     if args.clean:
         clean_all()
+        return
+    if args.upgrade_single:
+        test_path = Path(args.upgrade_single)
+        if not test_path.is_file():
+            print(f"`{test_path}` does not exist or is not a file.")
+            return
+        elif "tests" not in args.upgrade_single:
+            print(f"`{test_path}` not nested under `tests` folder.")
+            return
+        upgrade(Path(args.upgrade_single))
         return
 
     test_dirs = [

@@ -124,13 +124,13 @@ struct AstPrinter final : public AstVisitor {
             for (i32 i = 0; i < node.capture_cnt - 1; i++) {
                 const CaptureDecl *capt = node.captures[i];
                 printf("\n%*s", offset, "");
-                printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, 
-                    capt, loc_tag_str(capt->loc.tag), capt->loc.idx);
+                printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, capt, loc_tag_str(capt->loc.tag),
+                    capt->loc.idx);
             }
             const CaptureDecl *capt = node.captures[node.capture_cnt - 1];
             printf("\n%*s", offset, "");
-            printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, 
-                capt, loc_tag_str(capt->loc.tag), capt->loc.idx);
+            printf("(Capture %.*s: %p, %s, %d)", capt->span.len, capt->span.start, capt, loc_tag_str(capt->loc.tag),
+                capt->loc.idx);
         }
         visit_stmt(*node.body);
     }

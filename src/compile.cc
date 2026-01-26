@@ -6,8 +6,6 @@
 #include "value.h"
 #include <stdlib.h>
 
-#include "debug.h"
-
 static u8 desugar_assign(const TokenTag tag)
 {
     switch (tag) {
@@ -316,7 +314,6 @@ struct Compiler final : AstVisitor {
         }
     }
 
-    // TODO need to know if fn_body
     void visit_block(BlockNode &node) override
     {
         const i32 line = node.span.line;

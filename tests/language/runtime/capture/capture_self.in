@@ -1,0 +1,20 @@
+class Foo {
+    fn init() {
+        self.x = 0;
+    }
+
+    fn mk_inc() {
+        fn inc() {
+            self.x += 10;
+            return self.x;
+        }
+        return inc;
+    }
+}
+
+fn main() {
+    var f = Foo();
+    var inc = f:mk_inc();
+    print inc();
+    print inc();
+}

@@ -27,7 +27,7 @@ enum OpCode {
     OP_LIST, // args: n 0..=255
     // args: n 0..=255, then n indices 0..=255 offset from bp
     // then  m 0..=255, then m indices 0..=255 idx into capture arr
-    OP_HEAPVAL,      // args: 0..=255 offset from bp
+    OP_HEAPVAL, // args: 0..=255 offset from bp
     OP_CLOSURE,
     OP_CLASS,
     OP_METHOD,

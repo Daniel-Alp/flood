@@ -419,7 +419,7 @@ static ModuleNode &parse_file(Parser &p)
     return *alloc<ModuleNode>(p.arena(), span, decls, cnt);
 }
 
-ModuleNode &Parser::parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
+ModuleNode &parse(const char *source, Arena &arena, Dynarr<ErrMsg> &errarr)
 {
     Parser p(source, arena, errarr);
     return parse_file(p);

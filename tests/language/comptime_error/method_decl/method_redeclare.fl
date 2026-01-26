@@ -1,0 +1,9 @@
+class Foo {
+    fn bar() {
+
+    }
+
+    fn bar() {
+        
+    }
+}

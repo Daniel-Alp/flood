@@ -1,0 +1,3 @@
+6 |     fn bar() {
+  |        ^~~ redeclared method
+
